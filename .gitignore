@@ -1,0 +1,55 @@
+# Tech stack not yet chosen — covers both candidates (.NET Blazor
+# WebAssembly and Node-based React/Next.js/Vue) until the decision
+# narrows this down. Trim the unused sections once stack is picked.
+
+# ---- OS cruft ----
+.DS_Store
+Thumbs.db
+
+# ---- Editor/IDE ----
+.vscode/
+.idea/
+*.swp
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Node / React / Next.js / Vue ----
+node_modules/
+dist/
+build/
+.next/
+out/
+.nuxt/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.turbo/
+
+# ---- .NET / Blazor WebAssembly ----
+bin/
+obj/
+*.user
+*.suo
+wwwroot/_framework/
+publish/
+
+# ---- PWA build artifacts ----
+*.tsbuildinfo
+service-worker-dev.js
+workbox-*.js
+
+# ---- Local data / logs ----
+*.log
+data/
+*.sqlite
+*.db
+
+# ---- AI session tooling (evaluate before committing) ----
+.claude/
