@@ -39,4 +39,12 @@ describe("LearnerProfileProvider", () => {
     const result = renderHook(() => useLearnerProfile(), { wrapper });
     expect(result.result.current.profile).toMatchObject({ displayName: "Sam", highContrast: false, reducedMotion: false });
   });
+
+  it("clears only the local learner profile for a development demo reset", () => {
+    const result = renderHook(() => useLearnerProfile(), { wrapper });
+    act(() => result.result.current.saveProfile({ displayName: "Chris", username: "cwoz" }));
+    act(() => result.result.current.resetProfile());
+    expect(result.result.current.profile).toBeNull();
+    expect(window.localStorage.getItem("tetherless.learner-profile.v1")).toBeNull();
+  });
 });

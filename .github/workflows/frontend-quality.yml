@@ -30,6 +30,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:bundle
+      - run: node scripts/check-performance-budget.mjs
       - run: npx playwright test
       - name: Upload Playwright failure evidence
         if: failure()

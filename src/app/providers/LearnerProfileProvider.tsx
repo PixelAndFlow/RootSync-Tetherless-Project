@@ -16,6 +16,7 @@ interface LearnerProfileContextValue {
   setSpanishAssist: (enabled: boolean) => void;
   setHighContrast: (enabled: boolean) => void;
   setReducedMotion: (enabled: boolean) => void;
+  resetProfile: () => void;
 }
 
 const storageKey = "tetherless.learner-profile.v1";
@@ -68,6 +69,10 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
     },
     setReducedMotion: (reducedMotion) => {
       if (profile) updateProfile({ ...profile, reducedMotion });
+    },
+    resetProfile: () => {
+      setProfile(null);
+      window.localStorage.removeItem(storageKey);
     },
   }), [profile]);
 

@@ -12,6 +12,14 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradie
 button, input { font: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, [tabindex="-1"]:focus { outline: 2px solid #41e4ea; outline-offset: 3px; }
 
+:root { --ui-radius: 1rem; --ui-panel-border: rgb(255 255 255 / 10%); --ui-panel-shadow: 0 24px 80px rgb(0 0 0 / 25%); --ui-focus: #41e4ea; --ui-action: #6d28d9; --ui-action-hover: #7c3aed; }
+.ui-panel { border: 1px solid var(--ui-panel-border); border-radius: var(--ui-radius); background: var(--color-panel); box-shadow: var(--ui-panel-shadow); }
+.ui-eyebrow { color: #67e8f9; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.18em; }
+.ui-action { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border-radius: 0.75rem; background: var(--ui-action); padding: 0.75rem 1.25rem; font-weight: 700; color: white; }
+.ui-action:hover { background: var(--ui-action-hover); }
+.ui-action-secondary { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid rgb(255 255 255 / 15%); border-radius: 0.75rem; padding: 0.75rem 1.25rem; font-weight: 700; }
+.ui-action-secondary:hover { background: rgb(255 255 255 / 5%); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }

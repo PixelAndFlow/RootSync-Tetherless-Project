@@ -50,6 +50,14 @@ describe("MockOfflineLearningGateway", () => {
     expect(summary.failureReason).toBe("No connection");
   });
 
+  it("keeps queued events protected when a sync is rejected for review", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    await gateway.startSession({ learnerId: "learner-rejected", deviceId: "device-rejected" });
+    gateway.simulateNextSyncRejection("Content version needs review");
+    const summary = await gateway.requestSync();
+    expect(summary).toMatchObject({ status: "rejected", pendingEventCount: 1, failureReason: "Content version needs review" });
+  });
+
   it("keeps learner/module records isolated and rejects unknown attempts", async () => {
     const gateway = new MockOfflineLearningGateway();
     const attempt = await gateway.startAttempt({ learnerId: "learner-a", moduleId: "module-a", kind: "full" });
