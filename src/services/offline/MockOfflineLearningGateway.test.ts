@@ -49,4 +49,42 @@ describe("MockOfflineLearningGateway", () => {
     expect(summary.pendingEventCount).toBe(1);
     expect(summary.failureReason).toBe("No connection");
   });
+
+  it("keeps learner/module records isolated and rejects unknown attempts", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const attempt = await gateway.startAttempt({ learnerId: "learner-a", moduleId: "module-a", kind: "full" });
+    await gateway.saveAnswer({ learnerId: "learner-a", moduleId: "module-a", attemptId: attempt.id, xpAward: 10, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" } });
+
+    expect(await gateway.getLearnerModuleRecord("learner-b", "module-a")).toBeNull();
+    expect(await gateway.getLearnerModuleRecord("learner-a", "module-b")).toBeNull();
+    await expect(gateway.saveAnswer({ learnerId: "learner-a", moduleId: "module-a", attemptId: "missing", xpAward: 10, answer: { questionId: "question-2", selectedChoiceId: "B", isCorrect: false, answeredAt: "2026-10-09T00:01:00.000Z" } })).rejects.toThrow("Unknown attempt");
+  });
+
+  it("returns defensive snapshots so callers cannot change stored learning data", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const questionIds = ["question-1"];
+    const remediation = await gateway.startRemediation({ learnerId: "learner-4", moduleId: "module-4", questionIds });
+    questionIds.push("question-2");
+    remediation.questionIds?.push("question-3");
+    remediation.answers.push({ questionId: "question-4", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" });
+
+    const record = await gateway.getLearnerModuleRecord("learner-4", "module-4");
+    expect(record?.attempts[0].questionIds).toEqual(["question-1"]);
+    expect(record?.attempts[0].answers).toEqual([]);
+  });
+
+  it("clears a stale retry message when new local work is queued and clears the queue after a later sync", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    await gateway.startSession({ learnerId: "learner-5", deviceId: "device-5" });
+    gateway.simulateNextSyncFailure("Temporary connection issue");
+    await gateway.requestSync();
+    await gateway.startSession({ learnerId: "learner-5", deviceId: "device-5" });
+    const pending = await gateway.getSyncSummary();
+    expect(pending).toMatchObject({ status: "pending", pendingEventCount: 2 });
+    expect(pending.failureReason).toBeUndefined();
+
+    const synced = await gateway.requestSync();
+    expect(synced).toMatchObject({ status: "synced", pendingEventCount: 0 });
+    expect(synced.failureReason).toBeUndefined();
+  });
 });

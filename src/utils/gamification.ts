@@ -15,7 +15,7 @@ export function gamificationAwards(module: TetherlessModule): {
   const sectors = config?.sectors ?? [];
   const sectorAwards = sectors.map((sector) => ({
     sectorId: sector.id,
-    questionIds: sector.question_ids,
+    questionIds: [...sector.question_ids],
     bonusXp: sector.mastery_bonus_xp ?? 0,
   }));
   const badge = config?.mission_badge;

@@ -115,7 +115,7 @@ const learners: TrainerModuleDetail[] = [{
 
 export class MockTrainerDataGateway implements TrainerDataGateway {
   async listLearners(): Promise<TrainerLearnerSummary[]> {
-    return learners;
+    return this.copy(learners);
   }
 
   async getLearnerModuleDetail(learnerId: string, moduleId: string): Promise<TrainerModuleDetail> {
@@ -123,19 +123,23 @@ export class MockTrainerDataGateway implements TrainerDataGateway {
     if (!learner) {
       throw new Error("Fixture learner/module record not found.");
     }
-    return learner;
+    return this.copy(learner);
   }
 
   async getModuleCohortSummary(moduleId: string): Promise<ModuleCohortSummary> {
     const cohort = learners.filter((learner) => learner.moduleId === moduleId);
     if (!cohort.length) throw new Error("Fixture module not found.");
-    return {
+    return this.copy({
       moduleId,
       moduleTitle: cohort[0].moduleTitle,
       learnerCount: cohort.length,
       completedCount: cohort.filter((learner) => learner.completionStatus === "completed").length,
       averageInitialScorePercent: Number((cohort.reduce((total, learner) => total + (learner.initialScorePercent ?? 0), 0) / cohort.filter((learner) => learner.initialScorePercent !== undefined).length).toFixed(1)),
       averageMasteryPercent: Number((cohort.reduce((total, learner) => total + learner.currentMasteryPercent, 0) / cohort.length).toFixed(1)),
-    };
+    });
+  }
+
+  private copy<T>(value: T): T {
+    return structuredClone(value);
   }
 }
