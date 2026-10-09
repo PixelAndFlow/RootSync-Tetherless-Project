@@ -38,7 +38,11 @@ export function MissionPlayScreen() {
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
   const [engagement, setEngagement] = useState<EngagementSummary>({ xp: 0, currentStreak: 0, bestStreak: 0, xpAwardedQuestionIds: [], completedSectorIds: [], earnedBadgeIds: [] });
   const startedFor = useRef<string | null>(null);
+  const missionRef = useRef<HTMLElement | null>(null);
+  const focusedFeedbackQuestionId = useRef<string | null>(null);
+  const previousIndex = useRef(index);
   const { summary: syncSummary } = useSyncStatus();
+  const question = module.questions[index];
 
   useEffect(() => {
     const attemptKey = profile ? `${profile.learnerId}:${module.module_id}` : null;
@@ -50,10 +54,26 @@ export function MissionPlayScreen() {
     ]).then(([, createdAttempt]) => setAttempt(createdAttempt));
   }, [module.module_id, profile]);
 
+  useEffect(() => {
+    if (!revealed[question.id] || focusedFeedbackQuestionId.current === question.id) return;
+    focusedFeedbackQuestionId.current = question.id;
+    const feedback = missionRef.current?.querySelector<HTMLElement>("article [aria-live='polite']");
+    feedback?.setAttribute("tabindex", "-1");
+    feedback?.focus();
+  }, [question.id, revealed]);
+
+  useEffect(() => {
+    if (previousIndex.current !== index) {
+      const heading = missionRef.current?.querySelector<HTMLHeadingElement>("article h2");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus();
+    }
+    previousIndex.current = index;
+  }, [index]);
+
   if (!profile) return <Navigate replace to="/learner" />;
   if (!attempt) return <LoadingState label="Preparing your local mission record…" />;
 
-  const question = module.questions[index];
   const awards = gamificationAwards(module);
   const selectedChoice = answers[question.id];
   const answerIsCorrect = selectedChoice === question.correct_choice;
@@ -98,7 +118,7 @@ export function MissionPlayScreen() {
   };
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]" ref={missionRef}>
       <div className="overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-2xl shadow-black/25">
         <header className="border-b border-white/10 px-5 py-5 sm:px-7">
           <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.18em] text-cyan-300">RECRUIT MISSION · {question.topic.replaceAll("_", " ")}</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">{module.title.en}</h1><p className="mt-1 text-sm text-slate-400">{module.subtitle?.en}</p></div><div className="flex gap-2"><SpanishAssistToggle enabled={profile.spanishAssist} onChange={setSpanishAssist} /><div className="hidden sm:block"><StatusChip status={syncSummary.status} /></div></div></div>
