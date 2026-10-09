@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { offlineLearningGateway } from "../../services/gateways";
+import { useOfflineLearningGateway } from "./GatewayProvider";
 import type { SyncSummary } from "../../types/learning";
 
 interface SyncStatusContextValue {
@@ -13,6 +13,7 @@ const SyncStatusContext = createContext<SyncStatusContextValue | null>(null);
 const initialSummary: SyncSummary = { status: "synced", pendingEventCount: 0 };
 
 export function SyncStatusProvider({ children }: { children: React.ReactNode }) {
+  const offlineLearningGateway = useOfflineLearningGateway();
   const [gatewaySummary, setGatewaySummary] = useState<SyncSummary>(initialSummary);
   const [isBrowserOnline, setIsBrowserOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
 

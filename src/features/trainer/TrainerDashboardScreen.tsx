@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MetricCard } from "../../components/trainer/MetricCard";
 import { ErrorState, LoadingState } from "../../components/common/PageState";
-import { trainerDataGateway } from "../../services/gateways";
+import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import type { TrainerLearnerSummary } from "../../types/trainer";
 
 export function TrainerDashboardScreen() {
+  const trainerDataGateway = useTrainerDataGateway();
   const [learners, setLearners] = useState<TrainerLearnerSummary[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "completed" | "in_progress">("all");

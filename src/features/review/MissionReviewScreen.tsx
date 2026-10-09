@@ -4,7 +4,7 @@ import { AnswerCard } from "../../components/learner/AnswerCard";
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { offlineLearningGateway } from "../../services/gateways";
+import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { LearnerModuleRecord } from "../../types/learning";
 import { EmptyState, LoadingState } from "../../components/common/PageState";
 
@@ -12,6 +12,7 @@ export function MissionReviewScreen() {
   const { moduleId } = useParams();
   const [searchParams] = useSearchParams();
   const { profile, setSpanishAssist } = useLearnerProfile();
+  const offlineLearningGateway = useOfflineLearningGateway();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const scope = searchParams.get("scope") === "correct" || searchParams.get("scope") === "missed" ? searchParams.get("scope") : "all";
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);

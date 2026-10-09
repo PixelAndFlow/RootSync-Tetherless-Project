@@ -6,7 +6,7 @@ import { EngagementStrip } from "../../components/gamification/EngagementStrip";
 import { SectorMap } from "../../components/gamification/SectorMap";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { offlineLearningGateway } from "../../services/gateways";
+import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { LearnerModuleRecord } from "../../types/learning";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
 import { EmptyState, LoadingState } from "../../components/common/PageState";
@@ -14,6 +14,7 @@ import { EmptyState, LoadingState } from "../../components/common/PageState";
 export function MissionResultsScreen() {
   const { moduleId } = useParams();
   const { profile } = useLearnerProfile();
+  const offlineLearningGateway = useOfflineLearningGateway();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);

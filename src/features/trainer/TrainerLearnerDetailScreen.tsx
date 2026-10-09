@@ -4,11 +4,12 @@ import { MetricCard } from "../../components/trainer/MetricCard";
 import { PerformanceBar } from "../../components/trainer/PerformanceBar";
 import { ErrorState, LoadingState } from "../../components/common/PageState";
 import { moduleLibrary } from "../../content/modules";
-import { trainerDataGateway } from "../../services/gateways";
+import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import type { TrainerModuleDetail } from "../../types/trainer";
 
 export function TrainerLearnerDetailScreen() {
   const { learnerId } = useParams();
+  const trainerDataGateway = useTrainerDataGateway();
   const module = moduleLibrary[0];
   const [detail, setDetail] = useState<TrainerModuleDetail | null>(null);
   const [error, setError] = useState<string | null>(null);

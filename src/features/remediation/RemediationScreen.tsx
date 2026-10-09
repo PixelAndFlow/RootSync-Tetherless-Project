@@ -4,7 +4,7 @@ import { AnswerCard } from "../../components/learner/AnswerCard";
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { offlineLearningGateway } from "../../services/gateways";
+import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, LearnerModuleRecord } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
 
@@ -12,6 +12,7 @@ export function RemediationScreen() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
   const { profile, setSpanishAssist } = useLearnerProfile();
+  const offlineLearningGateway = useOfflineLearningGateway();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
