@@ -32,4 +32,9 @@ Keep JSON fixtures local and pass them through the typed gateway/content boundar
 1. Replace all visible placeholder text and give the module a stable, descriptive `module_id`.
 2. Add the module import to `src/content/modules.ts` only after it passes validation.
 3. Run `npm run validate:content`, then `npm test`.
-4. Review the learner flow on an RCO representative mobile viewport. Do not use a template as learner-ready content without content-owner review.
+4. Run `npm run report:spanish-coverage`. It reports untranslated learner-facing copy without rejecting an English-first draft.
+5. Review the learner flow on an RCO representative mobile viewport. Do not use a template as learner-ready content without content-owner review.
+
+## Frontend-only content preview
+
+`src/content/fixtures/secure-workspace-basics.preview.json` is a valid bilingual preview fixture for testing cards and Spanish Assist. It is deliberately not imported by `moduleLibrary`, so it never appears to learners until content owners approve it.
