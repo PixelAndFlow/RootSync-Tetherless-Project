@@ -59,9 +59,22 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     const previousIndex = attempt.answers.findIndex(
       (answer) => answer.questionId === input.answer.questionId,
     );
-    if (previousIndex >= 0) attempt.answers[previousIndex] = input.answer;
-    else attempt.answers.push(input.answer);
+    if (previousIndex >= 0) {
+      attempt.answers[previousIndex] = input.answer;
+      return;
+    }
+    attempt.answers.push(input.answer);
     record.questionsAnswered = Math.max(record.questionsAnswered, attempt.answers.length);
+    if (input.answer.isCorrect) {
+      record.engagement.currentStreak += 1;
+      record.engagement.bestStreak = Math.max(record.engagement.bestStreak, record.engagement.currentStreak);
+      if (!record.engagement.xpAwardedQuestionIds.includes(input.answer.questionId)) {
+        record.engagement.xpAwardedQuestionIds.push(input.answer.questionId);
+        record.engagement.xp += input.xpAward;
+      }
+    } else {
+      record.engagement.currentStreak = 0;
+    }
   }
 
   async completeAttempt(input: CompleteAttemptInput): Promise<AttemptRecord> {
@@ -83,6 +96,19 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       record.initialMissedQuestionIds = attempt.answers
         .filter((answer) => !answer.isCorrect)
         .map((answer) => answer.questionId);
+    }
+    for (const award of input.sectorMasteryAwards ?? []) {
+      const sectorIsMastered = award.questionIds.every((questionId) => record.masteredQuestionIds.includes(questionId));
+      if (sectorIsMastered && !record.engagement.completedSectorIds.includes(award.sectorId)) {
+        record.engagement.completedSectorIds.push(award.sectorId);
+        record.engagement.xp += award.bonusXp;
+      }
+    }
+    const allQuestionsMastered = record.masteredQuestionIds.length === input.questionsTotal;
+    const missionAward = input.missionMasteryAward;
+    if (allQuestionsMastered && missionAward?.badgeId && !record.engagement.earnedBadgeIds.includes(missionAward.badgeId)) {
+      record.engagement.earnedBadgeIds.push(missionAward.badgeId);
+      record.engagement.xp += missionAward.bonusXp;
     }
     record.firstCompletedAt ??= attempt.completedAt;
     record.completionStatus = "completed";
@@ -137,6 +163,14 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       attempts: [],
       initialMissedQuestionIds: [],
       masteredQuestionIds: [],
+      engagement: {
+        xp: 0,
+        currentStreak: 0,
+        bestStreak: 0,
+        xpAwardedQuestionIds: [],
+        completedSectorIds: [],
+        earnedBadgeIds: [],
+      },
     };
     this.records.set(key, record);
     return record;

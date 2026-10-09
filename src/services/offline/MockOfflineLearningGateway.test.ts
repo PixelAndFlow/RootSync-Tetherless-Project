@@ -16,6 +16,20 @@ describe("MockOfflineLearningGateway", () => {
     expect(record?.currentMasteryPercent).toBe(100);
   });
 
+  it("awards one-time engagement XP and sector/mission rewards without changing score", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const attempt = await gateway.startAttempt({ learnerId: "learner-2", moduleId: "module-2", kind: "full" });
+    await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" } });
+    await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:01.000Z" } });
+    await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-2", selectedChoiceId: "B", isCorrect: true, answeredAt: "2026-10-09T00:00:02.000Z" } });
+    await gateway.completeAttempt({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, questionsTotal: 2, correctQuestionIds: ["question-1", "question-2"], sectorMasteryAwards: [{ sectorId: "sector-1", questionIds: ["question-1", "question-2"], bonusXp: 50 }], missionMasteryAward: { badgeId: "recruit", bonusXp: 250 } });
+    const record = await gateway.getLearnerModuleRecord("learner-2", "module-2");
+    expect(record?.initialScorePercent).toBe(100);
+    expect(record?.engagement.xp).toBe(500);
+    expect(record?.engagement.bestStreak).toBe(2);
+    expect(record?.engagement.earnedBadgeIds).toEqual(["recruit"]);
+  });
+
   it("publishes syncing and synced states for a manual sync", async () => {
     const gateway = new MockOfflineLearningGateway();
     const statuses: string[] = [];
