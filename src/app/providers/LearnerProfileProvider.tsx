@@ -6,12 +6,16 @@ export interface LearnerProfile {
   displayName: string;
   username: string;
   spanishAssist: boolean;
+  highContrast: boolean;
+  reducedMotion: boolean;
 }
 
 interface LearnerProfileContextValue {
   profile: LearnerProfile | null;
   saveProfile: (input: Pick<LearnerProfile, "displayName" | "username">) => void;
   setSpanishAssist: (enabled: boolean) => void;
+  setHighContrast: (enabled: boolean) => void;
+  setReducedMotion: (enabled: boolean) => void;
 }
 
 const storageKey = "tetherless.learner-profile.v1";
@@ -20,7 +24,18 @@ const LearnerProfileContext = createContext<LearnerProfileContextValue | null>(n
 function readStoredProfile(): LearnerProfile | null {
   try {
     const value = window.localStorage.getItem(storageKey);
-    return value ? (JSON.parse(value) as LearnerProfile) : null;
+    if (!value) return null;
+    const storedProfile = JSON.parse(value) as Partial<LearnerProfile>;
+    if (!storedProfile.learnerId || !storedProfile.deviceId || !storedProfile.displayName || !storedProfile.username) return null;
+    return {
+      learnerId: storedProfile.learnerId,
+      deviceId: storedProfile.deviceId,
+      displayName: storedProfile.displayName,
+      username: storedProfile.username,
+      spanishAssist: Boolean(storedProfile.spanishAssist),
+      highContrast: Boolean(storedProfile.highContrast),
+      reducedMotion: Boolean(storedProfile.reducedMotion),
+    };
   } catch {
     return null;
   }
@@ -42,9 +57,17 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
       displayName: displayName.trim(),
       username: username.trim(),
       spanishAssist: profile?.spanishAssist ?? false,
+      highContrast: profile?.highContrast ?? false,
+      reducedMotion: profile?.reducedMotion ?? false,
     }),
     setSpanishAssist: (spanishAssist) => {
       if (profile) updateProfile({ ...profile, spanishAssist });
+    },
+    setHighContrast: (highContrast) => {
+      if (profile) updateProfile({ ...profile, highContrast });
+    },
+    setReducedMotion: (reducedMotion) => {
+      if (profile) updateProfile({ ...profile, reducedMotion });
     },
   }), [profile]);
 

@@ -11,3 +11,13 @@ html { background: #061127; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at 12% 0%, rgb(90 30 228 / 20%), transparent 28%), radial-gradient(circle at 90% 12%, rgb(52 231 228 / 8%), transparent 24%), linear-gradient(180deg, #071129, #040914 72%); }
 button, input { font: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, [tabindex="-1"]:focus { outline: 2px solid #41e4ea; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+
+.app-reduced-motion *, .app-reduced-motion *::before, .app-reduced-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+.app-high-contrast { --color-panel: #080d1c; }
+.app-high-contrast .text-slate-400 { color: #dbeafe; }
+.app-high-contrast .text-slate-300 { color: #eff6ff; }
+.app-high-contrast [class~="border-white/10"], .app-high-contrast [class~="border-white/15"] { border-color: rgb(255 255 255 / 38%); }

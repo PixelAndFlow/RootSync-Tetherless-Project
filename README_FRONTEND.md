@@ -20,7 +20,8 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - engagement-only XP, streaks, sector checkpoints, Cyber Shield, and mission badge;
 - clear offline, pending, syncing, synced, retryable-error, and rejected status UI;
 - route fallback/error states for broken or unavailable links;
-- keyboard focus moves to answer feedback after selection and to the next question after navigation.
+- keyboard focus moves to answer feedback after selection and to the next question after navigation;
+- optional high-contrast and reduced-motion preferences that persist only on the current browser/device.
 
 ### Trainer experience
 
@@ -77,7 +78,7 @@ Open the Vite URL shown in the terminal. The application uses hash routing, so l
 | `npm run check:bundle` | Checks the built asset size against the 1 MB temporary guardrail. Run after a build. |
 | `npm run test:device` | Builds the app, checks bundle size, and runs Playwright mobile-browser tests. |
 
-At the current project state, the suite includes 29 unit/regression tests, 5 content-focused checks, and 40 mobile-browser checks.
+At the current project state, the suite includes 31 unit/regression tests (including 6 content-focused checks) and 55 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile.
 
 ## Device and browser coverage
 
@@ -89,7 +90,7 @@ The automated browser suite checks these RCO representative profiles:
 - iPhone 8-sized viewport / 375 x 667;
 - iPhone SE 2-sized viewport / 375 x 667.
 
-It verifies learner flow, touch targets, focus behavior, offline-state messaging, trainer layout, sorting/filtering, broken-route recovery, visual snapshots, PWA metadata, and selected WCAG rules.
+It verifies learner flow, touch targets, focus behavior, offline-state messaging, trainer layout, sorting/filtering, broken-route recovery, invalid-mission protection, visual snapshots, display preferences, PWA metadata, and selected WCAG rules. One protected full-flow regression test also verifies first-score preservation through remediation, review, and full retry.
 
 These are Chromium viewport/touch simulations, not real Android or iOS certification. They do **not** prove Safari/WebKit behavior, actual 2 GB RAM performance, device storage eviction, installed-PWA restart behavior, or multi-day offline persistence. Those require Android Emulator/Xcode where available and final real-device or device-cloud testing after the DDIL layer exists.
 
@@ -107,7 +108,7 @@ Before changing or adding a module, run:
 npm run validate:content
 ```
 
-The validator checks stable IDs, question count, score range, English learner copy, choices, correct answers, and sector references. See the [content authoring guide](docs/CONTENT_AUTHORING_GUIDE.md) for the full workflow.
+The validator checks stable IDs, question count, score range, English learner copy, choices, correct answers, and sector references. Start new modules from the validated template at `src/content/templates/tetherless-module.template.json`. See the [content authoring guide](docs/CONTENT_AUTHORING_GUIDE.md) for the full workflow.
 
 ## Project layout
 
@@ -145,4 +146,6 @@ docs/                  Handoff, integration, content, and design references
 - [Frontend handoff](docs/CODEX_FRONTEND_HANDOFF.md)
 - [Build reference](docs/App_Build_Complete_Reference.md)
 - [Integration boundary](docs/FRONTEND_INTEGRATION_BOUNDARY.md)
+- [Frontend integration checklist](docs/FRONTEND_INTEGRATION_CHECKLIST.md)
 - [Content authoring guide](docs/CONTENT_AUTHORING_GUIDE.md)
+- [Device emulator and real-device test plan](docs/DEVICE_EMULATOR_AND_REAL_DEVICE_TEST_PLAN.md)
