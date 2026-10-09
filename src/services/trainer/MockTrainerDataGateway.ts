@@ -5,7 +5,7 @@ import type {
 } from "../../types/trainer";
 import type { TrainerDataGateway } from "./TrainerDataGateway";
 
-const learner: TrainerModuleDetail = {
+const learners: TrainerModuleDetail[] = [{
   learnerId: "fixture-learner-001",
   displayName: "Alex Rivera",
   moduleId: "rcyc-recruit-cyber-squad-gamified-001",
@@ -41,29 +41,101 @@ const learner: TrainerModuleDetail = {
     { sectorId: "rules", label: "Stay Inside the Rules", masteredCount: 5, totalCount: 5 },
     { sectorId: "evidence", label: "Protect the Evidence", masteredCount: 5, totalCount: 5 },
   ],
-};
+}, {
+  learnerId: "fixture-learner-002",
+  displayName: "Jordan Lee",
+  moduleId: "rcyc-recruit-cyber-squad-gamified-001",
+  moduleTitle: "Operation Cyber Squad",
+  contentVersion: "2.0.0",
+  completionStatus: "in_progress",
+  currentMasteryPercent: 46.7,
+  questionsAnswered: 9,
+  questionsTotal: 15,
+  initialMissedCount: 0,
+  stillUnmasteredCount: 8,
+  activeEngagementSeconds: 392,
+  sessionCount: 3,
+  xp: 320,
+  bestStreak: 3,
+  syncStatus: "pending",
+  lastActivityAt: "2026-10-09T00:42:00.000Z",
+  firstStartedAt: "2026-10-09T00:30:00.000Z",
+  remediationAttempted: 0,
+  remediationCorrected: 0,
+  fullAttemptCount: 1,
+  remediationRoundCount: 0,
+  returnCount: 2,
+  topicPerformance: [
+    { topic: "Authorization", masteredCount: 1, totalCount: 3 },
+    { topic: "Ethics", masteredCount: 2, totalCount: 3 },
+    { topic: "Version Control", masteredCount: 4, totalCount: 4 },
+  ],
+  sectorPerformance: [
+    { sectorId: "team", label: "Know Your Team", masteredCount: 3, totalCount: 5 },
+    { sectorId: "rules", label: "Stay Inside the Rules", masteredCount: 2, totalCount: 5 },
+    { sectorId: "evidence", label: "Protect the Evidence", masteredCount: 2, totalCount: 5 },
+  ],
+}, {
+  learnerId: "fixture-learner-003",
+  displayName: "Sam Ortiz",
+  moduleId: "rcyc-recruit-cyber-squad-gamified-001",
+  moduleTitle: "Operation Cyber Squad",
+  contentVersion: "2.0.0",
+  completionStatus: "completed",
+  initialScorePercent: 86.7,
+  currentMasteryPercent: 100,
+  questionsAnswered: 15,
+  questionsTotal: 15,
+  initialMissedCount: 2,
+  stillUnmasteredCount: 0,
+  activeEngagementSeconds: 583,
+  sessionCount: 1,
+  xp: 1_550,
+  bestStreak: 9,
+  syncStatus: "synced",
+  lastActivityAt: "2026-10-08T21:05:00.000Z",
+  firstStartedAt: "2026-10-08T20:54:00.000Z",
+  completedAt: "2026-10-08T21:05:00.000Z",
+  remediationAttempted: 2,
+  remediationCorrected: 2,
+  fullAttemptCount: 1,
+  remediationRoundCount: 1,
+  returnCount: 0,
+  topicPerformance: [
+    { topic: "Authorization", masteredCount: 3, totalCount: 3 },
+    { topic: "Ethics", masteredCount: 3, totalCount: 3 },
+    { topic: "Version Control", masteredCount: 4, totalCount: 4 },
+  ],
+  sectorPerformance: [
+    { sectorId: "team", label: "Know Your Team", masteredCount: 5, totalCount: 5 },
+    { sectorId: "rules", label: "Stay Inside the Rules", masteredCount: 5, totalCount: 5 },
+    { sectorId: "evidence", label: "Protect the Evidence", masteredCount: 5, totalCount: 5 },
+  ],
+}];
 
 export class MockTrainerDataGateway implements TrainerDataGateway {
   async listLearners(): Promise<TrainerLearnerSummary[]> {
-    return [learner];
+    return learners;
   }
 
   async getLearnerModuleDetail(learnerId: string, moduleId: string): Promise<TrainerModuleDetail> {
-    if (learnerId !== learner.learnerId || moduleId !== learner.moduleId) {
+    const learner = learners.find((candidate) => candidate.learnerId === learnerId && candidate.moduleId === moduleId);
+    if (!learner) {
       throw new Error("Fixture learner/module record not found.");
     }
     return learner;
   }
 
   async getModuleCohortSummary(moduleId: string): Promise<ModuleCohortSummary> {
-    if (moduleId !== learner.moduleId) throw new Error("Fixture module not found.");
+    const cohort = learners.filter((learner) => learner.moduleId === moduleId);
+    if (!cohort.length) throw new Error("Fixture module not found.");
     return {
       moduleId,
-      moduleTitle: learner.moduleTitle,
-      learnerCount: 1,
-      completedCount: 1,
-      averageInitialScorePercent: learner.initialScorePercent ?? 0,
-      averageMasteryPercent: learner.currentMasteryPercent,
+      moduleTitle: cohort[0].moduleTitle,
+      learnerCount: cohort.length,
+      completedCount: cohort.filter((learner) => learner.completionStatus === "completed").length,
+      averageInitialScorePercent: Number((cohort.reduce((total, learner) => total + (learner.initialScorePercent ?? 0), 0) / cohort.filter((learner) => learner.initialScorePercent !== undefined).length).toFixed(1)),
+      averageMasteryPercent: Number((cohort.reduce((total, learner) => total + learner.currentMasteryPercent, 0) / cohort.length).toFixed(1)),
     };
   }
 }
