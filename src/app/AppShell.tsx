@@ -1,12 +1,14 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { StatusChip } from "../components/common/StatusChip";
 import { useSyncStatus } from "./providers/SyncStatusProvider";
+import { useLearnerProfile } from "./providers/LearnerProfileProvider";
 
 export function AppShell() {
   const { summary } = useSyncStatus();
+  const { profile } = useLearnerProfile();
 
   return (
-    <div className="min-h-screen bg-ink text-slate-50">
+    <div className={`min-h-screen bg-ink text-slate-50 ${profile?.highContrast ? "app-high-contrast" : ""} ${profile?.reducedMotion ? "app-reduced-motion" : ""}`}>
       <a className="sr-only absolute left-4 top-4 z-50 rounded-lg bg-cyan-300 px-4 py-2 font-bold text-ink focus:not-sr-only" href="#main-content">Skip to main content</a>
       <header className="sticky top-0 border-b border-white/10 bg-ink/95 px-4 py-3 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4" aria-label="Primary navigation">

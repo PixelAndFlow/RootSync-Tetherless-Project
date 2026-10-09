@@ -2,15 +2,17 @@ import { Link } from "react-router-dom";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { StorageStatusCard } from "../../components/common/StorageStatusCard";
+import { DisplayPreferences } from "../../components/learner/DisplayPreferences";
 
 export function MissionLibraryScreen() {
-  const { profile } = useLearnerProfile();
+  const { profile, setHighContrast, setReducedMotion } = useLearnerProfile();
   return (
     <section>
       <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">LEARNER MISSIONS</p>
       <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{profile ? `Welcome back, ${profile.displayName.split(" ")[0]}.` : "Choose your next cyber mission."}</h1>
       <p className="mt-3 max-w-2xl text-slate-400">Every downloaded mission stays available when connection is limited. Your learning record will sync when service returns.</p>
       <StorageStatusCard />
+      {profile && <DisplayPreferences highContrast={profile.highContrast} reducedMotion={profile.reducedMotion} onHighContrastChange={setHighContrast} onReducedMotionChange={setReducedMotion} />}
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {moduleLibrary.map((module) => (
           <article className="relative overflow-hidden rounded-2xl border border-white/10 bg-panel p-6" key={module.module_id}>
