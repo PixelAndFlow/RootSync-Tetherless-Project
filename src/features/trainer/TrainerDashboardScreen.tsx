@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MetricCard } from "../../components/trainer/MetricCard";
+import { ErrorState, LoadingState } from "../../components/common/PageState";
 import { trainerDataGateway } from "../../services/gateways";
 import type { TrainerLearnerSummary } from "../../types/trainer";
 
@@ -8,8 +9,10 @@ export function TrainerDashboardScreen() {
   const [learners, setLearners] = useState<TrainerLearnerSummary[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "completed" | "in_progress">("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { void trainerDataGateway.listLearners().then(setLearners); }, []);
+  useEffect(() => { void trainerDataGateway.listLearners().then(setLearners).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load trainer fixtures.")).finally(() => setIsLoading(false)); }, []);
   const visibleLearners = useMemo(() => learners.filter((learner) => {
     const queryMatches = learner.displayName.toLowerCase().includes(query.trim().toLowerCase());
     const filterMatches = filter === "all" || learner.completionStatus === filter;
@@ -18,6 +21,9 @@ export function TrainerDashboardScreen() {
   const completedCount = learners.filter((learner) => learner.completionStatus === "completed").length;
   const averageMastery = learners.length ? Math.round(learners.reduce((total, learner) => total + learner.currentMasteryPercent, 0) / learners.length) : 0;
   const waitingSync = learners.filter((learner) => learner.syncStatus !== "synced").length;
+
+  if (isLoading) return <LoadingState label="Loading trainer fixture data…" />;
+  if (error) return <ErrorState actionLabel="Return to missions" actionTo="/learner/missions" detail={error} title="Trainer overview unavailable" />;
 
   return (
     <section>

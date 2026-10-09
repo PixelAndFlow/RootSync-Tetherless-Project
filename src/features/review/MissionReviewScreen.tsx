@@ -6,6 +6,7 @@ import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { offlineLearningGateway } from "../../services/gateways";
 import type { LearnerModuleRecord } from "../../types/learning";
+import { EmptyState, LoadingState } from "../../components/common/PageState";
 
 export function MissionReviewScreen() {
   const { moduleId } = useParams();
@@ -15,8 +16,9 @@ export function MissionReviewScreen() {
   const scope = searchParams.get("scope") === "correct" || searchParams.get("scope") === "missed" ? searchParams.get("scope") : "all";
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [index, setIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => { if (profile) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord); }, [module.module_id, profile]);
+  useEffect(() => { if (!profile) return; void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false)); }, [module.module_id, profile]);
   const firstAttempt = record?.attempts.find((attempt) => attempt.kind === "full" && attempt.status === "completed");
   const questions = useMemo(() => module.questions.filter((question) => {
     const answer = firstAttempt?.answers.find((candidate) => candidate.questionId === question.id);
@@ -24,8 +26,9 @@ export function MissionReviewScreen() {
   }), [firstAttempt, module.questions, scope]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up learner profile →</Link></section>;
-  if (!firstAttempt) return <section className="rounded-3xl border border-white/10 bg-panel p-8">Loading saved mission record…</section>;
-  if (!questions.length) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">No questions match this review.</h1><Link className="mt-5 inline-flex text-cyan-300" to={`/learner/missions/${module.module_id}/results`}>Return to debrief →</Link></section>;
+  if (isLoading) return <LoadingState label="Loading saved mission record…" />;
+  if (!firstAttempt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Complete a full mission attempt before opening a read-only review." title="No saved attempt is available." />;
+  if (!questions.length) return <EmptyState actionLabel="Return to debrief" actionTo={`/learner/missions/${module.module_id}/results`} detail="No questions match this review filter." title="Nothing matches this review." />;
   const question = questions[index];
   const selected = firstAttempt.answers.find((answer) => answer.questionId === question.id)?.selectedChoiceId;
   const heading = scope === "correct" ? "Review correct answers" : scope === "missed" ? "Review initially missed answers" : "Review all answers";

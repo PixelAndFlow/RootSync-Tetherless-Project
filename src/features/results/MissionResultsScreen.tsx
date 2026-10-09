@@ -9,18 +9,21 @@ import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { offlineLearningGateway } from "../../services/gateways";
 import type { LearnerModuleRecord } from "../../types/learning";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
+import { EmptyState, LoadingState } from "../../components/common/PageState";
 
 export function MissionResultsScreen() {
   const { moduleId } = useParams();
   const { profile } = useLearnerProfile();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { summary: syncSummary } = useSyncStatus();
 
-  useEffect(() => { if (profile) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord); }, [module.module_id, profile]);
+  useEffect(() => { if (!profile) return; void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false)); }, [module.module_id, profile]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">Set up your learner profile first.</h1><Link className="mt-5 inline-flex text-cyan-300" to="/learner">Return to setup →</Link></section>;
-  if (!record?.firstCompletedAt) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><p className="text-xs font-bold tracking-[0.18em] text-cyan-300">MISSION DEBRIEF</p><h1 className="mt-3 text-3xl font-bold">Finish every question to unlock your debrief.</h1><Link className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-3 font-bold" to={`/learner/missions/${module.module_id}/play`}>Return to mission</Link></section>;
+  if (isLoading) return <LoadingState label="Loading your saved mission debrief…" />;
+  if (!record?.firstCompletedAt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Finish every question to create an initial score and unlock your debrief." title="Your mission debrief is not ready yet." />;
 
   const initialMissed = record.initialMissedQuestionIds.length;
   const practiceAvailable = record.stillUnmasteredCount > 0;
