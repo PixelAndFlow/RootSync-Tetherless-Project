@@ -1,0 +1,62 @@
+name: Frontend quality
+
+on:
+  push:
+    branches: [chris]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      capture_visual_candidates:
+        description: Capture candidate visual baselines as an artifact for human review
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:content
+      - run: npm run report:spanish-coverage
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:bundle
+      - run: npx playwright test
+      - name: Upload Playwright failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+  visual-candidates:
+    if: github.event_name == 'workflow_dispatch' && inputs.capture_visual_candidates
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright test --grep "approved mobile learner visual baseline" --update-snapshots
+      - name: Upload candidate screenshots for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline-candidates
+          path: |
+            e2e/rco-mobile.spec.ts-snapshots
+            playwright-report

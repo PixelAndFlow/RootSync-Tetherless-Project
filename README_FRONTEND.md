@@ -35,6 +35,7 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - reusable loading, empty, and error states;
 - visible focus treatment, skip-to-content link, live status announcements, and automated WCAG checks;
 - visual regression snapshots for five RCO representative mobile viewport profiles;
+- Windows GitHub Actions quality checks with failure artifacts and a manual visual-baseline candidate workflow;
 - a production bundle-size guardrail; the current bundle is approximately 542 KB, below the temporary 1 MB guardrail;
 - PWA metadata, app icon, theme metadata, and browser-storage messaging.
 
@@ -74,11 +75,13 @@ Open the Vite URL shown in the terminal. The application uses hash routing, so l
 | --- | --- |
 | `npm run test` | Unit and regression tests. |
 | `npm run validate:content` | Validates the JSON learning fixture and content rules. |
+| `npm run report:spanish-coverage` | Reports Spanish Assist translation coverage without blocking English-first drafts. |
 | `npm run build` | Type-checks and creates a production build. |
 | `npm run check:bundle` | Checks the built asset size against the 1 MB temporary guardrail. Run after a build. |
 | `npm run test:device` | Builds the app, checks bundle size, and runs Playwright mobile-browser tests. |
+| `npm run check:android-emulator` | Reports whether Android Studio's SDK, Emulator, and target AVDs are ready on this computer. |
 
-At the current project state, the suite includes 31 unit/regression tests (including 6 content-focused checks) and 55 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile.
+At the current project state, the suite includes 34 unit/regression tests (including 9 content-focused checks) and 60 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile.
 
 ## Device and browser coverage
 

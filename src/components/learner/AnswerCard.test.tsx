@@ -11,5 +11,6 @@ describe("AnswerCard", () => {
     await user.click(screen.getByRole("button", { name: /blue team/i }));
     expect(onChoose).toHaveBeenCalledOnce();
     expect(screen.getByText("Equipo Azul")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /blue team\./i })).toHaveAttribute("aria-pressed", "false");
   });
 });

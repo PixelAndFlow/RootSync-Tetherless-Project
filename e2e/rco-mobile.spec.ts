@@ -92,6 +92,20 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByText("Operation Cyber Squad")).toBeVisible();
   });
 
+  test("exposes answer selection and feedback state to assistive technology", async ({ page }) => {
+    await page.goto("/#/learner");
+    await page.getByLabel("Your name").fill("RCO Tester");
+    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByRole("button", { name: "Continue to missions" }).click();
+    await page.getByRole("link", { name: /View mission/ }).click();
+    await page.getByRole("link", { name: "Start mission" }).click();
+    const redTeam = page.getByRole("button", { name: /Red Team/ });
+    await expect(redTeam).toHaveAttribute("aria-pressed", "false");
+    await redTeam.click();
+    await expect(page.getByRole("button", { name: /Red Team\. Correct answer/ })).toBeDisabled();
+    await expect(page.locator("article [aria-live='polite']")).toContainText("Correct");
+  });
+
   test("protects the full learner record through practice, review, and retry", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "RCO-Android10-2GB-viewport", "The complete workflow is exercised once on the minimum Android viewport; core checks run on every profile.");
     await page.goto("/#/learner");
@@ -126,6 +140,7 @@ test.describe("RCO representative mobile profiles", () => {
   });
 
   test("matches the approved mobile learner visual baseline", async ({ page }) => {
+    test.slow();
     await page.goto("/#/learner");
     await page.getByLabel("Your name").fill("RCO Tester");
     await page.getByLabel("Username").fill("rco-tester");

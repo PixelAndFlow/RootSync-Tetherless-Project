@@ -19,6 +19,8 @@ No Moodle source code or dependency is required for this frontend testing plan.
 
 ## Android Studio setup on this Windows machine
 
+After Android Studio is installed, run `npm run check:android-emulator`. The local readiness check finds the Android SDK, Emulator, Platform Tools, and configured AVD names without changing the computer.
+
 Install Android Studio and use **Tools → Device Manager** to create these AVDs. Android's Device Manager supports configurable hardware profiles, including RAM and internal storage, so these are useful RCO stress approximations—not certification of the exact retail models.
 
 | AVD | Target profile | Minimum setup | Test focus |
