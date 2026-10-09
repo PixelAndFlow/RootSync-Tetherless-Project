@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { StatusChip } from "../components/common/StatusChip";
 import { useSyncStatus } from "./providers/SyncStatusProvider";
 
@@ -7,6 +7,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-ink text-slate-50">
+      <a className="sr-only absolute left-4 top-4 z-50 rounded-lg bg-cyan-300 px-4 py-2 font-bold text-ink focus:not-sr-only" href="#main-content">Skip to main content</a>
       <header className="sticky top-0 border-b border-white/10 bg-ink/95 px-4 py-3 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4" aria-label="Primary navigation">
           <Link className="flex items-center gap-3" to="/learner/missions">
@@ -15,12 +16,12 @@ export function AppShell() {
           </Link>
           <div className="flex items-center gap-2 text-sm">
             <Link aria-label="View sync status" className="hidden rounded-full sm:block" to="/learner/sync"><StatusChip status={summary.status} /></Link>
-            <Link className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10" to="/learner/missions">Missions</Link>
-            <Link className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10" to="/trainer">Trainer</Link>
+            <NavLink className={({ isActive }) => `rounded-lg px-3 py-2 ${isActive ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/10"}`} to="/learner/missions">Missions</NavLink>
+            <NavLink className={({ isActive }) => `rounded-lg px-3 py-2 ${isActive ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/10"}`} to="/trainer">Trainer</NavLink>
           </div>
         </nav>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8"><Outlet /></main>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8" id="main-content"><Outlet /></main>
     </div>
   );
 }

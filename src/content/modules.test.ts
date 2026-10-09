@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { operationCyberSquad } from "./modules";
+import { validateModule } from "./validateModule";
 
 describe("Operation Cyber Squad fixture", () => {
   it("provides the complete bilingual 15-question learner mission", () => {
@@ -11,5 +12,6 @@ describe("Operation Cyber Squad fixture", () => {
       expect(question.feedback.es).toBeTruthy();
       expect(question.choices.some((choice) => choice.id === question.correct_choice)).toBe(true);
     });
+    expect(validateModule(operationCyberSquad)).toEqual([]);
   });
 });
