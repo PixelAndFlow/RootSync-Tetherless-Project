@@ -4,3 +4,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Client-source material remains on Chris's local machine only.
+docs/rco-source-private/
