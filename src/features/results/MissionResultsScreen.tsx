@@ -7,16 +7,16 @@ import { SectorMap } from "../../components/gamification/SectorMap";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { offlineLearningGateway } from "../../services/gateways";
-import type { LearnerModuleRecord, SyncSummary } from "../../types/learning";
+import type { LearnerModuleRecord } from "../../types/learning";
+import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
 
 export function MissionResultsScreen() {
   const { moduleId } = useParams();
   const { profile } = useLearnerProfile();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
-  const [syncSummary, setSyncSummary] = useState<SyncSummary>({ status: "synced", pendingEventCount: 0 });
+  const { summary: syncSummary } = useSyncStatus();
 
-  useEffect(() => offlineLearningGateway.subscribeToSyncStatus(setSyncSummary), []);
   useEffect(() => { if (profile) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord); }, [module.module_id, profile]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">Set up your learner profile first.</h1><Link className="mt-5 inline-flex text-cyan-300" to="/learner">Return to setup →</Link></section>;

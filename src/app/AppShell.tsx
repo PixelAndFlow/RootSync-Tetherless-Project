@@ -1,12 +1,9 @@
 import { Link, Outlet } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { StatusChip } from "../components/common/StatusChip";
-import { offlineLearningGateway } from "../services/gateways";
-import type { SyncSummary } from "../types/learning";
+import { useSyncStatus } from "./providers/SyncStatusProvider";
 
 export function AppShell() {
-  const [syncSummary, setSyncSummary] = useState<SyncSummary>({ status: "synced", pendingEventCount: 0 });
-  useEffect(() => offlineLearningGateway.subscribeToSyncStatus(setSyncSummary), []);
+  const { summary } = useSyncStatus();
 
   return (
     <div className="min-h-screen bg-ink text-slate-50">
@@ -17,7 +14,7 @@ export function AppShell() {
             <span className="text-sm font-bold tracking-[0.16em]">TETHERLESS</span>
           </Link>
           <div className="flex items-center gap-2 text-sm">
-            <div className="hidden sm:block"><StatusChip status={syncSummary.status} /></div>
+            <Link aria-label="View sync status" className="hidden rounded-full sm:block" to="/learner/sync"><StatusChip status={summary.status} /></Link>
             <Link className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10" to="/learner/missions">Missions</Link>
             <Link className="rounded-lg px-3 py-2 text-slate-200 hover:bg-white/10" to="/trainer">Trainer</Link>
           </div>
