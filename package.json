@@ -13,6 +13,7 @@
     "report:spanish-coverage": "node scripts/report-spanish-coverage.mjs",
     "check:android-emulator": "node scripts/check-android-emulator.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",
+    "check:performance": "npm run build && node scripts/check-performance-budget.mjs",
     "test:device": "npm run build && npm run check:bundle && playwright test"
   },
   "dependencies": {

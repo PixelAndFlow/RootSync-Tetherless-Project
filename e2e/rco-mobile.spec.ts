@@ -106,6 +106,15 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.locator("article [aria-live='polite']")).toContainText("Correct");
   });
 
+  test("moves from the skip link to the main landmark by keyboard", async ({ page }) => {
+    await page.goto("/#/learner");
+    await page.keyboard.press("Tab");
+    const skipLink = page.getByRole("link", { name: "Skip to main content" });
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#main-content")).toBeFocused();
+  });
+
   test("protects the full learner record through practice, review, and retry", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "RCO-Android10-2GB-viewport", "The complete workflow is exercised once on the minimum Android viewport; core checks run on every profile.");
     await page.goto("/#/learner");
@@ -157,7 +166,7 @@ test.describe("RCO representative mobile profiles", () => {
 
   test("meets selected WCAG mobile accessibility checks", async ({ page }) => {
     await page.goto("/#/learner");
-    const results = await new AxeBuilder({ page }).withRules(["color-contrast", "button-name", "link-name", "label", "landmark-one-main", "page-has-heading-one"]).analyze();
+    const results = await new AxeBuilder({ page }).withRules(["aria-allowed-attr", "aria-valid-attr-value", "button-name", "color-contrast", "heading-order", "label", "landmark-one-main", "link-name", "page-has-heading-one"]).analyze();
     expect(results.violations).toEqual([]);
   });
 

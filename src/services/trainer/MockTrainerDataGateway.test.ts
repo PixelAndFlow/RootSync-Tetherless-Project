@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { MockTrainerDataGateway } from "./MockTrainerDataGateway";
 
 describe("MockTrainerDataGateway", () => {
+  it("supplies controlled empty and failed-load scenarios for frontend states", async () => {
+    const empty = new MockTrainerDataGateway("empty_cohort");
+    expect(await empty.listLearners()).toEqual([]);
+    expect(await empty.getModuleCohortSummary("module-empty")).toMatchObject({ learnerCount: 0, completedCount: 0 });
+
+    const failure = new MockTrainerDataGateway("load_failure");
+    await expect(failure.listLearners()).rejects.toThrow("scenario testing");
+  });
   it("provides de-identified learner summaries and cohort metrics", async () => {
     const gateway = new MockTrainerDataGateway();
     const learners = await gateway.listLearners();

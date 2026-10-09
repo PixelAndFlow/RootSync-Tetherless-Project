@@ -27,6 +27,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   private readonly subscribers = new Set<(summary: SyncSummary) => void>();
   private syncSummary: SyncSummary = { status: "synced", pendingEventCount: 0 };
   private nextSyncFailureReason: string | null = null;
+  private nextSyncRejectionReason: string | null = null;
 
   async startSession(input: StartSessionInput): Promise<SessionRecord> {
     const session = {
@@ -158,6 +159,16 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       this.notify();
       return this.copy(this.syncSummary);
     }
+    if (this.nextSyncRejectionReason) {
+      this.syncSummary = {
+        ...this.syncSummary,
+        status: "rejected",
+        failureReason: this.nextSyncRejectionReason,
+      };
+      this.nextSyncRejectionReason = null;
+      this.notify();
+      return this.copy(this.syncSummary);
+    }
     this.syncSummary = {
       status: "synced",
       pendingEventCount: 0,
@@ -176,6 +187,11 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   /** Development/test-only control. It is not part of the production gateway contract. */
   simulateNextSyncFailure(reason = "Connection interrupted. Try again when service returns."): void {
     this.nextSyncFailureReason = reason;
+  }
+
+  /** Development/test-only control. It is not part of the production gateway contract. */
+  simulateNextSyncRejection(reason = "A server review is required before this activity can be acknowledged."): void {
+    this.nextSyncRejectionReason = reason;
   }
 
   private ensureRecord(learnerId: string, moduleId: string): LearnerModuleRecord {

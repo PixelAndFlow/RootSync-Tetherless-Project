@@ -5,6 +5,8 @@ import type {
 } from "../../types/trainer";
 import type { TrainerDataGateway } from "./TrainerDataGateway";
 
+export type MockTrainerScenario = "default" | "empty_cohort" | "load_failure";
+
 const learners: TrainerModuleDetail[] = [{
   learnerId: "fixture-learner-001",
   displayName: "Alex Rivera",
@@ -114,11 +116,16 @@ const learners: TrainerModuleDetail[] = [{
 }];
 
 export class MockTrainerDataGateway implements TrainerDataGateway {
+  constructor(private readonly scenario: MockTrainerScenario = "default") {}
+
   async listLearners(): Promise<TrainerLearnerSummary[]> {
+    if (this.scenario === "load_failure") throw new Error("Trainer fixture load failed for scenario testing.");
+    if (this.scenario === "empty_cohort") return [];
     return this.copy(learners);
   }
 
   async getLearnerModuleDetail(learnerId: string, moduleId: string): Promise<TrainerModuleDetail> {
+    if (this.scenario === "load_failure") throw new Error("Trainer fixture load failed for scenario testing.");
     const learner = learners.find((candidate) => candidate.learnerId === learnerId && candidate.moduleId === moduleId);
     if (!learner) {
       throw new Error("Fixture learner/module record not found.");
@@ -127,6 +134,8 @@ export class MockTrainerDataGateway implements TrainerDataGateway {
   }
 
   async getModuleCohortSummary(moduleId: string): Promise<ModuleCohortSummary> {
+    if (this.scenario === "load_failure") throw new Error("Trainer fixture load failed for scenario testing.");
+    if (this.scenario === "empty_cohort") return { moduleId, moduleTitle: "No fixture module", learnerCount: 0, completedCount: 0, averageInitialScorePercent: 0, averageMasteryPercent: 0 };
     const cohort = learners.filter((learner) => learner.moduleId === moduleId);
     if (!cohort.length) throw new Error("Fixture module not found.");
     return this.copy({

@@ -24,6 +24,7 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - keyboard focus moves to answer feedback after selection and to the next question after navigation;
 - optional high-contrast and reduced-motion preferences that persist only on the current browser/device.
 - answer selection and feedback state exposed to assistive technology through accessible labels and live feedback.
+- a development-only “Reset local demo” control that clears the local learner profile without appearing in production builds.
 
 ### Trainer experience
 
@@ -39,7 +40,7 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - visual regression snapshots for five RCO representative mobile viewport profiles;
 - Windows GitHub Actions quality checks for content, translation coverage, tests, bundle size, and mobile browser regressions;
 - failure artifacts in GitHub Actions plus a manual workflow-dispatch option to capture candidate visual baselines for human approval;
-- a production bundle-size guardrail; the current bundle is approximately 550 KB, below the temporary 1 MB guardrail;
+- a production bundle-size guardrail; the current bundle is approximately 553 KB, below the temporary 1 MB guardrail;
 - PWA metadata, app icon, theme metadata, and browser-storage messaging.
 
 ## Important architecture boundary
@@ -81,10 +82,11 @@ Open the Vite URL shown in the terminal. The application uses hash routing, so l
 | `npm run report:spanish-coverage` | Reports Spanish Assist translation coverage without blocking English-first drafts. |
 | `npm run build` | Type-checks and creates a production build. |
 | `npm run check:bundle` | Checks the built asset size against the 1 MB temporary guardrail. Run after a build. |
+| `npm run check:performance` | Builds the app and checks gzip JavaScript/CSS budgets for mobile performance regressions. |
 | `npm run test:device` | Builds the app, checks bundle size, and runs Playwright mobile-browser tests. |
 | `npm run check:android-emulator` | Reports whether Android Studio's SDK, Emulator, and target AVDs are ready on this computer. |
 
-At the current project state, the suite includes 34 unit/regression tests (including 9 content-focused checks) and 60 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile. The published mission's Spanish Assist copy is currently 99/99 (100%) translated.
+At the current project state, the suite includes 37 unit/regression tests (including 9 content-focused checks) and 65 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile. The published mission's Spanish Assist copy is currently 99/99 (100%) translated.
 
 ## Device and browser coverage
 
@@ -160,3 +162,6 @@ docs/                  Handoff, integration, content, and design references
 - [Frontend integration checklist](docs/FRONTEND_INTEGRATION_CHECKLIST.md)
 - [Content authoring guide](docs/CONTENT_AUTHORING_GUIDE.md)
 - [Device emulator and real-device test plan](docs/DEVICE_EMULATOR_AND_REAL_DEVICE_TEST_PLAN.md)
+- [Frontend component catalog](docs/FRONTEND_COMPONENT_CATALOG.md)
+- [Frontend mock scenarios](docs/FRONTEND_MOCK_SCENARIOS.md)
+- [UX mockup comparison](docs/UX_MOCKUP_COMPARISON.md)
