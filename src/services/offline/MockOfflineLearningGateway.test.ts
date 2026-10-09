@@ -30,12 +30,23 @@ describe("MockOfflineLearningGateway", () => {
     expect(record?.engagement.earnedBadgeIds).toEqual(["recruit"]);
   });
 
-  it("publishes syncing and synced states for a manual sync", async () => {
+  it("publishes pending, syncing, and synced states for a manual sync", async () => {
     const gateway = new MockOfflineLearningGateway();
     const statuses: string[] = [];
     const unsubscribe = gateway.subscribeToSyncStatus((summary) => statuses.push(summary.status));
+    await gateway.startSession({ learnerId: "learner-1", deviceId: "device-1" });
     await gateway.requestSync();
     unsubscribe();
-    expect(statuses).toEqual(["synced", "syncing", "synced"]);
+    expect(statuses).toEqual(["synced", "pending", "syncing", "synced"]);
+  });
+
+  it("keeps queued events available when a sync needs retrying", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    await gateway.startSession({ learnerId: "learner-3", deviceId: "device-3" });
+    gateway.simulateNextSyncFailure("No connection");
+    const summary = await gateway.requestSync();
+    expect(summary.status).toBe("retryable_error");
+    expect(summary.pendingEventCount).toBe(1);
+    expect(summary.failureReason).toBe("No connection");
   });
 });

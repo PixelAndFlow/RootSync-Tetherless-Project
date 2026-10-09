@@ -26,14 +26,17 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   private readonly records = new Map<string, LearnerModuleRecord>();
   private readonly subscribers = new Set<(summary: SyncSummary) => void>();
   private syncSummary: SyncSummary = { status: "synced", pendingEventCount: 0 };
+  private nextSyncFailureReason: string | null = null;
 
   async startSession(input: StartSessionInput): Promise<SessionRecord> {
-    return {
+    const session = {
       id: crypto.randomUUID(),
       learnerId: input.learnerId,
       deviceId: input.deviceId,
       startedAt: new Date().toISOString(),
     };
+    this.queueLocalEvent();
+    return session;
   }
 
   async startAttempt(input: StartAttemptInput): Promise<AttemptRecord> {
@@ -50,6 +53,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     record.attempts.push(attempt);
     record.firstStartedAt ??= attempt.startedAt;
     record.completionStatus = "in_progress";
+    this.queueLocalEvent();
     return attempt;
   }
 
@@ -75,6 +79,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     } else {
       record.engagement.currentStreak = 0;
     }
+    this.queueLocalEvent();
   }
 
   async completeAttempt(input: CompleteAttemptInput): Promise<AttemptRecord> {
@@ -112,6 +117,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     }
     record.firstCompletedAt ??= attempt.completedAt;
     record.completionStatus = "completed";
+    this.queueLocalEvent();
     return attempt;
   }
 
@@ -139,6 +145,16 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   async requestSync(): Promise<SyncSummary> {
     this.syncSummary = { ...this.syncSummary, status: "syncing" };
     this.notify();
+    if (this.nextSyncFailureReason) {
+      this.syncSummary = {
+        ...this.syncSummary,
+        status: "retryable_error",
+        failureReason: this.nextSyncFailureReason,
+      };
+      this.nextSyncFailureReason = null;
+      this.notify();
+      return this.syncSummary;
+    }
     this.syncSummary = {
       status: "synced",
       pendingEventCount: 0,
@@ -152,6 +168,11 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     this.subscribers.add(callback);
     callback(this.syncSummary);
     return () => this.subscribers.delete(callback);
+  }
+
+  /** Development/test-only control. It is not part of the production gateway contract. */
+  simulateNextSyncFailure(reason = "Connection interrupted. Try again when service returns."): void {
+    this.nextSyncFailureReason = reason;
   }
 
   private ensureRecord(learnerId: string, moduleId: string): LearnerModuleRecord {
@@ -188,5 +209,14 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
 
   private notify(): void {
     this.subscribers.forEach((callback) => callback(this.syncSummary));
+  }
+
+  private queueLocalEvent(): void {
+    this.syncSummary = {
+      ...this.syncSummary,
+      status: "pending",
+      pendingEventCount: this.syncSummary.pendingEventCount + 1,
+    };
+    this.notify();
   }
 }

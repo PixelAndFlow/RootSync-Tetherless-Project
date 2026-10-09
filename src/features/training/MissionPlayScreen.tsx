@@ -9,8 +9,9 @@ import { SectorMap } from "../../components/gamification/SectorMap";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { offlineLearningGateway } from "../../services/gateways";
-import type { AttemptRecord, EngagementSummary, SyncSummary } from "../../types/learning";
+import type { AttemptRecord, EngagementSummary } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
+import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
 
 const presentationCopy: Record<string, string> = {
   kahoot_cards: "Quick check",
@@ -33,11 +34,10 @@ export function MissionPlayScreen() {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
-  const [syncSummary, setSyncSummary] = useState<SyncSummary>({ status: "synced", pendingEventCount: 0 });
   const [engagement, setEngagement] = useState<EngagementSummary>({ xp: 0, currentStreak: 0, bestStreak: 0, xpAwardedQuestionIds: [], completedSectorIds: [], earnedBadgeIds: [] });
   const startedFor = useRef<string | null>(null);
+  const { summary: syncSummary } = useSyncStatus();
 
-  useEffect(() => offlineLearningGateway.subscribeToSyncStatus(setSyncSummary), []);
   useEffect(() => {
     const attemptKey = profile ? `${profile.learnerId}:${module.module_id}` : null;
     if (!profile || startedFor.current === attemptKey) return;
