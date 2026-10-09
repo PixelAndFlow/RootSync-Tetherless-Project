@@ -84,6 +84,27 @@ export interface LearnerModuleRecord extends ModuleProgress {
   firstCompletedAt?: string;
   initialMissedQuestionIds: string[];
   masteredQuestionIds: string[];
+  engagement: EngagementSummary;
+}
+
+export interface EngagementSummary {
+  xp: number;
+  currentStreak: number;
+  bestStreak: number;
+  xpAwardedQuestionIds: string[];
+  completedSectorIds: string[];
+  earnedBadgeIds: string[];
+}
+
+export interface SectorMasteryAward {
+  sectorId: string;
+  questionIds: string[];
+  bonusXp: number;
+}
+
+export interface MissionMasteryAward {
+  badgeId?: string;
+  bonusXp: number;
 }
 
 export interface SyncSummary {
@@ -109,6 +130,7 @@ export interface SaveAnswerInput {
   moduleId: string;
   attemptId: string;
   answer: AnswerRecord;
+  xpAward: number;
 }
 
 export interface CompleteAttemptInput {
@@ -117,6 +139,8 @@ export interface CompleteAttemptInput {
   attemptId: string;
   questionsTotal: number;
   correctQuestionIds: string[];
+  sectorMasteryAwards?: SectorMasteryAward[];
+  missionMasteryAward?: MissionMasteryAward;
 }
 
 export interface StartRemediationInput {
