@@ -8,7 +8,7 @@ import { EngagementStrip } from "../../components/gamification/EngagementStrip";
 import { SectorMap } from "../../components/gamification/SectorMap";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { offlineLearningGateway } from "../../services/gateways";
+import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, EngagementSummary } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
@@ -29,6 +29,7 @@ export function MissionPlayScreen() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
   const { profile, setSpanishAssist } = useLearnerProfile();
+  const offlineLearningGateway = useOfflineLearningGateway();
   const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
