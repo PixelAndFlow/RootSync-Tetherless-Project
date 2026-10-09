@@ -35,8 +35,9 @@ export function MissionPlayScreen() {
 
   useEffect(() => offlineLearningGateway.subscribeToSyncStatus(setSyncSummary), []);
   useEffect(() => {
-    if (!profile || startedFor.current === profile.learnerId) return;
-    startedFor.current = profile.learnerId;
+    const attemptKey = profile ? `${profile.learnerId}:${module.module_id}` : null;
+    if (!profile || startedFor.current === attemptKey) return;
+    startedFor.current = attemptKey;
     void Promise.all([
       offlineLearningGateway.startSession({ learnerId: profile.learnerId, deviceId: profile.deviceId }),
       offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, kind: "full" }),
@@ -68,6 +69,21 @@ export function MissionPlayScreen() {
 
   const move = (nextIndex: number) => setIndex(Math.max(0, Math.min(module.questions.length - 1, nextIndex)));
 
+  const finishAttempt = async () => {
+    if (!attempt) return;
+    const correctQuestionIds = module.questions
+      .filter((candidate) => answers[candidate.id] === candidate.correct_choice)
+      .map((candidate) => candidate.id);
+    await offlineLearningGateway.completeAttempt({
+      learnerId: profile.learnerId,
+      moduleId: module.module_id,
+      attemptId: attempt.id,
+      questionsTotal: module.questions.length,
+      correctQuestionIds,
+    });
+    navigate(`/learner/missions/${module.module_id}/results`);
+  };
+
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-2xl shadow-black/25">
@@ -81,7 +97,7 @@ export function MissionPlayScreen() {
             <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} index={choiceIndex} isCorrect={choice.id === question.correct_choice} key={choice.id} onChoose={() => chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
             {revealed[question.id] && <div className={`mt-5 rounded-xl border p-4 text-sm leading-6 ${answerIsCorrect ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-50" : "border-rose-300/30 bg-rose-300/10 text-rose-50"}`}><p className="font-bold">{answerIsCorrect ? "Correct — mission insight saved locally." : "Not quite — review the mission insight."}</p><p className="mt-1">{question.feedback.en}</p>{profile.spanishAssist && question.feedback.es && <p className="mt-2 text-current/75">{question.feedback.es}</p>}</div>}
           </article>
-          <div className="mt-6 flex items-center justify-between gap-3"><button className="rounded-xl border border-white/15 px-4 py-3 text-sm font-bold text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30" disabled={index === 0} onClick={() => move(index - 1)} type="button">← Previous</button>{index === module.questions.length - 1 ? <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={checkedCount !== module.questions.length} onClick={() => navigate(`/learner/missions/${module.module_id}/results`)} type="button">View mission debrief</button> : <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={!revealed[question.id]} onClick={() => move(index + 1)} type="button">Next question →</button>}</div>
+          <div className="mt-6 flex items-center justify-between gap-3"><button className="rounded-xl border border-white/15 px-4 py-3 text-sm font-bold text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30" disabled={index === 0} onClick={() => move(index - 1)} type="button">← Previous</button>{index === module.questions.length - 1 ? <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={checkedCount !== module.questions.length || !attempt} onClick={() => void finishAttempt()} type="button">View mission debrief</button> : <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={!revealed[question.id]} onClick={() => move(index + 1)} type="button">Next question →</button>}</div>
         </div>
       </div>
       <aside className="rounded-3xl border border-white/10 bg-panel p-5 lg:sticky lg:top-24 lg:h-fit"><div className="flex items-center justify-between"><div><h2 className="font-bold">Mission navigation</h2><p className="mt-1 text-xs leading-5 text-slate-400">Jump between checked questions.</p></div><span className="text-xs font-bold text-cyan-200">{checkedCount}/{module.questions.length}</span></div><div className="mt-5 grid grid-cols-5 gap-2">{module.questions.map((candidate, candidateIndex) => <button aria-label={`Question ${candidateIndex + 1}`} className={`relative h-10 rounded-lg border text-xs font-bold transition ${candidateIndex === index ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : revealed[candidate.id] ? "border-violet-300/40 bg-violet-300/10 text-violet-100" : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/25"}`} key={candidate.id} onClick={() => move(candidateIndex)} type="button">{candidateIndex + 1}{flagged[candidate.id] && <span className="absolute right-1 top-0.5 text-amber-200">•</span>}</button>)}</div><div className="mt-5 border-t border-white/10 pt-5"><StatusChip status={syncSummary.status} /><p className="mt-3 text-xs leading-5 text-slate-400">Your answers are captured through the temporary learning gateway. DDIL persistence and real synchronization will replace this adapter later.</p></div></aside>

@@ -69,16 +69,30 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     const attempt = this.findAttempt(record, input.attemptId);
     attempt.status = "completed";
     attempt.completedAt = new Date().toISOString();
-    attempt.initialCorrectCount = input.initialCorrectCount;
-    attempt.initialScorePercent = input.initialScorePercent;
-    record.initialScorePercent ??= input.initialScorePercent;
+    const scorePercent = Number(((input.correctQuestionIds.length / input.questionsTotal) * 100).toFixed(1));
+    attempt.initialCorrectCount = input.correctQuestionIds.length;
+    attempt.initialScorePercent = scorePercent;
+    record.questionsTotal = input.questionsTotal;
+    record.questionsAnswered = Math.max(record.questionsAnswered, attempt.answers.length);
+    const mastered = new Set([...record.masteredQuestionIds, ...input.correctQuestionIds]);
+    record.masteredQuestionIds = [...mastered];
+    record.currentMasteryPercent = Number(((record.masteredQuestionIds.length / input.questionsTotal) * 100).toFixed(1));
+    record.stillUnmasteredCount = Math.max(0, input.questionsTotal - record.masteredQuestionIds.length);
+    if (attempt.kind === "full" && record.initialScorePercent === undefined) {
+      record.initialScorePercent = scorePercent;
+      record.initialMissedQuestionIds = attempt.answers
+        .filter((answer) => !answer.isCorrect)
+        .map((answer) => answer.questionId);
+    }
     record.firstCompletedAt ??= attempt.completedAt;
     record.completionStatus = "completed";
     return attempt;
   }
 
   async startRemediation(input: StartRemediationInput): Promise<AttemptRecord> {
-    return this.startAttempt({ ...input, kind: "remediation" });
+    const attempt = await this.startAttempt({ ...input, kind: "remediation" });
+    attempt.questionIds = input.questionIds;
+    return attempt;
   }
 
   async getModuleProgress(learnerId: string, moduleId: string): Promise<ModuleProgress> {
@@ -118,7 +132,12 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     const key = this.key(learnerId, moduleId);
     const existing = this.records.get(key);
     if (existing) return existing;
-    const record: LearnerModuleRecord = { ...defaultProgress(learnerId, moduleId), attempts: [] };
+    const record: LearnerModuleRecord = {
+      ...defaultProgress(learnerId, moduleId),
+      attempts: [],
+      initialMissedQuestionIds: [],
+      masteredQuestionIds: [],
+    };
     this.records.set(key, record);
     return record;
   }
