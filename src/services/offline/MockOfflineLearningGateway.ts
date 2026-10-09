@@ -36,7 +36,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       startedAt: new Date().toISOString(),
     };
     this.queueLocalEvent();
-    return session;
+    return this.copy(session);
   }
 
   async startAttempt(input: StartAttemptInput): Promise<AttemptRecord> {
@@ -54,7 +54,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     record.firstStartedAt ??= attempt.startedAt;
     record.completionStatus = "in_progress";
     this.queueLocalEvent();
-    return attempt;
+    return this.copy(attempt);
   }
 
   async saveAnswer(input: SaveAnswerInput): Promise<void> {
@@ -118,28 +118,31 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     record.firstCompletedAt ??= attempt.completedAt;
     record.completionStatus = "completed";
     this.queueLocalEvent();
-    return attempt;
+    return this.copy(attempt);
   }
 
   async startRemediation(input: StartRemediationInput): Promise<AttemptRecord> {
-    const attempt = await this.startAttempt({ ...input, kind: "remediation" });
-    attempt.questionIds = input.questionIds;
-    return attempt;
+    const startedAttempt = await this.startAttempt({ ...input, kind: "remediation" });
+    const record = this.ensureRecord(input.learnerId, input.moduleId);
+    const attempt = this.findAttempt(record, startedAttempt.id);
+    attempt.questionIds = [...input.questionIds];
+    return this.copy(attempt);
   }
 
   async getModuleProgress(learnerId: string, moduleId: string): Promise<ModuleProgress> {
-    return this.records.get(this.key(learnerId, moduleId)) ?? defaultProgress(learnerId, moduleId);
+    return this.copy(this.records.get(this.key(learnerId, moduleId)) ?? defaultProgress(learnerId, moduleId));
   }
 
   async getLearnerModuleRecord(
     learnerId: string,
     moduleId: string,
   ): Promise<LearnerModuleRecord | null> {
-    return this.records.get(this.key(learnerId, moduleId)) ?? null;
+    const record = this.records.get(this.key(learnerId, moduleId));
+    return record ? this.copy(record) : null;
   }
 
   async getSyncSummary(): Promise<SyncSummary> {
-    return this.syncSummary;
+    return this.copy(this.syncSummary);
   }
 
   async requestSync(): Promise<SyncSummary> {
@@ -153,7 +156,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       };
       this.nextSyncFailureReason = null;
       this.notify();
-      return this.syncSummary;
+      return this.copy(this.syncSummary);
     }
     this.syncSummary = {
       status: "synced",
@@ -161,12 +164,12 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
       lastSyncedAt: new Date().toISOString(),
     };
     this.notify();
-    return this.syncSummary;
+    return this.copy(this.syncSummary);
   }
 
   subscribeToSyncStatus(callback: (summary: SyncSummary) => void): () => void {
     this.subscribers.add(callback);
-    callback(this.syncSummary);
+    callback(this.copy(this.syncSummary));
     return () => this.subscribers.delete(callback);
   }
 
@@ -208,15 +211,20 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   }
 
   private notify(): void {
-    this.subscribers.forEach((callback) => callback(this.syncSummary));
+    this.subscribers.forEach((callback) => callback(this.copy(this.syncSummary)));
   }
 
   private queueLocalEvent(): void {
+    const { failureReason: _failureReason, ...priorSummary } = this.syncSummary;
     this.syncSummary = {
-      ...this.syncSummary,
+      ...priorSummary,
       status: "pending",
       pendingEventCount: this.syncSummary.pendingEventCount + 1,
     };
     this.notify();
+  }
+
+  private copy<T>(value: T): T {
+    return structuredClone(value);
   }
 }
