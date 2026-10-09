@@ -57,6 +57,7 @@ export interface AttemptRecord {
   answers: AnswerRecord[];
   initialCorrectCount?: number;
   initialScorePercent?: number;
+  questionIds?: string[];
 }
 
 export interface SessionRecord {
@@ -81,6 +82,8 @@ export interface LearnerModuleRecord extends ModuleProgress {
   attempts: AttemptRecord[];
   firstStartedAt?: string;
   firstCompletedAt?: string;
+  initialMissedQuestionIds: string[];
+  masteredQuestionIds: string[];
 }
 
 export interface SyncSummary {
@@ -112,11 +115,12 @@ export interface CompleteAttemptInput {
   learnerId: string;
   moduleId: string;
   attemptId: string;
-  initialCorrectCount: number;
-  initialScorePercent: number;
+  questionsTotal: number;
+  correctQuestionIds: string[];
 }
 
 export interface StartRemediationInput {
   learnerId: string;
   moduleId: string;
+  questionIds: string[];
 }
