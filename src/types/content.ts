@@ -49,6 +49,26 @@ export interface ModuleSettings {
   allow_full_review?: boolean;
 }
 
+export interface MissionSector {
+  id: string;
+  order: number;
+  name: LocalizedText;
+  icon?: string;
+  question_ids: string[];
+  mastery_bonus_xp?: number;
+}
+
+export interface GamificationConfig {
+  mode?: string;
+  mission_name?: LocalizedText;
+  mission_badge?: Choice;
+  sectors?: MissionSector[];
+  xp?: Record<string, unknown>;
+  streak?: Record<string, unknown>;
+  cyber_shield?: Record<string, unknown>;
+  excluded_mechanics?: Record<string, string>;
+}
+
 export interface TetherlessModule {
   schema_version: string;
   module_id: string;
@@ -63,6 +83,6 @@ export interface TetherlessModule {
   questions: Question[];
   brand?: Record<string, unknown>;
   tracking_policy?: Record<string, unknown>;
-  gamification?: Record<string, unknown>;
+  gamification?: GamificationConfig;
   trainer_reporting?: Record<string, unknown>;
 }
