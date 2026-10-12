@@ -15,11 +15,12 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - learner profile setup with local browser storage;
 - JSON-driven `Operation Cyber Squad` beginner mission with 15 questions;
 - mission library and mission briefing;
-- immediate answer feedback, Spanish Assist, progress, flagged questions, question navigation, and mobile touch targets;
+- gateway-aware answer saving: feedback appears only after the current gateway confirms the save, with a learner-safe retry message on failure;
+- Spanish Assist, progress, flagged questions, question navigation, and mobile touch targets;
 - mockup-aligned color-coded answer cards, with clear selected, correct, and incorrect states;
 - first-attempt score preservation, remediation, current mastery, full retry, and review flows;
 - engagement-only XP, streaks, sector checkpoints, Cyber Shield, and mission badge;
-- clear offline, pending, syncing, synced, retryable-error, and rejected status UI;
+- clear local-save, offline, pending, syncing, synced, retryable-error, and rejected status UI;
 - route fallback/error states for broken or unavailable links;
 - keyboard focus moves to answer feedback after selection and to the next question after navigation;
 - optional high-contrast and reduced-motion preferences that persist only on the current browser/device.
@@ -40,7 +41,7 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - visual regression snapshots for five RCO representative mobile viewport profiles;
 - Windows GitHub Actions quality checks for content, translation coverage, tests, bundle size, and mobile browser regressions;
 - failure artifacts in GitHub Actions plus a manual workflow-dispatch option to capture candidate visual baselines for human approval;
-- a production bundle-size guardrail; the current bundle is approximately 553 KB, below the temporary 1 MB guardrail;
+- a production bundle-size guardrail; the current bundle is approximately 404 KB, below the temporary 1 MB guardrail;
 - PWA metadata, app icon, theme metadata, and browser-storage messaging.
 
 ## Important architecture boundary
@@ -86,7 +87,7 @@ Open the Vite URL shown in the terminal. The application uses hash routing, so l
 | `npm run test:device` | Builds the app, checks bundle size, and runs Playwright mobile-browser tests. |
 | `npm run check:android-emulator` | Reports whether Android Studio's SDK, Emulator, and target AVDs are ready on this computer. |
 
-At the current project state, the suite includes 37 unit/regression tests (including 9 content-focused checks) and 65 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile. The published mission's Spanish Assist copy is currently 99/99 (100%) translated.
+At the current project state, the suite includes 41 unit/regression tests (including 9 content-focused checks) and 65 mobile-browser checks. The complete learner-record workflow runs on the minimum Android profile; its four duplicate profile runs are intentionally skipped while the core checks run on every profile. The published mission's Spanish Assist copy is currently 99/99 (100%) translated.
 
 ## Device and browser coverage
 
@@ -157,6 +158,7 @@ docs/                  Handoff, integration, content, and design references
 ## Useful references
 
 - [Frontend handoff](docs/CODEX_FRONTEND_HANDOFF.md)
+- [Build ownership and integration contract](docs/BUILD_OWNERSHIP_AND_INTEGRATION_CONTRACT.md)
 - [Build reference](docs/App_Build_Complete_Reference.md)
 - [Integration boundary](docs/FRONTEND_INTEGRATION_BOUNDARY.md)
 - [Frontend integration checklist](docs/FRONTEND_INTEGRATION_CHECKLIST.md)

@@ -6,6 +6,7 @@ The current adapters remain mock-only. These controlled scenarios let the fronte
 | --- | --- | --- |
 | Retryable sync failure | `simulateNextSyncFailure(reason)` | Show retry guidance; keep queued activity and the local record. |
 | Rejected sync | `simulateNextSyncRejection(reason)` | Show review guidance; keep queued activity and never delete learning data. |
+| Failed answer save | `simulateNextSaveFailure(reason)` | Do not reveal answer feedback; keep the question available and show a retry message. |
 | Empty trainer cohort | `new MockTrainerDataGateway("empty_cohort")` | Show zero values and the trainer no-results state safely. |
 | Trainer fixture failure | `new MockTrainerDataGateway("load_failure")` | Show the shared error state with a safe return route. |
 | Unknown attempt | Existing mock gateway validation | Reject the operation rather than create or alter an unrelated attempt. |

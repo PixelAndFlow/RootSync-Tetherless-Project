@@ -37,6 +37,8 @@ export function MissionPlayScreen() {
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
   const [engagement, setEngagement] = useState<EngagementSummary>({ xp: 0, currentStreak: 0, bestStreak: 0, xpAwardedQuestionIds: [], completedSectorIds: [], earnedBadgeIds: [] });
+  const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const startedFor = useRef<string | null>(null);
   const missionRef = useRef<HTMLElement | null>(null);
   const focusedFeedbackQuestionId = useRef<string | null>(null);
@@ -79,13 +81,14 @@ export function MissionPlayScreen() {
   const answerIsCorrect = selectedChoice === question.correct_choice;
   const completionPercent = ((index + 1) / module.questions.length) * 100;
   const checkedCount = Object.keys(revealed).length;
+  const isSavingAnswer = savingQuestionId === question.id;
 
   const chooseAnswer = async (choiceId: string) => {
-    if (revealed[question.id]) return;
+    if (revealed[question.id] || savingQuestionId || !attempt) return;
     const isCorrect = choiceId === question.correct_choice;
-    setAnswers((current) => ({ ...current, [question.id]: choiceId }));
-    setRevealed((current) => ({ ...current, [question.id]: true }));
-    if (attempt) {
+    setSavingQuestionId(question.id);
+    setSaveError(null);
+    try {
       await offlineLearningGateway.saveAnswer({
         learnerId: profile.learnerId,
         moduleId: module.module_id,
@@ -93,8 +96,14 @@ export function MissionPlayScreen() {
         answer: { questionId: question.id, selectedChoiceId: choiceId, isCorrect, answeredAt: new Date().toISOString() },
         xpAward: awards.questionXp,
       });
+      setAnswers((current) => ({ ...current, [question.id]: choiceId }));
+      setRevealed((current) => ({ ...current, [question.id]: true }));
       const updatedRecord = await offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id);
       if (updatedRecord) setEngagement(updatedRecord.engagement);
+    } catch {
+      setSaveError("Your answer was not saved. Please choose an answer again.");
+    } finally {
+      setSavingQuestionId(null);
     }
   };
 
@@ -128,7 +137,9 @@ export function MissionPlayScreen() {
         <div className="p-5 sm:p-7">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-100">{presentationCopy[question.presentation] ?? "Mission question"}</span><button className={`text-sm font-semibold ${flagged[question.id] ? "text-amber-200" : "text-slate-400 hover:text-slate-200"}`} onClick={() => setFlagged((current) => ({ ...current, [question.id]: !current[question.id] }))} type="button">⚑ {flagged[question.id] ? "Flagged" : "Flag question"}</button></div>
           <article className={`rounded-2xl border bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-5 sm:p-6 ${question.presentation === "boss_question" ? "border-amber-300/40" : "border-white/10"}`}><h2 className="text-xl font-bold leading-8 sm:text-2xl">{question.prompt.en}</h2>{profile.spanishAssist && question.prompt.es && <p className="mt-3 text-base leading-7 text-slate-400">{question.prompt.es}</p>}{question.scenario && <div className="mt-5 rounded-xl border border-violet-300/20 bg-violet-400/10 p-4"><p className="text-sm font-semibold text-violet-100">{question.scenario.en}</p>{profile.spanishAssist && question.scenario.es && <p className="mt-2 text-sm text-violet-200/70">{question.scenario.es}</p>}</div>}
-            <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} index={choiceIndex} isCorrect={choice.id === question.correct_choice} key={choice.id} onChoose={() => void chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
+            <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} disabled={Boolean(savingQuestionId)} index={choiceIndex} isCorrect={choice.id === question.correct_choice} key={choice.id} onChoose={() => void chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
+            {isSavingAnswer && <p aria-live="polite" className="mt-4 text-sm text-cyan-100">Saving your answer locally...</p>}
+            {saveError && <p aria-live="assertive" className="mt-4 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm text-rose-100">{saveError}</p>}
             {revealed[question.id] && <div aria-live="polite" className={`mt-5 rounded-xl border p-4 text-sm leading-6 ${answerIsCorrect ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-50" : "border-rose-300/30 bg-rose-300/10 text-rose-50"}`}><p className="font-bold">{answerIsCorrect ? "Correct — mission insight saved locally." : "Not quite — review the mission insight."}</p><p className="mt-1">{question.feedback.en}</p>{profile.spanishAssist && question.feedback.es && <p className="mt-2 text-current/75">{question.feedback.es}</p>}</div>}
           </article>
           <div className="mt-6 flex items-center justify-between gap-3"><button className="rounded-xl border border-white/15 px-4 py-3 text-sm font-bold text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30" disabled={index === 0} onClick={() => move(index - 1)} type="button">← Previous</button>{index === module.questions.length - 1 ? <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={checkedCount !== module.questions.length || !attempt} onClick={() => void finishAttempt()} type="button">View mission debrief</button> : <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={!revealed[question.id]} onClick={() => move(index + 1)} type="button">Next question →</button>}</div>

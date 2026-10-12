@@ -9,7 +9,7 @@ This catalog documents the reusable frontend pieces that future screens should u
 | `ui-eyebrow` | Small section label | Decorative context only; pair it with a meaningful heading. |
 | `PageState` | Loading, empty, and error states | Loading uses polite status; error uses assertive status and safe return action. |
 | `StatusChip` | Learner-friendly sync state | Uses a live status region; never expose queue IDs or backend internals. |
-| `AnswerCard` | Learner answer choice | Color plus text/state; exposes selected, correct, and incorrect state to assistive technology. |
+| `AnswerCard` | Learner answer choice | Color plus text/state; exposes selected, correct, and incorrect state to assistive technology; supports a disabled saving state to prevent duplicate submissions. |
 | `DisplayPreferences` | High contrast and reduced motion | Persists only in the local learner profile and never affects scores. |
 | `StorageStatusCard` | Browser storage estimate | Must not promise durable offline persistence before DDIL storage is implemented. |
 

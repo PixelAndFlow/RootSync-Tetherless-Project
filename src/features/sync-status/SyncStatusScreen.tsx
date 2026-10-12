@@ -3,10 +3,10 @@ import { StatusChip } from "../../components/common/StatusChip";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
 
 const stateCopy = {
-  offline: { title: "You are offline. Your learning is safe on this device.", detail: "Keep working normally. New activity will wait here until a connection returns." },
+  offline: { title: "You are offline. Your learning is saved locally.", detail: "Keep working normally. New activity will wait here until a connection returns." },
   pending: { title: "Your latest learning is saved locally.", detail: "It is waiting for a safe connection before it uploads to RCO." },
-  syncing: { title: "Syncing your saved learning activity…", detail: "Keep this screen open until the status changes to Synced." },
-  synced: { title: "Your learning record is synced.", detail: "RCO can receive the latest acknowledged activity from this device." },
+  syncing: { title: "Your saved learning is syncing.", detail: "Your activity remains saved locally while RCO receives the latest acknowledged activity." },
+  synced: { title: "Your learning record is synced with RCO.", detail: "RCO has acknowledged the latest activity from this device." },
   retryable_error: { title: "Sync could not finish yet.", detail: "Your work remains saved locally. Retry when a connection is stable." },
   rejected: { title: "A saved activity needs review.", detail: "Your work remains protected locally; the team can inspect the issue without deleting it." },
 };

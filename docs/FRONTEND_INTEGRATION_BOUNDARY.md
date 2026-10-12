@@ -20,6 +20,7 @@ mock adapters today / agreed production adapters later
 
 - `MockOfflineLearningGateway` supplies local demo learning, score, mastery, engagement, and sync-status behavior.
 - `MockTrainerDataGateway` supplies de-identified trainer fixture data.
+- Answer feedback is committed in the UI only after `OfflineLearningGateway.saveAnswer()` resolves; save failures leave the question available for retry.
 - No component calls an API, database, IndexedDB, Dexie, service worker, or outbox directly.
 - The default adapters remain mocks until the team explicitly supplies replacements at the app boundary.
 

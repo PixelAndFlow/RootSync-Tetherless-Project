@@ -26,6 +26,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   private readonly records = new Map<string, LearnerModuleRecord>();
   private readonly subscribers = new Set<(summary: SyncSummary) => void>();
   private syncSummary: SyncSummary = { status: "synced", pendingEventCount: 0 };
+  private nextSaveFailureReason: string | null = null;
   private nextSyncFailureReason: string | null = null;
   private nextSyncRejectionReason: string | null = null;
 
@@ -59,6 +60,11 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   }
 
   async saveAnswer(input: SaveAnswerInput): Promise<void> {
+    if (this.nextSaveFailureReason) {
+      const reason = this.nextSaveFailureReason;
+      this.nextSaveFailureReason = null;
+      throw new Error(reason);
+    }
     const record = this.ensureRecord(input.learnerId, input.moduleId);
     const attempt = this.findAttempt(record, input.attemptId);
     const previousIndex = attempt.answers.findIndex(
@@ -182,6 +188,11 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     this.subscribers.add(callback);
     callback(this.copy(this.syncSummary));
     return () => this.subscribers.delete(callback);
+  }
+
+  /** Development/test-only control. It is not part of the production gateway contract. */
+  simulateNextSaveFailure(reason = "Your answer could not be saved locally. Please try again."): void {
+    this.nextSaveFailureReason = reason;
   }
 
   /** Development/test-only control. It is not part of the production gateway contract. */

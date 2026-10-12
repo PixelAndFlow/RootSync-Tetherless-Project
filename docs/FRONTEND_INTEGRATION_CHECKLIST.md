@@ -8,6 +8,7 @@ This checklist keeps the frontend safe to integrate while the DDIL and backend c
 2. Confirm the event payload for starting, answering, completing, and practicing a mission. Include an event ID, timestamp, device ID, module content version, and a retry/idempotency strategy.
 3. Confirm which server response is authoritative when two devices have unsynced work. The interface must be able to show `pending`, `synced`, `conflict`, and `needs attention` without silently overwriting a learner record.
 4. Keep learner results and operational data out of browser console output, fixture files, screenshots, and Git commits.
+5. Preserve the frontend save rule: `saveAnswer()` resolves only after the DDIL layer has completed its durable local write. Until it resolves, the learner UI must prevent duplicate answer submissions and must not claim the answer is saved.
 
 ## Naquan — DDIL/offline boundary
 
@@ -35,6 +36,8 @@ npm run test:device
 ```
 
 Then manually test one complete learner flow, an unknown mission link, an offline/reconnect transition, keyboard-only navigation, display preferences, and trainer empty/filter states.
+
+For answer saving, also confirm that a delayed save disables duplicate answer choices, a rejected save leaves the question available to retry, and success feedback appears only after the gateway resolves.
 
 ## Current deliberate non-goals
 
