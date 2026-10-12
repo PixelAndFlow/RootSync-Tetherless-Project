@@ -13,4 +13,14 @@ describe("AnswerCard", () => {
     expect(screen.getByText("Equipo Azul")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /blue team\./i })).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("prevents selection while a local save is in progress", async () => {
+    const user = userEvent.setup();
+    const onChoose = vi.fn();
+    render(<AnswerCard choice={{ id: "A", en: "Blue Team" }} disabled index={0} isCorrect={false} onChoose={onChoose} revealed={false} selected={false} spanishAssist={false} />);
+    const answer = screen.getByRole("button", { name: /blue team/i });
+    expect(answer).toBeDisabled();
+    await user.click(answer);
+    expect(onChoose).not.toHaveBeenCalled();
+  });
 });

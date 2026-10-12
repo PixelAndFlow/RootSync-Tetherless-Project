@@ -50,6 +50,17 @@ describe("MockOfflineLearningGateway", () => {
     expect(summary.failureReason).toBe("No connection");
   });
 
+  it("fails one requested answer save without changing the learning record", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const attempt = await gateway.startAttempt({ learnerId: "learner-save-failure", moduleId: "module-save-failure", kind: "full" });
+    gateway.simulateNextSaveFailure("Storage is temporarily unavailable");
+
+    await expect(gateway.saveAnswer({ learnerId: "learner-save-failure", moduleId: "module-save-failure", attemptId: attempt.id, xpAward: 10, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-11T00:00:00.000Z" } })).rejects.toThrow("Storage is temporarily unavailable");
+
+    const record = await gateway.getLearnerModuleRecord("learner-save-failure", "module-save-failure");
+    expect(record?.attempts[0].answers).toEqual([]);
+  });
+
   it("keeps queued events protected when a sync is rejected for review", async () => {
     const gateway = new MockOfflineLearningGateway();
     await gateway.startSession({ learnerId: "learner-rejected", deviceId: "device-rejected" });

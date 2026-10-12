@@ -4,12 +4,12 @@ import { StatusChip } from "./StatusChip";
 import type { SyncStatus } from "../../types/learning";
 
 const expectedCopy: Record<SyncStatus, string> = {
-  offline: "Offline · saved locally",
-  pending: "Waiting to sync",
-  syncing: "Syncing",
-  synced: "Saved locally",
-  retryable_error: "Sync retry available",
-  rejected: "Sync needs review",
+  offline: "Offline - saved locally",
+  pending: "Saved locally - waiting to sync",
+  syncing: "Saved locally - syncing",
+  synced: "Synced with RCO",
+  retryable_error: "Saved locally - retry sync",
+  rejected: "Saved locally - needs review",
 };
 
 describe("StatusChip", () => {
