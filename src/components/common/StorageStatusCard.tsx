@@ -28,5 +28,5 @@ export function StorageStatusCard() {
       ? "This browser does not report a storage estimate. Keep important work synced when a connection is available."
       : `Used by this site: ${formatMegabytes(storage.usage)}. Browser-reported quota: ${formatMegabytes(storage.quota)}.`;
 
-  return <aside aria-live="polite" className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-5"><p className="text-xs font-bold uppercase tracking-wider text-cyan-100">Device storage check</p><p className="mt-2 text-sm leading-6 text-slate-300">{detail}</p><p className="mt-3 text-xs leading-5 text-slate-400">Install metadata is ready. Offline caching and persistent learner storage will be enabled only with the agreed DDIL adapter.</p></aside>;
+  return <aside aria-live="polite" className="app-storage-status mt-4 rounded-2xl border p-5"><p className="text-xs font-bold uppercase tracking-wider">Device storage check</p><p className="mt-2 text-sm leading-6 text-slate-300">{detail}</p><p className="mt-3 text-xs leading-5 text-slate-400">Install metadata is ready. Offline caching and persistent learner storage will be enabled only with the agreed DDIL adapter.</p></aside>;
 }
