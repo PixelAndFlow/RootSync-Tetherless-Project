@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Tetherless API
+  version: 1.0.0
+  description: |
+    TRIAL RUN (2026-10-15), not adopted; pending team review.
+    Sync and trainer API for Tetherless. Event shapes and validation rules are
+    defined in packages/contract/src/index.ts; this file describes the HTTP surface.
+servers:
+  - url: http://localhost:8080
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: Opaque device token returned once by POST /v1/enroll. Never expires on a timer; can be revoked.
+    trainerSession:
+      type: http
+      scheme: bearer
+      description: Trainer session token from POST /v1/trainer/login (12 hours by default).
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, examples: [INVALID_CODE, USERNAME_TAKEN, UNAUTHORIZED] }
+            message: { type: string }
+    LocalizedText:
+      type: object
+      required: [en]
+      properties: { en: { type: string }, es: { type: string } }
+    Event:
+      type: object
+      description: One of the eight event types in packages/contract. Unknown fields are rejected.
+      required: [event_id, schema_version, event_type, device_id, device_seq, occurred_at, session_id, monotonic_ms, payload]
+      properties:
+        event_id: { type: string, format: uuid }
+        schema_version: { const: 1 }
+        event_type:
+          enum: [session_started, visibility_changed, heartbeat, session_ended, attempt_started, answer_submitted, attempt_completed, attempt_abandoned]
+        device_id: { type: string, format: uuid }
+        device_seq: { type: integer, minimum: 1 }
+        occurred_at: { type: string, format: date-time, description: Phone clock; advisory only. }
+        session_id: { type: string, format: uuid }
+        monotonic_ms: { type: number, minimum: 0, description: Milliseconds since session_started (performance.now()). }
+        module_id: { type: string, description: Attempt events only. }
+        content_version: { type: integer, description: Attempt events only. }
+        attempt_id: { type: string, format: uuid, description: Attempt events only. }
+        question_id: { type: string, description: answer_submitted only. }
+        payload: { type: object }
+    EventResult:
+      type: object
+      required: [event_id, status]
+      properties:
+        event_id: { type: [string, "null"] }
+        status: { enum: [accepted, duplicate, retryable_error, rejected] }
+        code:
+          enum: [INVALID_EVENT, UNSUPPORTED_SCHEMA_VERSION, DEVICE_MISMATCH, UNKNOWN_MODULE, UNKNOWN_QUESTION, UNKNOWN_CHOICE, EVENT_ID_CONFLICT, SERVER_BUSY]
+        message: { type: string }
+    Score:
+      type: object
+      properties: { correct: { type: integer }, total: { type: integer }, pct: { type: number } }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      responses: { "200": { description: OK } }
+  /v1/content/modules:
+    get:
+      summary: Latest published version of each module
+      responses: { "200": { description: Module summaries } }
+  /v1/content/modules/{module_id}/versions/{content_version}:
+    get:
+      summary: Full module JSON (canonical content format, answer keys included for offline scoring)
+      parameters:
+        - { name: module_id, in: path, required: true, schema: { type: string } }
+        - { name: content_version, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Module }
+        "404": { $ref: "#/components/responses/Error" }
+  /v1/enroll:
+    post:
+      summary: Enroll a learner's phone with a cohort code, or move a learner to a new phone with a re-link code
+      description: Rate limited per client address. The device token is returned once and stored by the server only as a SHA-256 hash.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, username, device_id]
+              properties:
+                name: { type: string, maxLength: 80 }
+                username: { type: string, pattern: "^[a-z0-9][a-z0-9._-]{2,31}$", description: Lower-cased by the server; unique within the cohort. }
+                device_id: { type: string, format: uuid }
+                enrollment_code: { type: string, description: Case-insensitive. Send this or relink_code. }
+                relink_code: { type: string, description: One-time code from a trainer; username must match. }
+      responses:
+        "201":
+          description: Enrolled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  learner_id: { type: string, format: uuid }
+                  device_id: { type: string, format: uuid }
+                  device_token: { type: string }
+                  cohort: { type: object, properties: { cohort_id: { type: string }, name: { type: string } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { description: "USERNAME_TAKEN or DEVICE_EXISTS", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "422": { description: INVALID_CODE (unknown, expired, revoked or used up), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { description: Rate limited; see Retry-After }
+  /v1/sync/events:
+    post:
+      summary: Send a batch of events; get a result for each one
+      description: |
+        Authentication happens before anything is read or stored. Safe to repeat:
+        an event already stored returns "duplicate". The phone marks accepted and
+        duplicate events Synced, retries retryable_error with the same event_id,
+        and keeps rejected events (never retried; they appear in exports).
+      security: [{ deviceToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schema_version, events]
+              properties:
+                schema_version: { const: 1 }
+                events: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/Event" } }
+      responses:
+        "200":
+          description: Per-event results, in the same order as the request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema_version: { const: 1 }
+                  received_at: { type: string, format: date-time }
+                  results: { type: array, items: { $ref: "#/components/schemas/EventResult" } }
+        "400": { description: Not JSON, no events array, or unsupported schema_version; nothing stored }
+        "401": { description: Missing, unknown or revoked device token; nothing stored. Keep events (blocked_auth). }
+        "413": { description: Over 512 KB or over 200 events; split the batch }
+        "429": { description: Retry after Retry-After }
+        "5XX": { description: Retry everything later with the same event_ids }
+  /v1/trainer/login:
+    post:
+      summary: Trainer sign-in (accounts are created by the server admin; no self-signup)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [username, password], properties: { username: { type: string }, password: { type: string } } }
+      responses:
+        "200": { description: "{ token, expires_at, trainer }" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { description: Rate limited }
+  /v1/trainer/logout:
+    post:
+      security: [{ trainerSession: [] }]
+      responses: { "200": { description: Signed out } }
+  /v1/trainer/cohorts:
+    get:
+      security: [{ trainerSession: [] }]
+      summary: List cohorts with learner counts
+      responses: { "200": { description: "{ cohorts: [...] }" } }
+    post:
+      security: [{ trainerSession: [] }]
+      summary: Create a cohort and its first enrollment code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                code: { type: string, description: "Optional custom code, e.g. RCYC-PR-Bootcamp2026; otherwise one like K7QM-42RX is generated" }
+                expires_at: { type: string, format: date-time }
+      responses:
+        "201": { description: "{ cohort, enrollment_code: { code, expires_at } }" }
+        "409": { description: CODE_TAKEN }
+  /v1/trainer/cohorts/{cohort_id}/codes:
+    parameters: [{ name: cohort_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      security: [{ trainerSession: [] }]
+      responses: { "200": { description: "{ codes: [...] }" } }
+    post:
+      security: [{ trainerSession: [] }]
+      summary: Issue another code (rotation); same body options as cohort creation
+      responses: { "201": { description: "{ enrollment_code }" } }
+  /v1/trainer/codes/{code}/revoke:
+    post:
+      security: [{ trainerSession: [] }]
+      parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: Revoked }, "404": { description: No active code } }
+  /v1/trainer/cohorts/{cohort_id}/report:
+    get:
+      security: [{ trainerSession: [] }]
+      summary: Per-learner scores (initial, best, latest, first-try, mastery), pass/struggling flags, weak topics, abandoned attempts, active and elapsed time, sync status
+      parameters: [{ name: cohort_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: Report } }
+  /v1/trainer/cohorts/{cohort_id}/export:
+    get:
+      security: [{ trainerSession: [] }]
+      summary: The report plus every accepted event and every rejected event with its reason (JSON download)
+      parameters: [{ name: cohort_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: Export file } }
+  /v1/trainer/learners/{learner_id}/relink:
+    post:
+      security: [{ trainerSession: [] }]
+      summary: One-time code (24 hours) to move a learner to a new phone
+      parameters: [{ name: learner_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "201": { description: "{ relink_code, expires_at, username }" } }
+  /v1/trainer/devices/{device_id}/revoke:
+    post:
+      security: [{ trainerSession: [] }]
+      summary: Revoke a device token (lost or stolen phone). Its later syncs get 401.
+      parameters: [{ name: device_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: Revoked }, "404": { description: No active device } }

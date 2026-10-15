@@ -1,0 +1,14 @@
+{
+  "name": "@tetherless/contract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tetherless sync contract: event types, validation and the sync API shapes shared by the phone and the server",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "engines": { "node": ">=22.18.0" },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": { "@types/node": "^22.18.0", "typescript": "^5.9.0" }
+}
