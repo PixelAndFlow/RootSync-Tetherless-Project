@@ -39,6 +39,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .mission-flag-action:hover { background: #2d2d30; }
 .mission-flag-action[data-flagged="true"] { background: var(--rco-purple); color: #ffffff; }
 
+.onboarding-readiness { border-color: #3e3e42; background: linear-gradient(145deg, #2d2d30, #252526 68%, #30294a); color: #cccccc; }
+.mission-ready-icon { display: grid; height: 4rem; width: 4rem; place-items: center; border: 1px solid var(--rco-purple); border-radius: 1rem; background: rgb(90 30 228 / 14%); color: var(--rco-purple-accessible); }
+.onboarding-readiness > p:nth-of-type(1) { color: var(--rco-magenta-accessible); }
+.onboarding-readiness > p:nth-of-type(2) { color: #9d9d9d; }
+.mission-ready-path li { display: flex; gap: 0.875rem; }
+.mission-ready-path li > span { display: grid; position: relative; height: 2rem; width: 2rem; flex: none; place-items: center; border: 1px solid var(--rco-purple); border-radius: 9999px; background: var(--color-ink); color: var(--rco-purple-accessible); font-size: 0.75rem; font-weight: 800; }
+.mission-ready-path li:not(:last-child) > span::after { position: absolute; top: 2rem; height: 1rem; border-left: 1px solid var(--rco-purple); content: ""; }
+.mission-ready-path h3 { color: #cccccc; font-size: 0.875rem; font-weight: 700; }
+.mission-ready-path p { margin-top: 0.125rem; color: #9d9d9d; font-size: 0.8125rem; line-height: 1.25rem; }
+
 /* Disabled mission navigation remains legible while still signalling that an answer is required. */
 article + div button:disabled { cursor: not-allowed; opacity: 1; }
 article + div button:not([class~="bg-violet-600"]):disabled { border-color: #707078; background: #2d2d30; color: #9d9d9d; }
@@ -104,6 +114,12 @@ button[class~="border-white/15"], a[class~="border-white/15"], input[class~="bor
 .app-light-theme .mission-flag-action:hover { background: #e8e8e8; }
 .app-light-theme article + div button:not([class~="bg-violet-600"]):disabled { border-color: #858585; background: #e8e8e8; color: #5c5c5c; }
 .app-light-theme article + div button[class~="bg-violet-600"]:disabled { background: #5a1ee4 !important; color: #ffffff; }
+.app-light-theme .onboarding-readiness { border-color: #c8c8c8; background: linear-gradient(145deg, #f3f3f3, #ffffff 68%, #f3edff); color: #1e1e1e; }
+.app-light-theme .mission-ready-icon { background: #ffffff; color: #5a1ee4; }
+.app-light-theme .onboarding-readiness > p:nth-of-type(1) { color: #9b2796; }
+.app-light-theme .onboarding-readiness > p:nth-of-type(2), .app-light-theme .mission-ready-path p { color: #3b3b3b; }
+.app-light-theme .mission-ready-path li > span { background: #ffffff; color: #5a1ee4; }
+.app-light-theme .mission-ready-path h3 { color: #1e1e1e; }
 .app-light-theme .answer-card-neutral { border-color: #c8c8c8; background: #ffffff; color: #1e1e1e; }
 .app-light-theme .answer-card-neutral:not(:disabled):hover { border-color: #5a1ee4; background: #f3edff; }
 .app-light-theme .answer-card-neutral .answer-card-translation { color: #3b3b3b; }
