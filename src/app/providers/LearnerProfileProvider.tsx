@@ -8,6 +8,7 @@ export interface LearnerProfile {
   spanishAssist: boolean;
   highContrast: boolean;
   reducedMotion: boolean;
+  colorTheme: "dark" | "light";
 }
 
 interface LearnerProfileContextValue {
@@ -16,6 +17,7 @@ interface LearnerProfileContextValue {
   setSpanishAssist: (enabled: boolean) => void;
   setHighContrast: (enabled: boolean) => void;
   setReducedMotion: (enabled: boolean) => void;
+  setColorTheme: (theme: LearnerProfile["colorTheme"]) => void;
   resetProfile: () => void;
 }
 
@@ -36,6 +38,7 @@ function readStoredProfile(): LearnerProfile | null {
       spanishAssist: Boolean(storedProfile.spanishAssist),
       highContrast: Boolean(storedProfile.highContrast),
       reducedMotion: Boolean(storedProfile.reducedMotion),
+      colorTheme: storedProfile.colorTheme === "light" ? "light" : "dark",
     };
   } catch {
     return null;
@@ -60,6 +63,7 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
       spanishAssist: profile?.spanishAssist ?? false,
       highContrast: profile?.highContrast ?? false,
       reducedMotion: profile?.reducedMotion ?? false,
+      colorTheme: profile?.colorTheme ?? "dark",
     }),
     setSpanishAssist: (spanishAssist) => {
       if (profile) updateProfile({ ...profile, spanishAssist });
@@ -69,6 +73,9 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
     },
     setReducedMotion: (reducedMotion) => {
       if (profile) updateProfile({ ...profile, reducedMotion });
+    },
+    setColorTheme: (colorTheme) => {
+      if (profile) updateProfile({ ...profile, colorTheme });
     },
     resetProfile: () => {
       setProfile(null);

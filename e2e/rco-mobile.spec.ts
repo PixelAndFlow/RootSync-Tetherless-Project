@@ -29,7 +29,7 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByText("Device storage check")).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole("link", { name: /View mission/ }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
     const redTeam = page.getByRole("button", { name: /Red Team/ });
     await expect(redTeam).toBeVisible();
@@ -92,12 +92,87 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByText("Operation Cyber Squad")).toBeVisible();
   });
 
+  test("keeps sticky mission navigation below the site header on desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/#/learner");
+    await page.getByLabel("Your name").fill("RCO Tester");
+    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByRole("button", { name: "Continue to missions" }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
+    await page.getByRole("link", { name: "Start mission" }).click();
+    await page.evaluate(() => window.scrollTo(0, 500));
+
+    const headerBox = await page.locator("header.app-header").boundingBox();
+    const navigationBox = await page.locator("main aside").first().boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(navigationBox).not.toBeNull();
+    expect(navigationBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height + 8);
+  });
+
+  test("keeps learner and trainer routes legible in both explicit colour themes", async ({ page }) => {
+    await page.goto("/#/learner");
+    await page.getByLabel("Your name").fill("RCO Tester");
+    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByRole("button", { name: "Continue to missions" }).click();
+    await page.getByText("Display preferences", { exact: true }).click();
+    await page.getByRole("button", { name: "Light mode" }).click();
+    await expect(page.locator(".app-light-theme")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Missions" })).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(page.locator(".app-status-chip")).toHaveCSS("background-color", "rgb(90, 30, 228)");
+
+    const lightResults = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+    expect(lightResults.violations).toEqual([]);
+
+    await page.getByRole("link", { name: /Start mission/ }).click();
+    await expect(page.getByRole("heading", { name: "What you’ll learn" })).toBeVisible();
+    await expect(page.getByText("Four checkpoints. Complete them in order.")).toBeVisible();
+    await expect(page.getByText("15 questions")).toHaveCSS("border-color", "rgb(133, 133, 133)");
+    await expect(page.getByText("No timer")).toHaveCSS("border-color", "rgb(133, 133, 133)");
+    await expect(page.getByRole("link", { name: "Start mission" })).toHaveCSS("color", "rgb(255, 255, 255)");
+    await page.getByRole("link", { name: "Start mission" }).click();
+    await expect(page.getByRole("heading", { name: /Which cybersecurity team/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Next question/ })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Next question/ })).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(page.getByRole("button", { name: /Next question/ })).toHaveCSS("background-color", "rgb(90, 30, 228)");
+    const lightFlagAction = page.getByRole("button", { name: "Flag for review" });
+    await expect(lightFlagAction).toHaveAttribute("aria-pressed", "false");
+    await expect(lightFlagAction).toHaveCSS("border-color", "rgb(90, 30, 228)");
+    await lightFlagAction.click();
+    await expect(page.getByRole("button", { name: "Flagged for review" })).toHaveAttribute("aria-pressed", "true");
+    await page.locator("main aside").first().getByRole("button", { name: "Question 4" }).click();
+    const neutralAnswer = page.locator("article").first().getByRole("button", { name: /Good intentions/ });
+    await expect(neutralAnswer).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(neutralAnswer).toHaveCSS("color", "rgb(30, 30, 30)");
+    const lightMissionResults = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+    expect(lightMissionResults.violations).toEqual([]);
+
+    await page.goto("/#/trainer");
+    await expect(page.getByRole("heading", { name: /See learning signals/ })).toBeVisible();
+    await expect(page.locator(".app-light-theme")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.goto("/#/learner/missions");
+    await page.getByText("Display preferences", { exact: true }).click();
+    await page.getByRole("button", { name: "Dark mode" }).click();
+    await expect(page.locator(".app-light-theme")).toHaveCount(0);
+    await expect(page.getByText("Operation Cyber Squad")).toBeVisible();
+    await page.getByRole("link", { name: /Start mission/ }).click();
+    await page.getByRole("link", { name: "Start mission" }).click();
+    const darkFlagAction = page.getByRole("button", { name: "Flag for review" });
+    await expect(page.getByRole("button", { name: /Next question/ })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Next question/ })).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(page.getByRole("button", { name: /Next question/ })).toHaveCSS("background-color", "rgb(70, 49, 141)");
+    await expect(darkFlagAction).toHaveCSS("border-color", "rgb(90, 30, 228)");
+    await darkFlagAction.click();
+    await expect(page.getByRole("button", { name: "Flagged for review" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   test("exposes answer selection and feedback state to assistive technology", async ({ page }) => {
     await page.goto("/#/learner");
     await page.getByLabel("Your name").fill("RCO Tester");
     await page.getByLabel("Username").fill("rco-tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
-    await page.getByRole("link", { name: /View mission/ }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
     const redTeam = page.getByRole("button", { name: /Red Team/ });
     await expect(redTeam).toHaveAttribute("aria-pressed", "false");
@@ -121,7 +196,7 @@ test.describe("RCO representative mobile profiles", () => {
     await page.getByLabel("Your name").fill("RCO Tester");
     await page.getByLabel("Username").fill("rco-tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
-    await page.getByRole("link", { name: /View mission/ }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
 
     await answerMission(page, [0, ...correctChoiceIndexes.slice(1)]);
@@ -154,13 +229,14 @@ test.describe("RCO representative mobile profiles", () => {
     await page.getByLabel("Your name").fill("RCO Tester");
     await page.getByLabel("Username").fill("rco-tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
-    await page.getByRole("link", { name: /View mission/ }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
     const redTeam = page.getByRole("button", { name: /Red Team/ });
     await expect(redTeam).toBeVisible();
     await redTeam.click();
     await expect(page.getByText(/Correct.*mission insight saved locally/)).toBeVisible();
     await page.evaluate(async () => { await document.fonts.ready; });
+    await page.addStyleTag({ content: ".app-header { position: static !important; backdrop-filter: none !important; }" });
     await expect(page).toHaveScreenshot("rco-minimum-learner-flow.png", { animations: "disabled", fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 

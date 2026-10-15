@@ -13,15 +13,16 @@ describe("LearnerProfileProvider", () => {
     const first = renderHook(() => useLearnerProfile(), { wrapper });
     act(() => first.result.current.saveProfile({ displayName: "  Chris  ", username: "  cwoz  " }));
     const saved = first.result.current.profile;
-    expect(saved).toMatchObject({ displayName: "Chris", username: "cwoz", spanishAssist: false, highContrast: false, reducedMotion: false });
+    expect(saved).toMatchObject({ displayName: "Chris", username: "cwoz", spanishAssist: false, highContrast: false, reducedMotion: false, colorTheme: "dark" });
     expect(saved?.learnerId).toBeTruthy();
     expect(saved?.deviceId).toBeTruthy();
 
     act(() => first.result.current.setSpanishAssist(true));
     act(() => first.result.current.setHighContrast(true));
     act(() => first.result.current.setReducedMotion(true));
+    act(() => first.result.current.setColorTheme("light"));
     const persisted = first.result.current.profile;
-    expect(persisted).toMatchObject({ learnerId: saved?.learnerId, deviceId: saved?.deviceId, spanishAssist: true, highContrast: true, reducedMotion: true });
+    expect(persisted).toMatchObject({ learnerId: saved?.learnerId, deviceId: saved?.deviceId, spanishAssist: true, highContrast: true, reducedMotion: true, colorTheme: "light" });
     first.unmount();
 
     const reloaded = renderHook(() => useLearnerProfile(), { wrapper });
@@ -37,7 +38,7 @@ describe("LearnerProfileProvider", () => {
   it("safely upgrades profiles saved before display preferences existed", () => {
     window.localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ learnerId: "learner", deviceId: "device", displayName: "Sam", username: "sam" }));
     const result = renderHook(() => useLearnerProfile(), { wrapper });
-    expect(result.result.current.profile).toMatchObject({ displayName: "Sam", highContrast: false, reducedMotion: false });
+    expect(result.result.current.profile).toMatchObject({ displayName: "Sam", highContrast: false, reducedMotion: false, colorTheme: "dark" });
   });
 
   it("clears only the local learner profile for a development demo reset", () => {

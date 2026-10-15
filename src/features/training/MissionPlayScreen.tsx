@@ -59,7 +59,7 @@ export function MissionPlayScreen() {
   useEffect(() => {
     if (!revealed[question.id] || focusedFeedbackQuestionId.current === question.id) return;
     focusedFeedbackQuestionId.current = question.id;
-    const feedback = missionRef.current?.querySelector<HTMLElement>("article [aria-live='polite']");
+    const feedback = missionRef.current?.querySelector<HTMLElement>("article div[aria-live='polite']");
     feedback?.setAttribute("tabindex", "-1");
     feedback?.focus();
   }, [question.id, revealed]);
@@ -135,9 +135,16 @@ export function MissionPlayScreen() {
           <div className="mt-6"><ProgressBar label={`Question ${index + 1} of ${module.questions.length}`} value={completionPercent} /></div>
         </header>
         <div className="p-5 sm:p-7">
-          <div className="mb-4 flex items-center justify-between gap-3"><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-100">{presentationCopy[question.presentation] ?? "Mission question"}</span><button className={`text-sm font-semibold ${flagged[question.id] ? "text-amber-200" : "text-slate-400 hover:text-slate-200"}`} onClick={() => setFlagged((current) => ({ ...current, [question.id]: !current[question.id] }))} type="button">⚑ {flagged[question.id] ? "Flagged" : "Flag question"}</button></div>
+          <div className="hidden">
+          <div className="mb-4 flex items-center justify-between gap-3"><span className="mission-presentation-token rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider">{presentationCopy[question.presentation] ?? "Mission question"}</span><button className={`text-sm font-semibold ${flagged[question.id] ? "text-amber-200" : "text-slate-400 hover:text-slate-200"}`} onClick={() => setFlagged((current) => ({ ...current, [question.id]: !current[question.id] }))} type="button">⚑ {flagged[question.id] ? "Flagged" : "Flag question"}</button></div>
+          </div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="mission-presentation-label text-xs font-bold uppercase tracking-wider">Question type · {presentationCopy[question.presentation] ?? "Mission question"}</p>
+            <button aria-describedby="flag-question-help" aria-pressed={Boolean(flagged[question.id])} className="mission-flag-action rounded-lg border px-3 py-2 text-sm font-bold transition" data-flagged={flagged[question.id] ? "true" : "false"} onClick={() => setFlagged((current) => ({ ...current, [question.id]: !current[question.id] }))} title="Flag questions you want to revisit before finishing." type="button">{flagged[question.id] ? "Flagged for review" : "Flag for review"}</button>
+          </div>
+          <p className="sr-only" id="flag-question-help">Flag questions you want to revisit before finishing.</p>
           <article className={`rounded-2xl border bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-5 sm:p-6 ${question.presentation === "boss_question" ? "border-amber-300/40" : "border-white/10"}`}><h2 className="text-xl font-bold leading-8 sm:text-2xl">{question.prompt.en}</h2>{profile.spanishAssist && question.prompt.es && <p className="mt-3 text-base leading-7 text-slate-400">{question.prompt.es}</p>}{question.scenario && <div className="mt-5 rounded-xl border border-violet-300/20 bg-violet-400/10 p-4"><p className="text-sm font-semibold text-violet-100">{question.scenario.en}</p>{profile.spanishAssist && question.scenario.es && <p className="mt-2 text-sm text-violet-200/70">{question.scenario.es}</p>}</div>}
-            <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} disabled={Boolean(savingQuestionId)} index={choiceIndex} isCorrect={choice.id === question.correct_choice} key={choice.id} onChoose={() => void chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
+            <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} disabled={Boolean(savingQuestionId)} index={choiceIndex} isCorrect={choice.id === question.correct_choice} isKahoot={question.presentation === "kahoot_cards"} key={choice.id} onChoose={() => void chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
             {isSavingAnswer && <p aria-live="polite" className="mt-4 text-sm text-cyan-100">Saving your answer locally...</p>}
             {saveError && <p aria-live="assertive" className="mt-4 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm text-rose-100">{saveError}</p>}
             {revealed[question.id] && <div aria-live="polite" className={`mt-5 rounded-xl border p-4 text-sm leading-6 ${answerIsCorrect ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-50" : "border-rose-300/30 bg-rose-300/10 text-rose-50"}`}><p className="font-bold">{answerIsCorrect ? "Correct — mission insight saved locally." : "Not quite — review the mission insight."}</p><p className="mt-1">{question.feedback.en}</p>{profile.spanishAssist && question.feedback.es && <p className="mt-2 text-current/75">{question.feedback.es}</p>}</div>}
