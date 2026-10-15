@@ -1,0 +1,1116 @@
+<title>Block the Threat</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one phone-width column; home = Raíces tree + modes, play = threat arena over a 2x2 answer grid. Single dark theme by design (game screen, OLED-friendly). */
+:root {
+  color-scheme: dark;
+  /* RCO palette */
+  --void: #030817;          /* page ground: deeper than RCO navy so glows read */
+  --navy: #041942;          /* RCO navy: panels */
+  --navy-2: #0a2560;        /* raised panel */
+  --line: #24356b;          /* hairlines on navy */
+  --indigo: #31167b;        /* RCO indigo */
+  --violet: #5a1ee4;        /* RCO primary */
+  --electric: #ae08f2;      /* RCO electric purple */
+  --magenta: #c143c0;       /* RCO magenta */
+  --royal: #041891;         /* RCO royal blue */
+  --gold: #ffde59;          /* RCO highlight */
+  --mint: #10ed3e;          /* RCO highlight: mastered */
+  --hit: #ff5c7a;           /* semantic: damage */
+  --ink: #f1f1f1;           /* RCO off-white */
+  --ink-2: #b9c2e6;         /* secondary text on navy */
+  --ink-3: #7f8bbd;         /* tertiary text */
+  --font-ui: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 14px;
+}
+html, body { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible, summary:focus-visible, input:focus-visible + .switch { outline: 3px solid var(--gold); outline-offset: 2px; }
+.app {
+  max-width: 460px;
+  margin: 0 auto;
+  min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+section { display: flex; flex-direction: column; gap: 16px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.es { display: block; color: var(--ink-3); font-size: .86em; font-style: italic; margin-top: 2px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+
+/* ---------- Top bar ---------- */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand b { font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+.brand span { font-size: 12px; color: var(--ink-3); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--navy); border: 1px solid var(--line);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.chip svg { width: 14px; height: 14px; }
+.chip.rank { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 40%, var(--line)); }
+
+/* ---------- Module switcher ---------- */
+.switcher { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--navy); border: 1px solid var(--line); }
+.switcher button { border: 0; background: transparent; border-radius: 9px; padding: 9px 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.switcher button small { font: 500 11px var(--font-num); color: var(--ink-3); }
+.switcher button[aria-selected="true"] { background: var(--violet); color: var(--ink); }
+.switcher button[aria-selected="true"] small { color: color-mix(in srgb, var(--ink) 75%, transparent); }
+
+/* ---------- Tree ---------- */
+.tree-card { background: radial-gradient(120% 90% at 50% 100%, color-mix(in srgb, var(--indigo) 55%, var(--void)) 0%, var(--void) 70%); border: 1px solid var(--line); border-radius: 20px; padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.tree-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-inline: 4px; flex-wrap: wrap; }
+.tree-head h2 { font-size: 17px; font-weight: 600; }
+.tree-head .eyebrow { color: var(--ink-2); }
+#tree { width: 100%; height: auto; display: block; overflow: visible; }
+.t-trunk { stroke: var(--violet); stroke-width: 7; stroke-linecap: round; fill: none; opacity: .9; }
+.t-root { stroke: var(--indigo); stroke-width: 2.5; stroke-linecap: round; fill: none; }
+.t-branch { stroke: var(--indigo); stroke-width: 3.2; stroke-linecap: round; fill: none; transition: stroke .4s; }
+.t-branch.done { stroke: var(--magenta); }
+.t-mesh { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; fill: none; }
+.t-node { cursor: pointer; }
+.t-node circle.core { stroke: var(--violet); stroke-width: 1.5; fill: var(--void); transition: fill .4s, stroke .4s; }
+.t-node circle.halo { fill: var(--electric); opacity: 0; transition: opacity .4s; }
+.t-node.sel circle.core { stroke: var(--ink); stroke-width: 2.5; }
+.t-label { fill: var(--ink-2); font-size: 11px; font-weight: 600; font-family: var(--font-ui); }
+.t-label.done { fill: var(--ink); }
+.t-boss { fill: var(--gold); }
+.t-boss-ring { fill: none; stroke: var(--gold); stroke-width: 1.5; }
+@media (prefers-reduced-motion: no-preference) {
+  .t-boss-ring { animation: ring 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ring { 50% { transform: scale(1.35); opacity: .35; } }
+}
+.node-info { min-height: 52px; background: var(--navy); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--ink-2); display: flex; gap: 12px; align-items: center; }
+.node-info strong { color: var(--ink); font-weight: 600; }
+.lvl { display: inline-flex; gap: 3px; }
+.lvl i { width: 14px; height: 6px; border-radius: 3px; background: var(--line); }
+.lvl i.on { background: var(--electric); }
+.lvl.max i.on { background: var(--mint); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--ink-3); padding-inline: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1.5px solid var(--violet); }
+
+/* ---------- Mode buttons ---------- */
+.modes { display: grid; gap: 10px; }
+.mode {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;
+  text-align: left; padding: 14px; border-radius: var(--r);
+  background: var(--navy); border: 1px solid var(--line);
+}
+.mode:hover { border-color: var(--violet); }
+.mode .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
+.mode .ico svg { width: 24px; height: 24px; }
+.mode .mh { display: block; font-size: 16px; font-weight: 600; }
+.mode .mp { display: block; font-size: 12.5px; color: var(--ink-3); }
+.mode .go { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.mode.practice .ico { background: color-mix(in srgb, var(--royal) 70%, var(--navy)); }
+.mode.challenge { background: linear-gradient(135deg, var(--violet), var(--indigo)); border-color: transparent; }
+.mode.challenge .mp, .mode.challenge .go { color: color-mix(in srgb, var(--ink) 80%, transparent); }
+.mode.challenge .ico { background: color-mix(in srgb, var(--void) 35%, transparent); }
+.mode.boss .ico { background: color-mix(in srgb, var(--magenta) 45%, var(--navy)); }
+.mode[disabled] { opacity: .55; cursor: not-allowed; }
+
+.settings { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch { width: 38px; height: 22px; border-radius: 999px; background: var(--line); position: relative; transition: background .2s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .2s; }
+.toggle input:checked + .switch { background: var(--violet); }
+.toggle input:checked + .switch::after { transform: translateX(16px); }
+.saved { display: inline-flex; align-items: center; gap: 6px; }
+.saved i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); display: inline-block; }
+
+details.demo { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--ink-3); }
+details.demo summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+details.demo .row { margin-top: 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--navy); border-radius: 10px; padding: 9px 14px; font-weight: 600; font-size: 13.5px; }
+.btn:hover { border-color: var(--violet); }
+.btn.primary { background: var(--violet); border-color: var(--violet); }
+.btn.primary:hover { background: color-mix(in srgb, var(--violet) 85%, white); }
+.btn.big { padding: 14px 18px; font-size: 15px; flex: 1; }
+.note { font-size: 11.5px; color: var(--ink-3); }
+
+/* ---------- Play ---------- */
+.hud { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--navy); display: grid; place-items: center; }
+.icon-btn svg { width: 16px; height: 16px; }
+.hud-mid { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hud-mode { font-size: 12px; font-weight: 600; color: var(--ink-2); letter-spacing: .06em; text-transform: uppercase; }
+.dots { display: flex; gap: 4px; }
+.dots i { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+.dots i.ok { background: var(--mint); }
+.dots i.bad { background: var(--hit); }
+.dots i.now { background: var(--ink-2); }
+.hud-stats { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.hud-stats .pts { font-size: 18px; font-weight: 700; }
+.hud-stats .stk { font-size: 11px; color: var(--gold); font-weight: 600; }
+.timer { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.timer > div { height: 100%; width: 100%; background: var(--gold); transform-origin: left; }
+
+.arena {
+  position: relative; height: 210px; border-radius: 18px; overflow: hidden;
+  background:
+    linear-gradient(to bottom, transparent 0 calc(100% - 1px), color-mix(in srgb, var(--violet) 30%, transparent) 0) 0 0 / 100% 28px,
+    linear-gradient(180deg, var(--void), color-mix(in srgb, var(--indigo) 60%, var(--void)));
+  border: 1px solid var(--line);
+}
+.threat {
+  position: absolute; left: 50%; top: 10px; transform: translate(-50%, 0);
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 8px;
+  background: color-mix(in srgb, var(--hit) 16%, var(--navy)); border: 1.5px solid var(--hit);
+  border-radius: 12px; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--hit) 35%, transparent);
+  will-change: transform;
+}
+.threat svg { width: 26px; height: 26px; flex: none; }
+.threat.gone { opacity: 0; }
+.dome {
+  position: absolute; left: 6%; right: 6%; bottom: 46px; height: 70px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  border: 3px solid var(--mint); border-bottom: none; opacity: 0; pointer-events: none;
+  box-shadow: 0 -6px 30px color-mix(in srgb, var(--mint) 45%, transparent), inset 0 8px 24px color-mix(in srgb, var(--mint) 25%, transparent);
+}
+.dome.up { animation: dome .8s ease-out; }
+@keyframes dome { 0% { opacity: 0; transform: scaleY(.2); transform-origin: bottom; } 25% { opacity: 1; transform: scaleY(1.05); } 100% { opacity: 0; transform: scaleY(1); } }
+.network { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; display: flex; align-items: center; justify-content: center; gap: 10px; background: color-mix(in srgb, var(--navy) 85%, transparent); border-top: 1px solid var(--line); }
+.network.flash { animation: flash .5s; }
+@keyframes flash { 30% { background: color-mix(in srgb, var(--hit) 45%, var(--navy)); } }
+.shield { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-2); }
+.shield svg { width: 26px; height: 28px; }
+.shield .s-body { fill: color-mix(in srgb, var(--violet) 45%, var(--navy)); stroke: var(--electric); stroke-width: 1.5; }
+.shield .s-letter { fill: var(--ink); font: 800 12px var(--font-ui); }
+.shield .s-crack { stroke: var(--hit); stroke-width: 2; fill: none; opacity: 0; }
+.shield.cracked .s-body { fill: color-mix(in srgb, var(--hit) 20%, var(--navy)); stroke: var(--hit); }
+.shield.cracked .s-crack { opacity: 1; }
+.shield.cracked .s-name { text-decoration: line-through; color: var(--hit); }
+.net-only { font-size: 12px; color: var(--ink-3); }
+.float { position: absolute; left: 50%; transform: translateX(-50%); font: 700 18px var(--font-num); color: var(--gold); pointer-events: none; text-shadow: 0 0 12px color-mix(in srgb, var(--gold) 60%, transparent); }
+.shard { position: absolute; width: 8px; height: 8px; background: var(--hit); border-radius: 2px; pointer-events: none; }
+.shake { animation: shake .4s; }
+@keyframes shake { 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+
+.payload { background: var(--navy); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.payload .eyebrow { color: var(--hit); }
+.payload p { font-size: 17px; font-weight: 600; line-height: 1.35; }
+.payload .es { font-size: 14px; font-weight: 400; }
+
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ans {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 76px; padding: 12px;
+  border-radius: var(--r); border: 0; text-align: left; font-size: 14px; font-weight: 600; line-height: 1.3;
+  box-shadow: inset 0 -4px 0 color-mix(in srgb, black 30%, transparent);
+  transition: transform .08s, opacity .2s, filter .2s;
+}
+.ans:active { transform: translateY(2px); }
+.ans svg { width: 18px; height: 18px; flex: none; }
+.ans .t { min-width: 0; }
+.ans .es { color: inherit; opacity: .78; font-weight: 400; }
+.ans.c0 { background: var(--violet); color: var(--ink); }
+.ans.c1 { background: var(--magenta); color: var(--ink); }
+.ans.c2 { background: var(--royal); color: var(--ink); }
+.ans.c3 { background: var(--gold); color: var(--void); }
+.ans svg .sh { fill: currentColor; }
+.answers.locked .ans { cursor: default; }
+.answers.locked .ans:not(.right):not(.wrong) { opacity: .35; filter: saturate(.4); }
+.ans.right { outline: 3px solid var(--mint); outline-offset: 2px; }
+.ans.wrong { outline: 3px solid var(--hit); outline-offset: 2px; }
+.ans .mark { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+
+.lesson { background: var(--navy-2); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.lesson .eyebrow { color: var(--gold); text-transform: none; letter-spacing: .01em; font-size: 13px; }
+.lesson .answer-line { font-weight: 600; }
+.lesson .answer-line b { color: var(--mint); font-weight: 600; }
+.lesson .why { color: var(--ink-2); }
+
+/* ---------- Summary ---------- */
+.sum-hero { text-align: left; display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+.sum-hero h2 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.sum-hero p { color: var(--ink-2); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--navy); border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font: 700 22px var(--font-num); }
+.stat span { font-size: 11.5px; color: var(--ink-3); }
+.levels { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.levels li { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--navy); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.levels li .t { min-width: 0; font-weight: 600; }
+.levels li.up .lvl i.on:last-of-type { box-shadow: 0 0 8px var(--electric); }
+.earned { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--gold) 12%, var(--navy)); border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--line)); font-size: 13.5px; }
+.earned svg { width: 22px; height: 22px; flex: none; color: var(--gold); }
+
+/* ---------- Boss list ---------- */
+.boss-list { display: flex; flex-direction: column; gap: 10px; }
+.boss-card { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; background: var(--navy); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; text-align: left; }
+.boss-card .bh { font-size: 15px; font-weight: 600; }
+.boss-card .bp { font-size: 12.5px; color: var(--ink-3); grid-column: 1 / -1; }
+.boss-card .state { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.boss-card.locked { opacity: .7; }
+.boss-card.locked .state { color: var(--ink-3); }
+.boss-card.open { border-color: var(--gold); }
+.boss-card.open .state { color: var(--gold); }
+.boss-card.cleared .state { color: var(--mint); }
+.scenario { background: linear-gradient(160deg, color-mix(in srgb, var(--magenta) 30%, var(--navy)), var(--navy)); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.scenario h2 { font-size: 22px; font-weight: 800; }
+.scenario p { font-size: 16px; }
+.mode-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.mode-table th, .mode-table td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.mode-table th { color: var(--ink-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.table-wrap { overflow-x: auto; }
+footer { font-size: 11.5px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+@media (max-width: 380px) {
+  .ans { min-height: 68px; font-size: 13px; padding: 10px; }
+  .payload p { font-size: 16px; }
+  .arena { height: 180px; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-packet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 6v4M13 6v4" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="14" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-email" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m3.5 7 8.5 6 8.5-6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="6" r="3" fill="var(--hit)"/></symbol>
+    <symbol id="i-popup" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 8h18" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v4M12 17.2v.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 8h6M9 11h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="18" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6z" fill="currentColor"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5C6.5 4 9.5 4 12 5.5 14.5 4 17.5 4 20 5.5V19c-2.5-1.5-5.5-1.5-8 0-2.5-1.5-5.5-1.5-8 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 5.5V19" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.8 7-7 0-3.5-2.2-5.6-3.6-7.3-.4 1.7-1.3 2.8-2.4 3.3.2-3.2-1.2-6.2-4-8.5.2 3.5-3.9 6.4-3.9 11.7C5.1 19.2 8 22 12 22z" fill="currentColor"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="currentColor"/></symbol>
+    <!-- Answer shapes (Kahoot-style: color + shape, so color is never the only cue) -->
+    <symbol id="sh0" viewBox="0 0 20 20"><path class="sh" d="M10 2 19 18H1z"/></symbol>
+    <symbol id="sh1" viewBox="0 0 20 20"><path class="sh" d="M10 1 19 10 10 19 1 10z"/></symbol>
+    <symbol id="sh2" viewBox="0 0 20 20"><circle class="sh" cx="10" cy="10" r="8.5"/></symbol>
+    <symbol id="sh3" viewBox="0 0 20 20"><rect class="sh" x="2" y="2" width="16" height="16" rx="1.5"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+
+  <!-- ================= HOME ================= -->
+  <section id="home">
+    <div class="topbar">
+      <div class="brand"><b>Block the Threat</b><span>Tetherless · RCO</span></div>
+      <div class="chips">
+        <span class="chip rank" id="chip-rank"><svg><use href="#i-star"/></svg><span></span></span>
+        <span class="chip" id="chip-streak"><svg style="color:var(--gold)"><use href="#i-flame"/></svg><span></span></span>
+      </div>
+    </div>
+
+    <div class="switcher" role="tablist" aria-label="Module" id="switcher"></div>
+
+    <div class="tree-card">
+      <div class="tree-head">
+        <h2 id="tree-title">Your Raíces tree</h2>
+        <span class="eyebrow num" id="tree-count"></span>
+      </div>
+      <svg id="tree" viewBox="0 0 400 330" role="img" aria-label="Progress tree: one branch per topic, one node per term"></svg>
+      <div class="legend">
+        <span><i></i>New</span>
+        <span><i style="background:color-mix(in srgb, var(--electric) 55%, var(--void))"></i>Growing</span>
+        <span><i style="background:var(--mint);border-color:var(--mint)"></i>Mastered</span>
+        <span><i style="border-color:var(--gold);border-radius:3px"></i>Boss Mission ready</span>
+      </div>
+      <div class="node-info" id="node-info">Tap a node to see a term. Each correct answer moves a term up a level; it glows brighter as it climbs.</div>
+    </div>
+
+    <div class="rank-progress note" id="rank-progress"></div>
+
+    <div class="modes">
+      <button class="mode challenge" id="go-challenge">
+        <span class="ico"><svg><use href="#i-bolt"/></svg></span>
+        <span><span class="mh">Challenge</span><span class="mp">Timer and speed bonus · three shields: C, I, A</span></span>
+        <span class="go">8 threats</span>
+      </button>
+      <button class="mode practice" id="go-practice">
+        <span class="ico"><svg><use href="#i-book"/></svg></span>
+        <span><span class="mh">Practice</span><span class="mp">No timer, no shields · take your time with the English</span></span>
+        <span class="go">8 threats</span>
+      </button>
+      <button class="mode boss" id="go-bosses">
+        <span class="ico"><svg><use href="#i-flag"/></svg></span>
+        <span><span class="mh">Boss Missions</span><span class="mp" id="boss-sub">Complete a branch to unlock its mission</span></span>
+        <span class="go num" id="boss-count"></span>
+      </button>
+    </div>
+
+    <div class="settings">
+      <label class="toggle" for="spanish">
+        <input type="checkbox" id="spanish">
+        <span class="switch" aria-hidden="true"></span>
+        <span>Spanish Assist</span>
+      </label>
+      <span class="saved"><i></i><span id="saved-count"></span></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="mode-table">
+        <thead><tr><th>Mode</th><th>Timer</th><th>Shields</th><th>Who it's for</th></tr></thead>
+        <tbody>
+          <tr><td>Practice</td><td>None</td><td>None</td><td>Beginners and anyone still building their English</td></tr>
+          <tr><td>Challenge</td><td>Yes, speed bonus</td><td>C, I, A</td><td>Confident learners who want the Kahoot rush</td></tr>
+          <tr><td>Boss Mission</td><td>Optional</td><td>C, I, A</td><td>Learners who completed a branch</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details class="demo">
+      <summary>Demo controls (for presenting)</summary>
+      <p style="margin-top:8px">Review timing is spaced over days, so these move the clock and fill progress for a demo.</p>
+      <div class="row">
+        <button class="btn" id="demo-day">Advance one day</button>
+        <button class="btn" id="demo-fill">Fill sample progress</button>
+        <button class="btn" id="demo-reset">Reset progress</button>
+      </div>
+      <p style="margin-top:8px" class="num" id="demo-clock"></p>
+    </details>
+
+    <footer>Trial run (2026-10-15), not adopted. The Security tools questions come from RCO's Puerto Rico bootcamp Kahoot. The Phishing module, and all topics, explanations and Boss Missions, are RootSync drafts for RCO review. Progress is stored only in this browser.</footer>
+  </section>
+
+  <!-- ================= PLAY ================= -->
+  <section id="play" hidden>
+    <div class="hud">
+      <button class="icon-btn" id="quit" aria-label="Leave and return to your tree"><svg><use href="#i-x"/></svg></button>
+      <div class="hud-mid">
+        <span class="hud-mode" id="hud-mode"></span>
+        <div class="dots" id="dots"></div>
+      </div>
+      <div class="hud-stats"><span class="pts num" id="hud-points">0</span><span class="stk num" id="hud-streak"></span></div>
+    </div>
+    <div class="timer" id="timer"><div id="timer-fill"></div></div>
+    <div class="arena" id="arena">
+      <div class="threat" id="threat"><svg><use id="threat-icon" href="#i-email"/></svg><span id="threat-label"></span></div>
+      <div class="dome" id="dome"></div>
+      <div class="network" id="network"></div>
+    </div>
+    <div class="payload">
+      <span class="eyebrow" id="payload-tag"></span>
+      <p id="prompt"></p>
+    </div>
+    <div class="answers" id="answers"></div>
+    <div class="lesson" id="lesson" hidden>
+      <span class="eyebrow" id="lesson-tag">The threat got through. Here's the lesson.</span>
+      <p class="answer-line" id="lesson-answer"></p>
+      <p class="why" id="lesson-why"></p>
+      <div class="row"><button class="btn primary big" id="lesson-next">Got it</button></div>
+    </div>
+  </section>
+
+  <!-- ================= SUMMARY ================= -->
+  <section id="summary" hidden>
+    <div class="sum-hero">
+      <span class="eyebrow" id="sum-eyebrow"></span>
+      <h2 id="sum-title"></h2>
+      <p id="sum-sub"></p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sum-blocked"></b><span>threats blocked</span></div>
+      <div class="stat"><b id="sum-best"></b><span>best streak</span></div>
+      <div class="stat"><b id="sum-points"></b><span>points</span></div>
+    </div>
+    <div class="earned" id="sum-earned"><svg><use href="#i-star"/></svg><span id="sum-earned-text"></span></div>
+    <h3 style="font-size:15px" id="sum-levels-title">Terms that leveled up</h3>
+    <ul class="levels" id="sum-levels"></ul>
+    <div class="row">
+      <button class="btn primary big" id="sum-again">Next wave</button>
+      <button class="btn big" id="sum-home">See your tree</button>
+    </div>
+  </section>
+
+  <!-- ================= BOSSES ================= -->
+  <section id="bosses" hidden>
+    <div class="hud" style="grid-template-columns:auto 1fr">
+      <button class="icon-btn" id="bosses-back" aria-label="Back to your tree"><svg><use href="#i-x"/></svg></button>
+      <h2 style="font-size:18px">Boss Missions</h2>
+    </div>
+    <p class="note">Each mission unlocks when every term on its branch reaches level 3. Missions use the three shields; the timer is optional.</p>
+    <label class="toggle" for="boss-timer">
+      <input type="checkbox" id="boss-timer">
+      <span class="switch" aria-hidden="true"></span>
+      <span>Timer on Boss Missions</span>
+    </label>
+    <div class="boss-list" id="boss-list"></div>
+  </section>
+
+  <section id="briefing" hidden>
+    <div class="hud" style="grid-template-columns:auto 1fr">
+      <button class="icon-btn" id="briefing-back" aria-label="Back to missions"><svg><use href="#i-x"/></svg></button>
+      <span class="hud-mode">Boss Mission</span>
+    </div>
+    <div class="scenario">
+      <span class="eyebrow" id="brief-topic"></span>
+      <h2 id="brief-title"></h2>
+      <p id="brief-scenario"></p>
+    </div>
+    <p class="note" id="brief-note"></p>
+    <button class="btn primary big" id="brief-start">Start mission</button>
+  </section>
+</div>
+
+<script type="application/json" id="module-data">[{"schema_version":1,"module_id":"pr-bootcamp-security-tools","content_version":2,"title":{"en":"Security Tools Basics","es":"Conceptos básicos de herramientas de seguridad"},"topics":[{"topic_id":"firewalls","name":{"en":"Firewalls","es":"Firewalls (cortafuegos)"}},{"topic_id":"vpn","name":{"en":"VPNs","es":"VPN"}},{"topic_id":"mfa","name":{"en":"Multi-factor authentication","es":"Autenticación multifactor"}},{"topic_id":"iam","name":{"en":"Identity and access","es":"Identidad y acceso"}},{"topic_id":"edr-xdr","name":{"en":"Endpoint protection (EDR/XDR)","es":"Protección de dispositivos (EDR/XDR)"}},{"topic_id":"password-managers","name":{"en":"Password managers","es":"Gestores de contraseñas"}},{"topic_id":"backups","name":{"en":"Backups","es":"Copias de seguridad"}}],"questions":[{"question_id":"pr-bootcamp-security-tools-q01","type":"multiple_choice","topic":"firewalls","term":{"en":"Firewall","es":"Firewall"},"prompt":{"en":"What does a firewall do?","es":"¿Qué hace un firewall (cortafuegos)?"},"choices":[{"choice_id":"a","text":{"en":"Filters network traffic with rules","es":"Filtra el tráfico de red con reglas"}},{"choice_id":"b","text":{"en":"Generates complex passwords","es":"Genera contraseñas complejas"}},{"choice_id":"c","text":{"en":"Creates data backups","es":"Crea copias de seguridad"}},{"choice_id":"d","text":{"en":"Encrypts local storage","es":"Cifra el almacenamiento local"}}],"correct_choice_id":"a","explanation":{"en":"A firewall checks network traffic against rules and blocks what isn't allowed.","es":"Un firewall revisa el tráfico de red según reglas y bloquea lo que no está permitido."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q02","type":"multiple_choice","topic":"firewalls","term":{"en":"Next-gen firewall (NGFW)","es":"Firewall de nueva generación (NGFW)"},"prompt":{"en":"What does an NGFW include?","es":"¿Qué incluye un Firewall de Nueva Generación (NGFW)?"},"choices":[{"choice_id":"a","text":{"en":"Basic antivirus only","es":"Antivirus básico solamente"}},{"choice_id":"b","text":{"en":"Deep packet inspection & detection","es":"Inspección profunda de paquetes"}},{"choice_id":"c","text":{"en":"Biometric authentication","es":"Autenticación biométrica"}},{"choice_id":"d","text":{"en":"Tech support calls","es":"Llamadas de soporte técnico"}}],"correct_choice_id":"b","explanation":{"en":"A next-generation firewall looks inside the traffic itself (deep packet inspection) to catch threats a basic firewall would miss.","es":"Un firewall de nueva generación examina el contenido del tráfico (inspección profunda de paquetes) para detectar amenazas que un firewall básico no vería."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q03","type":"multiple_choice","topic":"vpn","term":{"en":"VPN","es":"VPN"},"prompt":{"en":"What is the main function of a VPN?","es":"¿Cuál es la función principal de una VPN?"},"choices":[{"choice_id":"a","text":{"en":"Block browser ads","es":"Bloquear anuncios en navegadores"}},{"choice_id":"b","text":{"en":"Remove system viruses","es":"Eliminar virus del sistema"}},{"choice_id":"c","text":{"en":"Encrypt the internet connection","es":"Cifrar la conexión a internet"}},{"choice_id":"d","text":{"en":"Restore deleted files","es":"Restaurar archivos borrados"}}],"correct_choice_id":"c","explanation":{"en":"A VPN encrypts your internet connection so others on the network can't read what you send.","es":"Una VPN cifra tu conexión a internet para que otras personas en la red no puedan leer lo que envías."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q04","type":"multiple_choice","topic":"vpn","term":{"en":"Remote access","es":"Acceso remoto"},"prompt":{"en":"When is a VPN especially useful?","es":"¿Cuándo es especialmente útil una VPN?"},"choices":[{"choice_id":"a","text":{"en":"When working with remote access","es":"Al trabajar con acceso remoto"}},{"choice_id":"b","text":{"en":"To speed up game downloads","es":"Para acelerar la descarga de juegos"}},{"choice_id":"c","text":{"en":"To clean the hard drive","es":"Para limpiar el disco duro"}},{"choice_id":"d","text":{"en":"To format computers","es":"Para formatear computadoras"}}],"correct_choice_id":"a","explanation":{"en":"A VPN lets people working away from the office connect safely to their organization's network.","es":"Una VPN permite que quienes trabajan fuera de la oficina se conecten de forma segura a la red de su organización."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q05","type":"multiple_choice","topic":"mfa","term":{"en":"MFA","es":"MFA"},"prompt":{"en":"What does MFA add?","es":"¿Qué añade la autenticación multifactor (MFA)?"},"choices":[{"choice_id":"a","text":{"en":"An extra verification step","es":"Un paso extra de verificación"}},{"choice_id":"b","text":{"en":"More disk space","es":"Más espacio en el disco"}},{"choice_id":"c","text":{"en":"Higher internet speed","es":"Mayor velocidad de internet"}},{"choice_id":"d","text":{"en":"Automatic updates","es":"Actualizaciones automáticas"}}],"correct_choice_id":"a","explanation":{"en":"MFA adds a second proof of identity, so a stolen password alone isn't enough to get in.","es":"La MFA añade una segunda prueba de identidad, así que una contraseña robada no basta para entrar."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q06","type":"multiple_choice","topic":"mfa","term":{"en":"Second factor","es":"Segundo factor"},"prompt":{"en":"What is an example of MFA?","es":"¿Cuál es un ejemplo de MFA?"},"choices":[{"choice_id":"a","text":{"en":"Using only a short password","es":"Usar solo una contraseña corta"}},{"choice_id":"b","text":{"en":"Authenticator app or YubiKey","es":"App autenticadora o llave YubiKey"}},{"choice_id":"c","text":{"en":"Typing your username","es":"Escribir tu nombre de usuario"}},{"choice_id":"d","text":{"en":"Clicking an email link","es":"Hacer clic en un enlace de email"}}],"correct_choice_id":"b","explanation":{"en":"An authenticator app or a security key like a YubiKey is something you have, added to the password you know.","es":"Una app autenticadora o una llave como YubiKey es algo que tienes, además de la contraseña que sabes."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q07","type":"multiple_choice","topic":"iam","term":{"en":"IAM","es":"IAM"},"prompt":{"en":"What does an IAM like Okta centralize?","es":"¿Qué centraliza una plataforma IAM como Okta?"},"choices":[{"choice_id":"a","text":{"en":"Processor speed","es":"La velocidad del procesador"}},{"choice_id":"b","text":{"en":"Permissions and access control","es":"Permisos y control de acceso"}},{"choice_id":"c","text":{"en":"Cloud backups","es":"Copias de respaldo en la nube"}},{"choice_id":"d","text":{"en":"Physical network cables","es":"Cables de red física"}}],"correct_choice_id":"b","explanation":{"en":"IAM platforms like Okta manage who can access what, all from one place.","es":"Las plataformas IAM como Okta controlan desde un solo lugar quién puede acceder a qué."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q08","type":"multiple_choice","topic":"iam","term":{"en":"Least privilege","es":"Menor privilegio"},"prompt":{"en":"What principle guides IAM management?","es":"¿En qué principio se basa la gestión IAM?"},"choices":[{"choice_id":"a","text":{"en":"Least Privilege (Zero Trust)","es":"Menor privilegio (Zero Trust)"}},{"choice_id":"b","text":{"en":"Total access for everyone","es":"Acceso total para todos"}},{"choice_id":"c","text":{"en":"Public passwords","es":"Contraseñas públicas"}},{"choice_id":"d","text":{"en":"Absolute trust without check","es":"Confianza absoluta sin revisión"}}],"correct_choice_id":"a","explanation":{"en":"Least privilege gives each person only the access they need, and Zero Trust checks every request instead of trusting by default.","es":"El menor privilegio da a cada persona solo el acceso que necesita, y Zero Trust verifica cada solicitud en lugar de confiar por defecto."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q09","type":"multiple_choice","topic":"edr-xdr","term":{"en":"EDR/XDR","es":"EDR/XDR"},"prompt":{"en":"How does EDR/XDR evolve antivirus?","es":"¿Cómo evoluciona el EDR/XDR del antivirus?"},"choices":[{"choice_id":"a","text":{"en":"Continuously monitors devices","es":"Monitorea dispositivos continuamente"}},{"choice_id":"b","text":{"en":"Scans only once a month","es":"Solo escanea una vez al mes"}},{"choice_id":"c","text":{"en":"Turns off servers at night","es":"Apaga los servidores de noche"}},{"choice_id":"d","text":{"en":"Disables network rules","es":"Desactiva las reglas de red"}}],"correct_choice_id":"a","explanation":{"en":"Antivirus scans for known threats; EDR/XDR watches devices all the time and reacts to suspicious behavior.","es":"El antivirus busca amenazas conocidas; EDR/XDR vigila los dispositivos todo el tiempo y reacciona ante comportamientos sospechosos."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q10","type":"multiple_choice","topic":"edr-xdr","term":{"en":"Real-time AI response","es":"Respuesta con IA en tiempo real"},"prompt":{"en":"What technology does EDR/XDR use?","es":"¿Qué tecnología usa EDR/XDR para responder?"},"choices":[{"choice_id":"a","text":{"en":"AI in real-time response","es":"Inteligencia Artificial en tiempo real"}},{"choice_id":"b","text":{"en":"Manual phone calls","es":"Llamadas telefónicas manuales"}},{"choice_id":"c","text":{"en":"SMS text messages","es":"Mensajes de texto SMS"}},{"choice_id":"d","text":{"en":"Printing paper reports","es":"Impresión de reportes en papel"}}],"correct_choice_id":"a","explanation":{"en":"EDR/XDR tools use AI to spot and stop attacks in real time, faster than a person could.","es":"Las herramientas EDR/XDR usan IA para detectar y detener ataques en tiempo real, más rápido que una persona."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q11","type":"multiple_choice","topic":"edr-xdr","term":{"en":"EDR/XDR tools","es":"Herramientas EDR/XDR"},"prompt":{"en":"What are examples of EDR/XDR?","es":"¿Cuáles son ejemplos de EDR/XDR?"},"choices":[{"choice_id":"a","text":{"en":"1Password and Bitwarden","es":"1Password y Bitwarden"}},{"choice_id":"b","text":{"en":"Okta and YubiKey","es":"Okta y YubiKey"}},{"choice_id":"c","text":{"en":"CrowdStrike and Microsoft Defender","es":"CrowdStrike y Microsoft Defender"}},{"choice_id":"d","text":{"en":"Cisco VPN and Firewalls","es":"Cisco VPN y Firewalls"}}],"correct_choice_id":"c","explanation":{"en":"CrowdStrike and Microsoft Defender are EDR/XDR products; the other pairs are password managers, identity tools and network tools.","es":"CrowdStrike y Microsoft Defender son productos EDR/XDR; los otros pares son gestores de contraseñas, herramientas de identidad y herramientas de red."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q12","type":"multiple_choice","topic":"password-managers","term":{"en":"Password reuse","es":"Reutilización de contraseñas"},"prompt":{"en":"What do password managers prevent?","es":"¿Qué evitan los gestores de contraseñas?"},"choices":[{"choice_id":"a","text":{"en":"Password reuse","es":"La reutilización de contraseñas"}},{"choice_id":"b","text":{"en":"File encryption","es":"El cifrado de archivos"}},{"choice_id":"c","text":{"en":"Use of MFA authentication","es":"El uso de autenticación MFA"}},{"choice_id":"d","text":{"en":"Connection to VPN networks","es":"La conexión a redes VPN"}}],"correct_choice_id":"a","explanation":{"en":"A password manager makes a different password for every account, so one leaked password doesn't unlock the rest.","es":"Un gestor de contraseñas crea una contraseña distinta para cada cuenta, así que una contraseña filtrada no abre las demás."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q13","type":"multiple_choice","topic":"password-managers","term":{"en":"Password manager tools","es":"Herramientas de contraseñas"},"prompt":{"en":"What tools are password managers?","es":"¿Qué herramientas son gestores de contraseñas?"},"choices":[{"choice_id":"a","text":{"en":"Okta and CrowdStrike","es":"Okta y CrowdStrike"}},{"choice_id":"b","text":{"en":"1Password and Bitwarden","es":"1Password y Bitwarden"}},{"choice_id":"c","text":{"en":"YubiKey and Firewalls","es":"YubiKey y Firewalls"}},{"choice_id":"d","text":{"en":"Microsoft Defender and VPN","es":"Microsoft Defender y VPN"}}],"correct_choice_id":"b","explanation":{"en":"1Password and Bitwarden are password managers; the other pairs mix in identity, endpoint and network tools.","es":"1Password y Bitwarden son gestores de contraseñas; los otros pares mezclan herramientas de identidad, de dispositivos y de red."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q14","type":"multiple_choice","topic":"backups","term":{"en":"Backup","es":"Copia de seguridad"},"prompt":{"en":"What is a data backup?","es":"¿Qué es una copia de seguridad (backup)?"},"choices":[{"choice_id":"a","text":{"en":"Copy of data in a secure place","es":"Duplicación de datos en lugar seguro"}},{"choice_id":"b","text":{"en":"A type of computer virus","es":"Un tipo de virus informático"}},{"choice_id":"c","text":{"en":"A rule to filter traffic","es":"Una regla para filtrar tráfico"}},{"choice_id":"d","text":{"en":"A system to make passwords","es":"Un sistema para crear contraseñas"}}],"correct_choice_id":"a","explanation":{"en":"A backup is a copy of your data kept in a separate, secure place.","es":"Una copia de seguridad es un duplicado de tus datos guardado en un lugar separado y seguro."},"time_limit_sec":60},{"question_id":"pr-bootcamp-security-tools-q15","type":"multiple_choice","topic":"backups","term":{"en":"Recovery","es":"Recuperación"},"prompt":{"en":"Why are backups vital?","es":"¿Por qué son vitales los backups?"},"choices":[{"choice_id":"a","text":{"en":"Allow restoring data after attack","es":"Permiten restaurar datos tras un ataque"}},{"choice_id":"b","text":{"en":"Increase network speed","es":"Aumentan la velocidad de la red"}},{"choice_id":"c","text":{"en":"Replace the need for MFA","es":"Reemplazan la necesidad de MFA"}},{"choice_id":"d","text":{"en":"Block phishing attacks","es":"Bloquean ataques de phishing"}}],"correct_choice_id":"a","explanation":{"en":"If ransomware or a failure wipes your data, a backup lets you restore it instead of losing it or paying attackers.","es":"Si un ransomware o una falla borra tus datos, una copia de seguridad te permite restaurarlos en lugar de perderlos o pagarle a los atacantes."},"time_limit_sec":60}],"boss_missions":[{"mission_id":"pr-bootcamp-security-tools-boss-firewalls","topic":"firewalls","title":{"en":"Traffic flood","es":"Inundación de tráfico"},"scenario":{"en":"Your school's computer lab is suddenly flooded with strange traffic from an address nobody recognizes.","es":"El laboratorio de computadoras de tu escuela de repente recibe muchísimo tráfico extraño desde una dirección que nadie reconoce."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-firewalls-1","type":"multiple_choice","prompt":{"en":"What should block the unknown traffic first?","es":"¿Qué debe bloquear primero el tráfico desconocido?"},"choices":[{"choice_id":"a","text":{"en":"Firewall rules","es":"Reglas del firewall"}},{"choice_id":"b","text":{"en":"A password manager","es":"Un gestor de contraseñas"}},{"choice_id":"c","text":{"en":"A backup","es":"Una copia de seguridad"}},{"choice_id":"d","text":{"en":"A new keyboard","es":"Un teclado nuevo"}}],"correct_choice_id":"a","explanation":{"en":"Firewall rules decide which traffic is allowed in, so they are the first line of defense.","es":"Las reglas del firewall deciden qué tráfico puede entrar, así que son la primera línea de defensa."}},{"question_id":"pr-bootcamp-security-tools-boss-firewalls-2","type":"multiple_choice","prompt":{"en":"The attack hides inside normal-looking web traffic. Which tool can look inside it?","es":"El ataque se esconde dentro de tráfico web que parece normal. ¿Qué herramienta puede examinarlo por dentro?"},"choices":[{"choice_id":"a","text":{"en":"A basic antivirus","es":"Un antivirus básico"}},{"choice_id":"b","text":{"en":"A next-gen firewall with deep packet inspection","es":"Un firewall de nueva generación con inspección profunda de paquetes"}},{"choice_id":"c","text":{"en":"A VPN","es":"Una VPN"}},{"choice_id":"d","text":{"en":"A YubiKey","es":"Una YubiKey"}}],"correct_choice_id":"b","explanation":{"en":"Deep packet inspection reads the contents of traffic, not just where it comes from.","es":"La inspección profunda de paquetes lee el contenido del tráfico, no solo de dónde viene."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-vpn","topic":"vpn","title":{"en":"Café Wi-Fi","es":"Wi-Fi del café"},"scenario":{"en":"You're finishing homework on a café's free Wi-Fi and need to log in to your school portal.","es":"Estás terminando la tarea con el Wi-Fi gratis de un café y necesitas entrar al portal de tu escuela."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-vpn-1","type":"multiple_choice","prompt":{"en":"What protects what you send over the public Wi-Fi?","es":"¿Qué protege lo que envías por el Wi-Fi público?"},"choices":[{"choice_id":"a","text":{"en":"Turning the screen brightness down","es":"Bajar el brillo de la pantalla"}},{"choice_id":"b","text":{"en":"Clearing your browser history","es":"Borrar el historial del navegador"}},{"choice_id":"c","text":{"en":"Connecting through a VPN","es":"Conectarte a través de una VPN"}},{"choice_id":"d","text":{"en":"Closing other apps","es":"Cerrar otras aplicaciones"}}],"correct_choice_id":"c","explanation":{"en":"A VPN encrypts your connection, so others on the same Wi-Fi can't read it.","es":"Una VPN cifra tu conexión, así que otras personas en el mismo Wi-Fi no pueden leerla."}},{"question_id":"pr-bootcamp-security-tools-boss-vpn-2","type":"multiple_choice","prompt":{"en":"Your teacher works from home and needs files on the school's private network. What lets her reach them safely?","es":"Tu maestra trabaja desde casa y necesita archivos de la red privada de la escuela. ¿Qué le permite llegar a ellos de forma segura?"},"choices":[{"choice_id":"a","text":{"en":"The school's VPN","es":"La VPN de la escuela"}},{"choice_id":"b","text":{"en":"Emailing the files to her personal account","es":"Enviarse los archivos a su correo personal"}},{"choice_id":"c","text":{"en":"A USB drive found in the parking lot","es":"Una memoria USB encontrada en el estacionamiento"}},{"choice_id":"d","text":{"en":"Turning off the firewall","es":"Apagar el firewall"}}],"correct_choice_id":"a","explanation":{"en":"Remote access through the school's VPN keeps the files on a protected, encrypted connection.","es":"El acceso remoto por la VPN de la escuela mantiene los archivos en una conexión protegida y cifrada."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-mfa","topic":"mfa","title":{"en":"Account locked?","es":"¿Cuenta bloqueada?"},"scenario":{"en":"You get an email saying your school account is locked. It asks you to log in through a link to unlock it.","es":"Recibes un correo que dice que tu cuenta de la escuela está bloqueada. Te pide entrar por un enlace para desbloquearla."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-mfa-1","type":"multiple_choice","prompt":{"en":"What do you check first?","es":"¿Qué revisas primero?"},"choices":[{"choice_id":"a","text":{"en":"How urgent the message sounds","es":"Qué tan urgente suena el mensaje"}},{"choice_id":"b","text":{"en":"The sender's address and where the link really goes","es":"La dirección de quien lo envía y adónde lleva realmente el enlace"}},{"choice_id":"c","text":{"en":"Whether it uses the school colors","es":"Si usa los colores de la escuela"}},{"choice_id":"d","text":{"en":"Nothing; click before it's too late","es":"Nada; haces clic antes de que sea tarde"}}],"correct_choice_id":"b","explanation":{"en":"Fake messages copy logos and create urgency; the sender's address and the real link give them away.","es":"Los mensajes falsos copian logos y crean urgencia; la dirección de quien envía y el enlace real los delatan."}},{"question_id":"pr-bootcamp-security-tools-boss-mfa-2","type":"multiple_choice","prompt":{"en":"Someone steals your password, but your account uses MFA. What stops them?","es":"Alguien roba tu contraseña, pero tu cuenta usa MFA. ¿Qué lo detiene?"},"choices":[{"choice_id":"a","text":{"en":"They still need your second factor, like your authenticator app","es":"Todavía necesitan tu segundo factor, como tu app autenticadora"}},{"choice_id":"b","text":{"en":"Nothing stops them","es":"Nada lo detiene"}},{"choice_id":"c","text":{"en":"Your username is secret","es":"Tu nombre de usuario es secreto"}},{"choice_id":"d","text":{"en":"The website is slow","es":"El sitio web es lento"}}],"correct_choice_id":"a","explanation":{"en":"With MFA, a password alone isn't enough; the attacker also needs something only you have.","es":"Con MFA, la contraseña sola no basta; el atacante también necesita algo que solo tú tienes."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-iam","topic":"iam","title":{"en":"The new intern","es":"La nueva pasante"},"scenario":{"en":"A new intern joins the organization and needs access to do her job.","es":"Una nueva pasante entra a la organización y necesita acceso para hacer su trabajo."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-iam-1","type":"multiple_choice","prompt":{"en":"How much access should the intern get?","es":"¿Cuánto acceso debe recibir la pasante?"},"choices":[{"choice_id":"a","text":{"en":"Admin access to everything, just in case","es":"Acceso de administradora a todo, por si acaso"}},{"choice_id":"b","text":{"en":"Only what her job needs","es":"Solo lo que su trabajo necesita"}},{"choice_id":"c","text":{"en":"The same access as her manager","es":"El mismo acceso que su supervisora"}},{"choice_id":"d","text":{"en":"A shared login with the whole team","es":"Un usuario compartido con todo el equipo"}}],"correct_choice_id":"b","explanation":{"en":"Least privilege limits the damage if her account is ever misused or stolen.","es":"El menor privilegio limita el daño si su cuenta llega a usarse mal o a ser robada."}},{"question_id":"pr-bootcamp-security-tools-boss-iam-2","type":"multiple_choice","prompt":{"en":"Where should an admin manage the intern's access?","es":"¿Dónde debe la administración gestionar el acceso de la pasante?"},"choices":[{"choice_id":"a","text":{"en":"In a central IAM platform like Okta","es":"En una plataforma IAM central como Okta"}},{"choice_id":"b","text":{"en":"On sticky notes","es":"En notas adhesivas"}},{"choice_id":"c","text":{"en":"In a shared spreadsheet of passwords","es":"En una hoja de cálculo compartida con contraseñas"}},{"choice_id":"d","text":{"en":"In the team group chat","es":"En el chat del equipo"}}],"correct_choice_id":"a","explanation":{"en":"A central IAM platform makes it easy to give, review and remove access in one place.","es":"Una plataforma IAM central facilita dar, revisar y quitar acceso desde un solo lugar."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-edr-xdr","topic":"edr-xdr","title":{"en":"2 a.m. alarm","es":"Alarma a las 2 a. m."},"scenario":{"en":"At 2 a.m., a laptop on the network starts locking files one after another.","es":"A las 2 a. m., una laptop de la red empieza a bloquear archivos uno tras otro."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-edr-1","type":"multiple_choice","prompt":{"en":"Which tool would notice this behavior as it happens?","es":"¿Qué herramienta notaría este comportamiento mientras ocurre?"},"choices":[{"choice_id":"a","text":{"en":"A monthly virus scan","es":"Un escaneo de virus mensual"}},{"choice_id":"b","text":{"en":"EDR/XDR monitoring","es":"El monitoreo EDR/XDR"}},{"choice_id":"c","text":{"en":"A password manager","es":"Un gestor de contraseñas"}},{"choice_id":"d","text":{"en":"A printed report","es":"Un reporte impreso"}}],"correct_choice_id":"b","explanation":{"en":"EDR/XDR watches devices continuously, so it can catch an attack in progress.","es":"EDR/XDR vigila los dispositivos continuamente, así que puede detectar un ataque en curso."}},{"question_id":"pr-bootcamp-security-tools-boss-edr-2","type":"multiple_choice","prompt":{"en":"What can EDR/XDR do right away to limit the damage?","es":"¿Qué puede hacer EDR/XDR de inmediato para limitar el daño?"},"choices":[{"choice_id":"a","text":{"en":"Isolate the laptop from the network","es":"Aislar la laptop de la red"}},{"choice_id":"b","text":{"en":"Email the attacker","es":"Enviarle un correo al atacante"}},{"choice_id":"c","text":{"en":"Turn off every server in the building","es":"Apagar todos los servidores del edificio"}},{"choice_id":"d","text":{"en":"Wait until morning","es":"Esperar hasta la mañana"}}],"correct_choice_id":"a","explanation":{"en":"Cutting the infected device off the network stops the attack from spreading.","es":"Desconectar el dispositivo infectado de la red evita que el ataque se propague."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-password-managers","topic":"password-managers","title":{"en":"One password for everything","es":"Una contraseña para todo"},"scenario":{"en":"Your friend uses the same password for email, games and banking. A game site gets hacked.","es":"Tu amigo usa la misma contraseña para el correo, los juegos y el banco. Hackean un sitio de juegos."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-pm-1","type":"multiple_choice","prompt":{"en":"What's the biggest risk now?","es":"¿Cuál es el mayor riesgo ahora?"},"choices":[{"choice_id":"a","text":{"en":"Attackers try that password on his other accounts","es":"Los atacantes prueban esa contraseña en sus otras cuentas"}},{"choice_id":"b","text":{"en":"His games run slower","es":"Sus juegos van más lentos"}},{"choice_id":"c","text":{"en":"His phone battery drains","es":"Se le descarga la batería del teléfono"}},{"choice_id":"d","text":{"en":"There is no risk","es":"No hay ningún riesgo"}}],"correct_choice_id":"a","explanation":{"en":"Reused passwords let one leak unlock many accounts.","es":"Las contraseñas reutilizadas permiten que una sola filtración abra muchas cuentas."}},{"question_id":"pr-bootcamp-security-tools-boss-pm-2","type":"multiple_choice","prompt":{"en":"What's the best fix?","es":"¿Cuál es la mejor solución?"},"choices":[{"choice_id":"a","text":{"en":"Add a 1 to the end of the same password","es":"Agregar un 1 al final de la misma contraseña"}},{"choice_id":"b","text":{"en":"Use a password manager with a unique password for each account","es":"Usar un gestor de contraseñas con una contraseña única para cada cuenta"}},{"choice_id":"c","text":{"en":"Write the password on his phone case","es":"Escribir la contraseña en el estuche del teléfono"}},{"choice_id":"d","text":{"en":"Stop using the internet","es":"Dejar de usar internet"}}],"correct_choice_id":"b","explanation":{"en":"A password manager creates and remembers a strong, different password for every account.","es":"Un gestor de contraseñas crea y recuerda una contraseña fuerte y distinta para cada cuenta."}}]},{"mission_id":"pr-bootcamp-security-tools-boss-backups","topic":"backups","title":{"en":"Ransom note","es":"Nota de rescate"},"scenario":{"en":"Ransomware locks every file on the club's shared computer and demands payment to unlock them.","es":"Un ransomware bloquea todos los archivos de la computadora compartida del club y exige un pago para desbloquearlos."},"questions":[{"question_id":"pr-bootcamp-security-tools-boss-backups-1","type":"multiple_choice","prompt":{"en":"What lets the club get its files back without paying?","es":"¿Qué permite al club recuperar sus archivos sin pagar?"},"choices":[{"choice_id":"a","text":{"en":"A recent backup stored somewhere else","es":"Una copia de seguridad reciente guardada en otro lugar"}},{"choice_id":"b","text":{"en":"Restarting the computer","es":"Reiniciar la computadora"}},{"choice_id":"c","text":{"en":"Renaming the files","es":"Cambiar el nombre de los archivos"}},{"choice_id":"d","text":{"en":"Paying the ransom","es":"Pagar el rescate"}}],"correct_choice_id":"a","explanation":{"en":"A separate, recent backup lets you restore your data and ignore the ransom demand.","es":"Una copia de seguridad reciente y separada te permite restaurar tus datos e ignorar la exigencia de rescate."}},{"question_id":"pr-bootcamp-security-tools-boss-backups-2","type":"multiple_choice","prompt":{"en":"Where should the club keep its backups?","es":"¿Dónde debe guardar el club sus copias de seguridad?"},"choices":[{"choice_id":"a","text":{"en":"In a folder on the same computer","es":"En una carpeta en la misma computadora"}},{"choice_id":"b","text":{"en":"In a separate, secure place, like an offline drive or protected cloud storage","es":"En un lugar separado y seguro, como un disco desconectado o una nube protegida"}},{"choice_id":"c","text":{"en":"In the computer's trash can","es":"En la papelera de la computadora"}},{"choice_id":"d","text":{"en":"Nowhere; backups slow things down","es":"En ningún lugar; las copias hacen todo más lento"}}],"correct_choice_id":"b","explanation":{"en":"Ransomware can lock a backup on the same machine, so keep copies somewhere it can't reach.","es":"El ransomware puede bloquear una copia guardada en la misma máquina, así que guarda copias donde no pueda llegar."}}]}],"retired_question_ids":[],"source":{"format":"json","file_name":"pr-bootcamp-security-tools.v2.json"}},{"schema_version":1,"module_id":"phishing-basics","content_version":1,"title":{"en":"Phishing Basics","es":"Conceptos básicos de phishing"},"topics":[{"topic_id":"what-is-phishing","name":{"en":"What phishing is","es":"Qué es el phishing"}},{"topic_id":"red-flags","name":{"en":"Red flags","es":"Señales de alerta"}},{"topic_id":"links-attachments","name":{"en":"Links and attachments","es":"Enlaces y archivos adjuntos"}},{"topic_id":"texts-calls","name":{"en":"Texts and calls","es":"Mensajes de texto y llamadas"}},{"topic_id":"targeted-attacks","name":{"en":"Targeted attacks","es":"Ataques dirigidos"}},{"topic_id":"respond-report","name":{"en":"Respond and report","es":"Responder y reportar"}}],"questions":[{"question_id":"phishing-basics-q01","type":"multiple_choice","topic":"what-is-phishing","term":{"en":"Phishing","es":"Phishing"},"prompt":{"en":"Attackers trick you into revealing passwords with fake messages. This is…","es":"Los atacantes te engañan con mensajes falsos para que reveles tus contraseñas. Esto es…"},"choices":[{"choice_id":"a","text":{"en":"A firewall","es":"Un firewall"}},{"choice_id":"b","text":{"en":"Phishing","es":"Phishing"}},{"choice_id":"c","text":{"en":"A backup","es":"Una copia de seguridad"}},{"choice_id":"d","text":{"en":"Encryption","es":"Cifrado"}}],"correct_choice_id":"b","explanation":{"en":"Phishing uses fake messages that look real to steal passwords, money or personal information.","es":"El phishing usa mensajes falsos que parecen reales para robar contraseñas, dinero o información personal."},"time_limit_sec":30},{"question_id":"phishing-basics-q02","type":"multiple_choice","topic":"what-is-phishing","term":{"en":"Social engineering","es":"Ingeniería social"},"prompt":{"en":"Phishing is a type of social engineering. What does social engineering attack?","es":"El phishing es un tipo de ingeniería social. ¿Qué ataca la ingeniería social?"},"choices":[{"choice_id":"a","text":{"en":"People's trust and emotions","es":"La confianza y las emociones de las personas"}},{"choice_id":"b","text":{"en":"Computer fans","es":"Los ventiladores de la computadora"}},{"choice_id":"c","text":{"en":"Network cables","es":"Los cables de red"}},{"choice_id":"d","text":{"en":"Screen brightness","es":"El brillo de la pantalla"}}],"correct_choice_id":"a","explanation":{"en":"Social engineering tricks people instead of breaking technology, using fear, curiosity, urgency or trust.","es":"La ingeniería social engaña a las personas en lugar de romper la tecnología, usando miedo, curiosidad, urgencia o confianza."},"time_limit_sec":30},{"question_id":"phishing-basics-q03","type":"multiple_choice","topic":"red-flags","term":{"en":"Urgency","es":"Urgencia"},"prompt":{"en":"An email says: \"Your account will be deleted in 1 hour!\" Which red flag is this?","es":"Un correo dice: \"¡Tu cuenta será eliminada en 1 hora!\" ¿Qué señal de alerta es esta?"},"choices":[{"choice_id":"a","text":{"en":"A friendly greeting","es":"Un saludo amistoso"}},{"choice_id":"b","text":{"en":"Correct spelling","es":"Buena ortografía"}},{"choice_id":"c","text":{"en":"Urgency and pressure","es":"Urgencia y presión"}},{"choice_id":"d","text":{"en":"A long signature","es":"Una firma larga"}}],"correct_choice_id":"c","explanation":{"en":"Attackers rush you so you act before you think; real services rarely give one-hour deadlines.","es":"Los atacantes te apuran para que actúes sin pensar; los servicios reales casi nunca dan plazos de una hora."},"time_limit_sec":30},{"question_id":"phishing-basics-q04","type":"multiple_choice","topic":"red-flags","term":{"en":"Sender address","es":"Dirección del remitente"},"prompt":{"en":"An email claims to be from your bank but comes from bank-help@secure-login-alerts.co. What's wrong?","es":"Un correo dice ser de tu banco pero viene de bank-help@secure-login-alerts.co. ¿Qué está mal?"},"choices":[{"choice_id":"a","text":{"en":"It mentions your bank","es":"Menciona a tu banco"}},{"choice_id":"b","text":{"en":"The address isn't your bank's real domain","es":"La dirección no es el dominio real de tu banco"}},{"choice_id":"c","text":{"en":"It arrived in the morning","es":"Llegó en la mañana"}},{"choice_id":"d","text":{"en":"It has a subject line","es":"Tiene un asunto"}}],"correct_choice_id":"b","explanation":{"en":"Anyone can type a bank's name; the part after the @ shows who really sent the message.","es":"Cualquiera puede escribir el nombre de un banco; la parte después de la @ muestra quién envió realmente el mensaje."},"time_limit_sec":30},{"question_id":"phishing-basics-q05","type":"multiple_choice","topic":"red-flags","term":{"en":"Too good to be true","es":"Demasiado bueno para ser verdad"},"prompt":{"en":"A message says you won a free phone and only need to pay shipping. This is most likely…","es":"Un mensaje dice que ganaste un teléfono gratis y solo tienes que pagar el envío. Lo más probable es que sea…"},"choices":[{"choice_id":"a","text":{"en":"A real prize","es":"Un premio real"}},{"choice_id":"b","text":{"en":"A security update","es":"Una actualización de seguridad"}},{"choice_id":"c","text":{"en":"A backup notice","es":"Un aviso de copia de seguridad"}},{"choice_id":"d","text":{"en":"A scam","es":"Una estafa"}}],"correct_choice_id":"d","explanation":{"en":"Prizes you never entered for are a classic hook; the \"shipping fee\" is how they steal your card details.","es":"Los premios por concursos en los que nunca participaste son un anzuelo clásico; el \"costo de envío\" es la forma de robar los datos de tu tarjeta."},"time_limit_sec":30},{"question_id":"phishing-basics-q06","type":"multiple_choice","topic":"links-attachments","term":{"en":"Check the link","es":"Revisa el enlace"},"prompt":{"en":"Before you tap a link in a message, what should you do?","es":"Antes de tocar un enlace en un mensaje, ¿qué debes hacer?"},"choices":[{"choice_id":"a","text":{"en":"Check where it really goes by holding or hovering over it","es":"Revisar adónde lleva realmente, manteniéndolo presionado o pasando el cursor"}},{"choice_id":"b","text":{"en":"Tap it quickly before it expires","es":"Tocarlo rápido antes de que expire"}},{"choice_id":"c","text":{"en":"Forward it to friends","es":"Reenviarlo a tus amigos"}},{"choice_id":"d","text":{"en":"Reply and ask if it's real","es":"Responder y preguntar si es real"}}],"correct_choice_id":"a","explanation":{"en":"The text of a link can say anything; the real address shows where it actually takes you.","es":"El texto de un enlace puede decir cualquier cosa; la dirección real muestra adónde te lleva de verdad."},"time_limit_sec":30},{"question_id":"phishing-basics-q07","type":"multiple_choice","topic":"links-attachments","term":{"en":"Lookalike address","es":"Dirección imitada"},"prompt":{"en":"Your school's site is portal.myschool.edu. Which address is a fake lookalike?","es":"El sitio de tu escuela es portal.myschool.edu. ¿Cuál dirección es una imitación falsa?"},"choices":[{"choice_id":"a","text":{"en":"portal.myschool.edu/login","es":"portal.myschool.edu/login"}},{"choice_id":"b","text":{"en":"portal.myschool.edu/grades","es":"portal.myschool.edu/grades"}},{"choice_id":"c","text":{"en":"portal.myschoo1.edu","es":"portal.myschoo1.edu"}},{"choice_id":"d","text":{"en":"myschool.edu","es":"myschool.edu"}}],"correct_choice_id":"c","explanation":{"en":"Attackers swap letters for lookalikes, like the number 1 for the letter l, so read addresses carefully.","es":"Los atacantes cambian letras por otras parecidas, como el número 1 por la letra l, así que lee las direcciones con cuidado."},"time_limit_sec":30},{"question_id":"phishing-basics-q08","type":"multiple_choice","topic":"links-attachments","term":{"en":"Risky attachments","es":"Adjuntos riesgosos"},"prompt":{"en":"You get an unexpected attachment named Invoice.pdf.exe. What should you do?","es":"Recibes un adjunto inesperado llamado Invoice.pdf.exe. ¿Qué debes hacer?"},"choices":[{"choice_id":"a","text":{"en":"Open it to see the invoice","es":"Abrirlo para ver la factura"}},{"choice_id":"b","text":{"en":"Don't open it, and report it","es":"No abrirlo y reportarlo"}},{"choice_id":"c","text":{"en":"Rename it to .pdf","es":"Cambiarle el nombre a .pdf"}},{"choice_id":"d","text":{"en":"Send it to classmates","es":"Enviarlo a tus compañeros"}}],"correct_choice_id":"b","explanation":{"en":"The real ending is .exe, a program that could install malware; the .pdf part is a disguise.","es":"La terminación real es .exe, un programa que podría instalar malware; la parte .pdf es un disfraz."},"time_limit_sec":30},{"question_id":"phishing-basics-q09","type":"multiple_choice","topic":"texts-calls","term":{"en":"Smishing","es":"Smishing"},"prompt":{"en":"Phishing by text message is called…","es":"El phishing por mensaje de texto se llama…"},"choices":[{"choice_id":"a","text":{"en":"Hashing","es":"Hashing"}},{"choice_id":"b","text":{"en":"Streaming","es":"Streaming"}},{"choice_id":"c","text":{"en":"Spamming","es":"Spamming"}},{"choice_id":"d","text":{"en":"Smishing","es":"Smishing"}}],"correct_choice_id":"d","explanation":{"en":"Smishing is SMS phishing: fake texts about packages, banks or prizes with a link to tap.","es":"El smishing es phishing por SMS: textos falsos sobre paquetes, bancos o premios con un enlace para tocar."},"time_limit_sec":30},{"question_id":"phishing-basics-q10","type":"multiple_choice","topic":"texts-calls","term":{"en":"Vishing","es":"Vishing"},"prompt":{"en":"A caller says they're from tech support and need your password to fix your account. This is…","es":"Alguien llama diciendo que es de soporte técnico y necesita tu contraseña para arreglar tu cuenta. Esto es…"},"choices":[{"choice_id":"a","text":{"en":"Vishing (voice phishing)","es":"Vishing (phishing por voz)"}},{"choice_id":"b","text":{"en":"Normal tech support","es":"Soporte técnico normal"}},{"choice_id":"c","text":{"en":"A backup check","es":"Una revisión de copias de seguridad"}},{"choice_id":"d","text":{"en":"A firewall test","es":"Una prueba del firewall"}}],"correct_choice_id":"a","explanation":{"en":"Real support teams never need your password; asking for it by phone is voice phishing.","es":"Los equipos de soporte reales nunca necesitan tu contraseña; pedirla por teléfono es phishing por voz."},"time_limit_sec":30},{"question_id":"phishing-basics-q11","type":"multiple_choice","topic":"texts-calls","term":{"en":"Verification codes","es":"Códigos de verificación"},"prompt":{"en":"Someone texts asking for the 6-digit code you just received. What do you do?","es":"Alguien te escribe pidiendo el código de 6 dígitos que acabas de recibir. ¿Qué haces?"},"choices":[{"choice_id":"a","text":{"en":"Send it quickly","es":"Enviarlo rápido"}},{"choice_id":"b","text":{"en":"Send only half of it","es":"Enviar solo la mitad"}},{"choice_id":"c","text":{"en":"Never share it","es":"Nunca compartirlo"}},{"choice_id":"d","text":{"en":"Post it so you don't forget it","es":"Publicarlo para no olvidarlo"}}],"correct_choice_id":"c","explanation":{"en":"That code is your second factor; sharing it lets the attacker log in as you.","es":"Ese código es tu segundo factor; compartirlo permite que el atacante entre como si fueras tú."},"time_limit_sec":30},{"question_id":"phishing-basics-q12","type":"multiple_choice","topic":"targeted-attacks","term":{"en":"Spear phishing","es":"Spear phishing"},"prompt":{"en":"A phishing email that uses your name, your school and your teacher's name is called…","es":"Un correo de phishing que usa tu nombre, tu escuela y el nombre de tu maestra se llama…"},"choices":[{"choice_id":"a","text":{"en":"A newsletter","es":"Un boletín"}},{"choice_id":"b","text":{"en":"Spear phishing","es":"Spear phishing"}},{"choice_id":"c","text":{"en":"Antivirus","es":"Antivirus"}},{"choice_id":"d","text":{"en":"Mass spam","es":"Spam masivo"}}],"correct_choice_id":"b","explanation":{"en":"Spear phishing is aimed at one person or group, using real details to seem trustworthy.","es":"El spear phishing va dirigido a una persona o grupo, usando datos reales para parecer confiable."},"time_limit_sec":30},{"question_id":"phishing-basics-q13","type":"multiple_choice","topic":"targeted-attacks","term":{"en":"Impersonation","es":"Suplantación"},"prompt":{"en":"Your \"principal\" emails asking you to buy gift cards right away and keep it secret. What do you do?","es":"Tu \"director\" te escribe pidiendo que compres tarjetas de regalo de inmediato y que lo mantengas en secreto. ¿Qué haces?"},"choices":[{"choice_id":"a","text":{"en":"Check with the principal in person or by a known phone number","es":"Confirmar con el director en persona o por un número conocido"}},{"choice_id":"b","text":{"en":"Buy the gift cards","es":"Comprar las tarjetas de regalo"}},{"choice_id":"c","text":{"en":"Reply with your card number","es":"Responder con el número de tu tarjeta"}},{"choice_id":"d","text":{"en":"Forward it to everyone","es":"Reenviarlo a todos"}}],"correct_choice_id":"a","explanation":{"en":"Urgency, secrecy and gift cards together are a common impersonation scam; verify through a channel you already trust.","es":"La urgencia, el secreto y las tarjetas de regalo juntos son una estafa de suplantación común; verifica por un medio en el que ya confíes."},"time_limit_sec":30},{"question_id":"phishing-basics-q14","type":"multiple_choice","topic":"respond-report","term":{"en":"Report it","es":"Repórtalo"},"prompt":{"en":"You spot a phishing email at school. What's the best next step?","es":"Descubres un correo de phishing en la escuela. ¿Cuál es el mejor siguiente paso?"},"choices":[{"choice_id":"a","text":{"en":"Reply to the sender","es":"Responderle al remitente"}},{"choice_id":"b","text":{"en":"Click the link to see what happens","es":"Tocar el enlace para ver qué pasa"}},{"choice_id":"c","text":{"en":"Ignore it and tell no one","es":"Ignorarlo y no decirle a nadie"}},{"choice_id":"d","text":{"en":"Report it to IT or your teacher, then delete it","es":"Reportarlo a IT o a tu maestra y luego borrarlo"}}],"correct_choice_id":"d","explanation":{"en":"Reporting helps IT block the attack for everyone else who got the same message.","es":"Reportarlo ayuda a IT a bloquear el ataque para todas las demás personas que recibieron el mismo mensaje."},"time_limit_sec":30},{"question_id":"phishing-basics-q15","type":"multiple_choice","topic":"respond-report","term":{"en":"If you clicked","es":"Si hiciste clic"},"prompt":{"en":"You clicked a phishing link and typed your password. What should you do first?","es":"Tocaste un enlace de phishing y escribiste tu contraseña. ¿Qué debes hacer primero?"},"choices":[{"choice_id":"a","text":{"en":"Wait and see what happens","es":"Esperar a ver qué pasa"}},{"choice_id":"b","text":{"en":"Change that password right away and tell IT","es":"Cambiar esa contraseña de inmediato y avisar a IT"}},{"choice_id":"c","text":{"en":"Delete your browser","es":"Borrar tu navegador"}},{"choice_id":"d","text":{"en":"Turn off your phone for a week","es":"Apagar tu teléfono por una semana"}}],"correct_choice_id":"b","explanation":{"en":"Changing the password quickly locks the attacker out, and IT can check for any damage.","es":"Cambiar la contraseña rápido deja al atacante afuera, y IT puede revisar si hubo algún daño."},"time_limit_sec":30}],"boss_missions":[{"mission_id":"phishing-basics-boss-giveaway","topic":"what-is-phishing","title":{"en":"The giveaway","es":"El sorteo"},"scenario":{"en":"A message on social media says you were picked for a gaming giveaway. To claim it, you have to log in through their link.","es":"Un mensaje en redes sociales dice que te escogieron en un sorteo de videojuegos. Para reclamarlo, tienes que iniciar sesión con su enlace."},"questions":[{"question_id":"phishing-basics-boss-giveaway-1","type":"multiple_choice","prompt":{"en":"What is this most likely?","es":"¿Qué es esto, lo más probable?"},"choices":[{"choice_id":"a","text":{"en":"A lucky win","es":"Un golpe de suerte"}},{"choice_id":"b","text":{"en":"A phishing attempt","es":"Un intento de phishing"}},{"choice_id":"c","text":{"en":"A game update","es":"Una actualización del juego"}},{"choice_id":"d","text":{"en":"A school announcement","es":"Un anuncio de la escuela"}}],"correct_choice_id":"b","explanation":{"en":"A surprise prize plus a login link is a common phishing setup.","es":"Un premio sorpresa más un enlace para iniciar sesión es una trampa de phishing común."}},{"question_id":"phishing-basics-boss-giveaway-2","type":"multiple_choice","prompt":{"en":"What are they really after?","es":"¿Qué buscan realmente?"},"choices":[{"choice_id":"a","text":{"en":"Your login details","es":"Tus datos de inicio de sesión"}},{"choice_id":"b","text":{"en":"Your favorite game","es":"Tu juego favorito"}},{"choice_id":"c","text":{"en":"Your screen time","es":"Tu tiempo de pantalla"}},{"choice_id":"d","text":{"en":"Your phone's color","es":"El color de tu teléfono"}}],"correct_choice_id":"a","explanation":{"en":"Once they have your login, they can take over the account or use it to scam your friends.","es":"Cuando tienen tus datos, pueden robarte la cuenta o usarla para estafar a tus amistades."}}]},{"mission_id":"phishing-basics-boss-power-bill","topic":"red-flags","title":{"en":"The power bill","es":"La factura de luz"},"scenario":{"en":"An email from \"your power company\" says your service will be cut off today unless you pay now through a link.","es":"Un correo de \"tu compañía de luz\" dice que te cortarán el servicio hoy si no pagas ahora mediante un enlace."},"questions":[{"question_id":"phishing-basics-boss-power-bill-1","type":"multiple_choice","prompt":{"en":"Which red flags do you see?","es":"¿Qué señales de alerta ves?"},"choices":[{"choice_id":"a","text":{"en":"A threat with a deadline, plus a payment link","es":"Una amenaza con fecha límite y un enlace de pago"}},{"choice_id":"b","text":{"en":"It mentions electricity","es":"Menciona la electricidad"}},{"choice_id":"c","text":{"en":"It has a logo","es":"Tiene un logo"}},{"choice_id":"d","text":{"en":"None; this is normal","es":"Ninguna; esto es normal"}}],"correct_choice_id":"a","explanation":{"en":"Threats, deadlines and pay-now links are pressure tactics, not how real bills work.","es":"Las amenazas, las fechas límite y los enlaces para pagar ya son tácticas de presión, no así funcionan las facturas reales."}},{"question_id":"phishing-basics-boss-power-bill-2","type":"multiple_choice","prompt":{"en":"How do you check if the bill is real?","es":"¿Cómo verificas si la factura es real?"},"choices":[{"choice_id":"a","text":{"en":"Click the link and look carefully","es":"Tocar el enlace y mirar con cuidado"}},{"choice_id":"b","text":{"en":"Reply to the email and ask","es":"Responder el correo y preguntar"}},{"choice_id":"c","text":{"en":"Go to the company's official app or site yourself, or call the number on a past bill","es":"Entrar tú mismo a la app o el sitio oficial de la compañía, o llamar al número de una factura anterior"}},{"choice_id":"d","text":{"en":"Pay a small amount first","es":"Pagar una cantidad pequeña primero"}}],"correct_choice_id":"c","explanation":{"en":"Contact the company through a route you found yourself, never through the suspicious message.","es":"Comunícate con la compañía por un medio que encontraste tú, nunca por el mensaje sospechoso."}}]},{"mission_id":"phishing-basics-boss-shared-file","topic":"links-attachments","title":{"en":"The shared file","es":"El archivo compartido"},"scenario":{"en":"An email says a classmate shared Final_Grades.docm with you and tells you to enable macros to see it.","es":"Un correo dice que un compañero compartió Final_Grades.docm contigo y te pide activar las macros para verlo."},"questions":[{"question_id":"phishing-basics-boss-shared-file-1","type":"multiple_choice","prompt":{"en":"What should make you stop?","es":"¿Qué debería hacerte detener?"},"choices":[{"choice_id":"a","text":{"en":"The file has a name","es":"El archivo tiene nombre"}},{"choice_id":"b","text":{"en":"It came on a weekday","es":"Llegó un día de semana"}},{"choice_id":"c","text":{"en":"Grades are interesting","es":"Las notas son interesantes"}},{"choice_id":"d","text":{"en":"An unexpected file is asking you to enable macros","es":"Un archivo inesperado te pide activar macros"}}],"correct_choice_id":"d","explanation":{"en":"Macros can run hidden code; an unexpected file that needs them is a common way to spread malware.","es":"Las macros pueden ejecutar código oculto; un archivo inesperado que las necesita es una forma común de propagar malware."}},{"question_id":"phishing-basics-boss-shared-file-2","type":"multiple_choice","prompt":{"en":"The link to open it goes to docs-share-login.net. What now?","es":"El enlace para abrirlo lleva a docs-share-login.net. ¿Y ahora qué?"},"choices":[{"choice_id":"a","text":{"en":"Sign in to see the grades","es":"Iniciar sesión para ver las notas"}},{"choice_id":"b","text":{"en":"Don't sign in; ask the classmate through another channel","es":"No iniciar sesión; preguntarle al compañero por otro medio"}},{"choice_id":"c","text":{"en":"Try your password twice","es":"Probar tu contraseña dos veces"}},{"choice_id":"d","text":{"en":"Download it anyway","es":"Descargarlo de todos modos"}}],"correct_choice_id":"b","explanation":{"en":"That address isn't your school's or a real sharing service's; check with the sender another way.","es":"Esa dirección no es de tu escuela ni de un servicio real para compartir; confirma con quien lo envió por otro medio."}}]},{"mission_id":"phishing-basics-boss-package","topic":"texts-calls","title":{"en":"The held package","es":"El paquete retenido"},"scenario":{"en":"A text says your package is being held and you must pay $1.99 at a link to get it delivered.","es":"Un texto dice que tu paquete está retenido y que debes pagar $1.99 en un enlace para que te lo entreguen."},"questions":[{"question_id":"phishing-basics-boss-package-1","type":"multiple_choice","prompt":{"en":"What kind of attack is this?","es":"¿Qué tipo de ataque es este?"},"choices":[{"choice_id":"a","text":{"en":"Smishing","es":"Smishing"}},{"choice_id":"b","text":{"en":"A firewall alert","es":"Una alerta del firewall"}},{"choice_id":"c","text":{"en":"A backup","es":"Una copia de seguridad"}},{"choice_id":"d","text":{"en":"A software update","es":"Una actualización de software"}}],"correct_choice_id":"a","explanation":{"en":"A fake delivery text with a payment link is one of the most common smishing scams.","es":"Un texto falso de entrega con un enlace de pago es una de las estafas de smishing más comunes."}},{"question_id":"phishing-basics-boss-package-2","type":"multiple_choice","prompt":{"en":"Later, someone calls saying they're your bank and asks you to confirm your card number. What do you do?","es":"Más tarde, alguien llama diciendo que es tu banco y te pide confirmar el número de tu tarjeta. ¿Qué haces?"},"choices":[{"choice_id":"a","text":{"en":"Read them the number","es":"Leerles el número"}},{"choice_id":"b","text":{"en":"Give only the last digits and the code on the back","es":"Dar solo los últimos dígitos y el código de atrás"}},{"choice_id":"c","text":{"en":"Hang up and call the bank using the number on your card","es":"Colgar y llamar al banco al número que aparece en tu tarjeta"}},{"choice_id":"d","text":{"en":"Ask them to call back later","es":"Pedirles que llamen más tarde"}}],"correct_choice_id":"c","explanation":{"en":"Calling back on a number you trust confirms who you're talking to.","es":"Devolver la llamada a un número de confianza confirma con quién estás hablando."}}]},{"mission_id":"phishing-basics-boss-coach","topic":"targeted-attacks","title":{"en":"Message from the coach","es":"Mensaje del entrenador"},"scenario":{"en":"You get an email with your team coach's name, sent from a personal address you don't recognize, asking for everyone's home address for \"a surprise.\"","es":"Recibes un correo con el nombre de tu entrenador, enviado desde una dirección personal que no reconoces, pidiendo la dirección de la casa de todo el equipo para \"una sorpresa\"."},"questions":[{"question_id":"phishing-basics-boss-coach-1","type":"multiple_choice","prompt":{"en":"Why is this suspicious?","es":"¿Por qué es sospechoso?"},"choices":[{"choice_id":"a","text":{"en":"Coaches never send email","es":"Los entrenadores nunca envían correos"}},{"choice_id":"b","text":{"en":"It uses a name you know, an address you don't, and asks for private information","es":"Usa un nombre que conoces, una dirección que no conoces y pide información privada"}},{"choice_id":"c","text":{"en":"Surprises are always fake","es":"Las sorpresas siempre son falsas"}},{"choice_id":"d","text":{"en":"It's too short","es":"Es muy corto"}}],"correct_choice_id":"b","explanation":{"en":"Targeted attacks borrow trusted names; the unknown address and the request for private details give it away.","es":"Los ataques dirigidos usan nombres de confianza; la dirección desconocida y la petición de datos privados lo delatan."}},{"question_id":"phishing-basics-boss-coach-2","type":"multiple_choice","prompt":{"en":"What's the best response?","es":"¿Cuál es la mejor respuesta?"},"choices":[{"choice_id":"a","text":{"en":"Ask the coach in person or through the official team channel","es":"Preguntarle al entrenador en persona o por el canal oficial del equipo"}},{"choice_id":"b","text":{"en":"Reply with your address","es":"Responder con tu dirección"}},{"choice_id":"c","text":{"en":"Send your teammates' addresses","es":"Enviar las direcciones de tus compañeros"}},{"choice_id":"d","text":{"en":"Post the email online","es":"Publicar el correo en internet"}}],"correct_choice_id":"a","explanation":{"en":"Verifying through a channel you already trust protects you and your teammates.","es":"Verificar por un medio en el que ya confías te protege a ti y a tus compañeros."}}]},{"mission_id":"phishing-basics-boss-fake-login","topic":"respond-report","title":{"en":"The fake login page","es":"La página de inicio falsa"},"scenario":{"en":"A few minutes ago you typed your school password into a login page, and now you realize the address was fake.","es":"Hace unos minutos escribiste tu contraseña de la escuela en una página de inicio de sesión, y ahora te das cuenta de que la dirección era falsa."},"questions":[{"question_id":"phishing-basics-boss-fake-login-1","type":"multiple_choice","prompt":{"en":"What do you do first?","es":"¿Qué haces primero?"},"choices":[{"choice_id":"a","text":{"en":"Change your password on the real site right away","es":"Cambiar tu contraseña en el sitio real de inmediato"}},{"choice_id":"b","text":{"en":"Wait until tomorrow","es":"Esperar hasta mañana"}},{"choice_id":"c","text":{"en":"Log in again on the fake page","es":"Iniciar sesión otra vez en la página falsa"}},{"choice_id":"d","text":{"en":"Delete the email and forget it","es":"Borrar el correo y olvidarlo"}}],"correct_choice_id":"a","explanation":{"en":"Speed matters: a new password stops the attacker from using the one they just stole.","es":"La rapidez importa: una contraseña nueva impide que el atacante use la que acaba de robar."}},{"question_id":"phishing-basics-boss-fake-login-2","type":"multiple_choice","prompt":{"en":"What else protects your account now?","es":"¿Qué más protege tu cuenta ahora?"},"choices":[{"choice_id":"a","text":{"en":"Using the same new password everywhere","es":"Usar la misma contraseña nueva en todos lados"}},{"choice_id":"b","text":{"en":"Turning on MFA and telling IT so they can watch for misuse","es":"Activar la MFA y avisar a IT para que vigilen cualquier mal uso"}},{"choice_id":"c","text":{"en":"Changing your profile picture","es":"Cambiar tu foto de perfil"}},{"choice_id":"d","text":{"en":"Clearing your notifications","es":"Borrar tus notificaciones"}}],"correct_choice_id":"b","explanation":{"en":"MFA blocks logins with just the password, and IT can check whether the account was used.","es":"La MFA bloquea los accesos que solo tienen la contraseña, e IT puede revisar si alguien usó la cuenta."}}]}],"retired_question_ids":[],"source":{"format":"json","file_name":"phishing-basics.v1.json"}}]</script>
+<script>
+(() => {
+"use strict";
+
+/* ================= Content ================= */
+const MODULES = JSON.parse(document.getElementById("module-data").textContent);
+let MODULE, QUESTIONS, TOPICS, BOSSES, topicById, bossByTopic;
+function useModule(id) {
+  MODULE = MODULES.find(m => m.module_id === id) || MODULES[0];
+  QUESTIONS = MODULE.questions;
+  TOPICS = MODULE.topics;
+  BOSSES = MODULE.boss_missions;
+  topicById = new Map(TOPICS.map(t => [t.topic_id, t]));
+  bossByTopic = new Map(BOSSES.map(b => [b.topic, b]));
+}
+const MODULE_LABEL = { "pr-bootcamp-security-tools": "Security tools", "phishing-basics": "Phishing" };
+
+/* Game tuning. These are design choices for the prototype, not content. */
+const WAVE_SIZE = 8;
+const CHALLENGE_SECONDS = 20;
+const BOSS_SECONDS = 25;
+const BASE_POINTS = 100;
+const SPEED_BONUS_MAX = 50;
+const BRANCH_DONE_LEVEL = 3;          // every term on the branch at level 3+ unlocks its Boss Mission
+const MAX_LEVEL = 5;                  // Leitner boxes 1–5; level 5 = mastered
+const REVIEW_DAYS = [0, 0, 1, 2, 4, 7]; // days until review, by level
+/* Which shield a wrong answer cracks: the CIA property the topic mainly protects. */
+const CIA_FOR_TOPIC = {
+  "vpn": "C", "mfa": "C", "iam": "C", "password-managers": "C", "firewalls": "I", "edr-xdr": "I", "backups": "A",
+  "what-is-phishing": "C", "red-flags": "C", "texts-calls": "C", "targeted-attacks": "C", "links-attachments": "I", "respond-report": "A",
+};
+const CIA_NAMES = { C: "Confidentiality", I: "Integrity", A: "Availability" };
+const THREAT_FOR_TOPIC = {
+  "firewalls": "packet", "vpn": "packet", "edr-xdr": "popup", "backups": "popup", "mfa": "email", "iam": "email", "password-managers": "email",
+  "what-is-phishing": "email", "red-flags": "email", "links-attachments": "email", "texts-calls": "text", "targeted-attacks": "email", "respond-report": "popup",
+};
+const THREAT_LABEL = { packet: "Suspicious packet", email: "Suspicious email", popup: "Pop-up alert", text: "Suspicious text" };
+const SHORT_TOPIC = {
+  "firewalls": "Firewalls", "vpn": "VPN", "mfa": "MFA", "iam": "IAM", "edr-xdr": "EDR/XDR", "password-managers": "Passwords", "backups": "Backups",
+  "what-is-phishing": "Basics", "red-flags": "Red flags", "links-attachments": "Links", "texts-calls": "Texts & calls", "targeted-attacks": "Targeted", "respond-report": "Respond",
+};
+const RANKS = ["Recruit", "Defender", "Cyberathlete"];
+
+/* ================= State (this browser only) ================= */
+const STORE_KEY = "tetherless.blockTheThreat.v1";
+const fresh = () => ({ dayOffset: 0, current: MODULES[0].module_id, modules: {}, streak: { count: 0, lastDay: null, skipWeek: null }, points: 0, spanish: false, bossTimer: false, events: 0 });
+let S = load();
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const s = Object.assign(fresh(), JSON.parse(raw));
+      if (s.terms) { // first prototype kept one module's progress at the top level
+        s.modules["pr-bootcamp-security-tools"] = { terms: s.terms, bosses: s.bosses || {} };
+        delete s.terms; delete s.bosses;
+      }
+      return s;
+    }
+  } catch (e) {}
+  return fresh();
+}
+function prog(id) {
+  const k = id || MODULE.module_id;
+  if (!S.modules[k]) S.modules[k] = { terms: {}, bosses: {} };
+  return S.modules[k];
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+const today = () => Math.floor(Date.now() / 86400000) + S.dayOffset;
+const weekOf = (day) => Math.floor((day + 3) / 7); // weeks start Monday
+const level = (id, m) => { const t = prog(m && m.module_id).terms[id]; return (t && t.box) || 0; };
+const isDue = (id) => level(id) > 0 && prog().terms[id].due <= today();
+const branchQuestions = (topic, m) => (m || MODULE).questions.filter(q => q.topic === topic);
+const branchDone = (topic, m) => branchQuestions(topic, m).every(q => level(q.question_id, m) >= BRANCH_DONE_LEVEL);
+const branchesDone = (m) => (m || MODULE).topics.filter(t => branchDone(t.topic_id, m)).length;
+const bossesCleared = (m) => (m || MODULE).topics.filter(t => prog((m || MODULE).module_id).bosses[t.topic_id]).length;
+/* Ranks count every module, so a learner's rank grows as RCO adds modules. */
+const totalBranches = () => MODULES.reduce((n, m) => n + m.topics.length, 0);
+const allBranchesDone = () => MODULES.reduce((n, m) => n + branchesDone(m), 0);
+const allBossesCleared = () => MODULES.reduce((n, m) => n + bossesCleared(m), 0);
+function rankIndex() {
+  if (allBranchesDone() === totalBranches() && allBossesCleared() === totalBranches()) return 2;
+  if (allBranchesDone() >= 3) return 1;
+  return 0;
+}
+
+/* ================= Helpers ================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const tx = (loc) => esc(loc.en) + (S.spanish && loc.es && loc.es !== loc.en ? `<span class="es">${esc(loc.es)}</span>` : "");
+const plain = (loc) => loc.en;
+const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function shuffle(a) { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+const lvlBar = (n) => `<span class="lvl${n >= MAX_LEVEL ? " max" : ""}" aria-label="Level ${n} of ${MAX_LEVEL}">${Array.from({ length: MAX_LEVEL }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`;
+function show(id) {
+  for (const s of ["home", "play", "summary", "bosses", "briefing"]) $(s).hidden = s !== id;
+  window.scrollTo(0, 0);
+}
+
+/* ================= Tree ================= */
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(name, attrs, parent) {
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+let selectedNode = null;
+
+function drawTree() {
+  const svg = $("tree");
+  svg.replaceChildren();
+  const cx = 200, baseY = 326, junctionY = 196;
+  const n = TOPICS.length;
+
+  // Roots
+  for (const dx of [-46, -22, 22, 46]) el("path", { class: "t-root", d: `M${cx} ${baseY - 8} q ${dx * 0.4} 6 ${dx} 6` }, svg);
+  // Trunk
+  el("path", { class: "t-trunk", d: `M${cx} ${baseY} C ${cx - 6} 270, ${cx + 6} 230, ${cx} ${junctionY}` }, svg);
+
+  const tips = [];
+  const branchLayer = el("g", {}, svg);
+  const meshLayer = el("g", {}, svg);
+  const nodeLayer = el("g", {}, svg);
+  const labelLayer = el("g", {}, svg);
+
+  TOPICS.forEach((t, i) => {
+    const angle = Math.PI * (0.92 - (0.84 * i) / (n - 1)); // 166° → 15°
+    const off = Math.abs(i - (n - 1) / 2);
+    const len = 168 - off * 9;
+    const sx = cx, sy = junctionY + off * 9;
+    const ex = sx + Math.cos(angle) * len, ey = sy - Math.sin(angle) * len;
+    // control point bowed upward for a living curve
+    const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+    const nx = -Math.sin(angle), ny = -Math.cos(angle);
+    const bow = (i < (n - 1) / 2 ? 1 : -1) * 14;
+    const qx = mx + nx * bow * -1, qy = my + ny * bow * -1 - 10;
+    const done = branchDone(t.topic_id);
+    el("path", { class: "t-branch" + (done ? " done" : ""), d: `M${sx} ${sy} Q ${qx} ${qy} ${ex} ${ey}` }, branchLayer);
+
+    const qs = branchQuestions(t.topic_id);
+    const at = (u) => ({ x: (1 - u) * (1 - u) * sx + 2 * (1 - u) * u * qx + u * u * ex, y: (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * qy + u * u * ey });
+    qs.forEach((q, k) => {
+      const u = qs.length === 1 ? 1 : 0.5 + (0.5 * k) / (qs.length - 1);
+      const p = at(u);
+      const lv = level(q.question_id);
+      const g = el("g", { class: "t-node" + (selectedNode === q.question_id ? " sel" : ""), tabindex: "0", role: "button", "aria-label": `${q.term ? q.term.en : q.question_id}, level ${lv} of ${MAX_LEVEL}` }, nodeLayer);
+      const halo = el("circle", { class: "halo", cx: p.x, cy: p.y, r: 13 }, g);
+      const core = el("circle", { class: "core", cx: p.x, cy: p.y, r: 7.5 }, g);
+      if (lv >= MAX_LEVEL) {
+        core.style.fill = "var(--mint)"; core.style.stroke = "var(--mint)";
+        halo.style.fill = "var(--mint)"; halo.style.opacity = ".35";
+      } else if (lv > 0) {
+        core.style.fill = `color-mix(in srgb, var(--electric) ${25 + lv * 17}%, var(--void))`;
+        core.style.stroke = "var(--electric)";
+        halo.style.opacity = String(0.05 + lv * 0.07);
+      }
+      const pick = () => { selectedNode = q.question_id; renderNodeInfo(q); drawTree(); };
+      g.addEventListener("click", pick);
+      g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    });
+
+    const tip = at(1);
+    tips.push(tip);
+    // Label outward from the tip
+    const lx = tip.x + Math.cos(angle) * 22, ly = tip.y - Math.sin(angle) * 22;
+    const anchor = Math.cos(angle) < -0.25 ? "end" : Math.cos(angle) > 0.25 ? "start" : "middle";
+    const label = el("text", { class: "t-label" + (done ? " done" : ""), x: lx, y: ly + 4, "text-anchor": anchor }, labelLayer);
+    label.textContent = SHORT_TOPIC[t.topic_id] || t.name.en;
+
+    // Boss marker
+    if (prog().bosses[t.topic_id]) {
+      const star = el("use", { href: "#i-star", x: tip.x - 7, y: tip.y - 25, width: 14, height: 14, class: "t-boss" }, labelLayer);
+      star.style.color = "var(--gold)";
+    } else if (done) {
+      el("circle", { class: "t-boss-ring", cx: tip.x, cy: tip.y, r: 12 }, nodeLayer);
+    }
+  });
+
+  // Network mesh between neighbouring branch tips: the leaves are network nodes
+  for (let i = 0; i < tips.length - 1; i++) {
+    el("path", { class: "t-mesh", d: `M${tips[i].x} ${tips[i].y} L ${tips[i + 1].x} ${tips[i + 1].y}` }, meshLayer);
+  }
+
+  const mastered = QUESTIONS.filter(q => level(q.question_id) >= MAX_LEVEL).length;
+  const started = QUESTIONS.filter(q => level(q.question_id) > 0).length;
+  $("tree-count").textContent = `${started}/${QUESTIONS.length} terms · ${mastered} mastered`;
+}
+
+function renderNodeInfo(q) {
+  const lv = level(q.question_id);
+  const t = topicById.get(q.topic);
+  let when = "Not started yet";
+  if (lv > 0) {
+    const d = prog().terms[q.question_id].due - today();
+    when = lv >= MAX_LEVEL ? "Mastered" : d <= 0 ? "Due for review now" : d === 1 ? "Review tomorrow" : `Review in ${d} days`;
+  }
+  $("node-info").innerHTML = `<div style="flex:1;min-width:0"><strong>${tx(q.term || { en: q.question_id })}</strong><div>${esc(t ? t.name.en : "")} · ${when}</div></div>${lvlBar(lv)}`;
+}
+
+/* ================= Home ================= */
+function renderHome() {
+  const r = rankIndex();
+  $("chip-rank").querySelector("span").textContent = RANKS[r];
+  const st = S.streak;
+  const alive = st.lastDay !== null && today() - st.lastDay <= 1 ? st.count : (st.lastDay !== null && today() - st.lastDay === 2 && st.skipWeek !== weekOf(today()) ? st.count : 0);
+  const skipLeft = st.skipWeek !== weekOf(today());
+  $("chip-streak").querySelector("span").textContent = `${alive}-day streak · ${skipLeft ? "1 skip day left" : "skip day used"}`;
+  $("spanish").checked = S.spanish;
+  $("saved-count").textContent = `Saved on device · ${S.events} answers`;
+
+  const done = allBranchesDone(), cleared = allBossesCleared(), total = totalBranches();
+  $("rank-progress").textContent = r === 0
+    ? `Rank: Recruit. Complete ${3 - done} more branch${3 - done === 1 ? "" : "es"} in any module to become a Defender.`
+    : r === 1
+      ? `Rank: Defender. Cyberathlete needs every branch in every module complete (${done} of ${total}) and every Boss Mission cleared (${cleared} of ${total}).`
+      : "Rank: Cyberathlete. Every branch complete and every Boss Mission cleared.";
+
+  $("switcher").innerHTML = MODULES.map(m => {
+    const started = m.questions.filter(q => level(q.question_id, m) > 0).length;
+    return `<button role="tab" aria-selected="${m.module_id === MODULE.module_id}" data-id="${esc(m.module_id)}">${esc(MODULE_LABEL[m.module_id] || m.title.en)}<small>${started}/${m.questions.length} terms</small></button>`;
+  }).join("");
+  $("switcher").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    S.current = b.dataset.id; useModule(S.current); selectedNode = null; save(); renderHome();
+    $("node-info").textContent = "Tap a node to see a term. Each correct answer moves a term up a level; it glows brighter as it climbs.";
+  }));
+  $("tree-title").textContent = `Your Raíces tree · ${MODULE_LABEL[MODULE.module_id] || MODULE.title.en}`;
+
+  const ready = TOPICS.filter(t => branchDone(t.topic_id) && !prog().bosses[t.topic_id]).length;
+  $("boss-sub").textContent = ready ? `${ready} mission${ready === 1 ? "" : "s"} ready to play` : "Complete a branch to unlock its mission";
+  $("boss-count").textContent = `${cleared}/${BOSSES.length}`;
+  $("demo-clock").textContent = `Game day ${S.dayOffset >= 0 ? "+" : ""}${S.dayOffset} from today`;
+  drawTree();
+  if (selectedNode) { const q = QUESTIONS.find(x => x.question_id === selectedNode); if (q) renderNodeInfo(q); }
+}
+
+/* ================= Waves ================= */
+function buildWave() {
+  const dueOf = (id) => (prog().terms[id] ? prog().terms[id].due : 0);
+  const byLevel = (a, b) => level(a.question_id) - level(b.question_id) || dueOf(a.question_id) - dueOf(b.question_id);
+  const due = QUESTIONS.filter(q => isDue(q.question_id)).sort(byLevel);
+  const newTerms = QUESTIONS.filter(q => level(q.question_id) === 0);
+  const items = [];
+  const take = (arr, max, kind) => { while (max-- > 0 && arr.length && items.length < WAVE_SIZE) items.push({ q: arr.shift(), kind }); };
+  take(due, 5, "due");          // due reviews first, but leave room for new terms
+  take(newTerms, WAVE_SIZE, "new");
+  take(due, WAVE_SIZE, "due");
+  if (items.length < WAVE_SIZE) {  // nothing else due today: extra practice that can't level up
+    const rest = QUESTIONS.filter(q => !items.some(i => i.q === q)).sort(byLevel);
+    take(rest, WAVE_SIZE, "extra");
+  }
+  return shuffle(items);
+}
+
+function buildBoss(topic) {
+  const boss = bossByTopic.get(topic);
+  const items = boss.questions.map(q => ({ q, kind: "boss" }));
+  for (const q of shuffle(branchQuestions(topic))) items.push({ q, kind: "boss-review" });
+  return items;
+}
+
+let run = null;
+let raf = 0;
+
+function startRun(mode, topic) {
+  const items = mode === "boss" ? buildBoss(topic) : buildWave();
+  run = {
+    mode, topic, items, index: 0,
+    shields: { C: true, I: true, A: true },
+    streak: 0, best: 0, points: 0, blocked: 0,
+    leveled: new Map(), practiced: new Set(), results: [],
+    timed: mode === "challenge" || (mode === "boss" && S.bossTimer),
+    seconds: mode === "boss" ? BOSS_SECONDS : CHALLENGE_SECONDS,
+    attemptId: uid(),
+  };
+  $("hud-mode").textContent = mode === "boss" ? `Boss Mission · ${SHORT_TOPIC[topic]}` : mode === "challenge" ? "Challenge · wave of 8" : "Practice · wave of 8";
+  $("timer").hidden = !run.timed;
+  renderNetwork();
+  show("play");
+  present();
+}
+
+function renderNetwork() {
+  const net = $("network");
+  if (run.mode === "practice") { net.innerHTML = `<span class="net-only">Your network</span>`; return; }
+  net.innerHTML = ["C", "I", "A"].map(k => `
+    <span class="shield${run.shields[k] ? "" : " cracked"}" title="${CIA_NAMES[k]}">
+      <svg viewBox="0 0 26 28" aria-hidden="true">
+        <path class="s-body" d="M13 1.5 2.5 5v8c0 6.4 4.3 11 10.5 13.5C19.2 24 23.5 19.4 23.5 13V5z"/>
+        <text class="s-letter" x="13" y="17.5" text-anchor="middle">${k}</text>
+        <path class="s-crack" d="M13 3l-2 6 4 3-3 5 2 4"/>
+      </svg>
+      <span class="s-name">${CIA_NAMES[k]}</span>
+    </span>`).join("");
+}
+
+function renderDots() {
+  $("dots").innerHTML = run.items.map((_, i) => {
+    const r = run.results[i];
+    return `<i class="${r === true ? "ok" : r === false ? "bad" : i === run.index ? "now" : ""}"></i>`;
+  }).join("");
+}
+
+function present() {
+  const item = run.items[run.index];
+  const q = item.q;
+  const threat = THREAT_FOR_TOPIC[q.topic] || "packet";
+  run.locked = false;
+  run.choices = shuffle(q.choices);
+  run.shownAt = performance.now();
+
+  $("threat-icon").setAttribute("href", `#i-${threat}`);
+  $("threat-label").textContent = item.kind === "boss" ? "Mission step" : THREAT_LABEL[threat];
+  const th = $("threat");
+  th.classList.remove("gone");
+  th.style.transform = "translate(-50%, 0)";
+  const topicName = SHORT_TOPIC[q.topic] || "";
+  $("payload-tag").textContent = item.kind === "boss" ? `Mission · ${topicName}` : `Incoming · ${topicName}${item.kind === "new" ? " · new term" : item.kind === "extra" ? " · extra practice" : ""}`;
+  $("prompt").innerHTML = tx(q.prompt);
+  $("lesson").hidden = true;
+  const ans = $("answers");
+  ans.hidden = false;
+  ans.classList.remove("locked");
+  ans.innerHTML = run.choices.map((c, i) => `
+    <button class="ans c${i}" data-id="${esc(c.choice_id)}" aria-label="Answer ${i + 1}: ${esc(c.text.en)}">
+      <svg aria-hidden="true"><use href="#sh${i}"/></svg><span class="t">${tx(c.text)}</span>
+    </button>`).join("");
+  ans.querySelectorAll(".ans").forEach(b => b.addEventListener("click", () => answer(b.dataset.id)));
+  $("hud-points").textContent = run.points;
+  $("hud-streak").textContent = run.streak >= 2 ? `streak ${run.streak} · x${multiplier(run.streak)}` : "";
+  renderDots();
+  animateThreat();
+}
+
+function multiplier(streak) { return streak >= 5 ? 3 : streak >= 3 ? 2 : 1; }
+
+function animateThreat() {
+  cancelAnimationFrame(raf);
+  const th = $("threat"), arena = $("arena"), fill = $("timer-fill");
+  const travel = arena.clientHeight - 46 - th.offsetHeight - 26;
+  const start = performance.now();
+  const total = run.seconds * 1000;
+  const step = (now) => {
+    if (!run || run.locked) return;
+    const t = now - start;
+    let p;
+    if (run.timed) {
+      p = Math.min(1, t / total);
+      fill.style.transform = `scaleX(${1 - p})`;
+      if (p >= 1) { answer(null); return; }
+    } else {
+      p = Math.min(0.72, t / 9000); // practice: drifts in and waits
+    }
+    if (!reduceMotion()) th.style.transform = `translate(-50%, ${p * travel}px)`;
+    raf = requestAnimationFrame(step);
+  };
+  fill.style.transform = "scaleX(1)";
+  raf = requestAnimationFrame(step);
+}
+
+function recordEvent(q, choiceId, correct, ms) {
+  // Mirrors the canonical answer event the real app will queue for sync.
+  S.events += 1;
+  const ev = { event_id: uid(), event_type: "answer_submitted", module_id: MODULE.module_id, content_version: MODULE.content_version,
+    attempt_id: run.attemptId, question_id: q.question_id, choice_id: choiceId, mode: run.mode, response_ms: Math.round(ms), occurred_at: new Date().toISOString() };
+  run.lastEvent = ev;
+}
+
+function updateLeitner(item, correct) {
+  if (item.kind === "boss" || item.kind === "boss-review") return;
+  const id = item.q.question_id;
+  const before = level(id);
+  let after = before;
+  if (item.kind === "extra") {
+    if (!correct) after = 1;          // extra practice can only demote
+  } else if (correct) {
+    after = before === 0 ? 2 : Math.min(MAX_LEVEL, before + 1);
+  } else {
+    after = 1;
+  }
+  prog().terms[id] = { box: after, due: today() + REVIEW_DAYS[after] };
+  if (correct && after > before) {
+    const prev = run.leveled.get(id);
+    run.leveled.set(id, { q: item.q, from: prev ? prev.from : before, to: after });
+  }
+  run.practiced.add(id);
+}
+
+function answer(choiceId) {
+  if (!run || run.locked) return;
+  run.locked = true;
+  cancelAnimationFrame(raf);
+  const item = run.items[run.index];
+  const q = item.q;
+  const ms = performance.now() - run.shownAt;
+  const correct = choiceId === q.correct_choice_id;
+  recordEvent(q, choiceId, correct, ms);
+  updateLeitner(item, correct);
+  run.results[run.index] = correct;
+
+  const ans = $("answers");
+  ans.classList.add("locked");
+  ans.querySelectorAll(".ans").forEach(b => {
+    if (b.dataset.id === q.correct_choice_id) { b.classList.add("right"); b.insertAdjacentHTML("beforeend", `<span class="mark">CORRECT</span>`); }
+    else if (b.dataset.id === choiceId) b.classList.add("wrong");
+  });
+
+  if (correct) {
+    run.streak += 1;
+    run.best = Math.max(run.best, run.streak);
+    run.blocked += 1;
+    let pts = BASE_POINTS * multiplier(run.streak);
+    if (run.timed) pts += Math.round(SPEED_BONUS_MAX * Math.max(0, 1 - ms / (run.seconds * 1000)));
+    run.points += pts;
+    deflect(pts);
+    save();
+    renderDots();
+    setTimeout(next, reduceMotion() ? 700 : 1100);
+  } else {
+    run.streak = 0;
+    let cracked = null;
+    if (run.mode !== "practice") cracked = crackShield(q.topic);
+    impact();
+    save();
+    renderDots();
+    const right = q.choices.find(c => c.choice_id === q.correct_choice_id);
+    $("lesson-tag").textContent = choiceId === null ? "Time ran out. Here's the lesson." : cracked ? `The threat cracked your ${CIA_NAMES[cracked]} shield. Here's the lesson.` : "The threat got through. Here's the lesson.";
+    $("lesson-answer").innerHTML = `Correct answer: <b>${tx(right.text)}</b>`;
+    $("lesson-why").innerHTML = q.explanation ? tx(q.explanation) : "";
+    ans.hidden = false;
+    $("lesson").hidden = false;
+    $("lesson-next").textContent = shieldsLeft() === 0 ? "See what you earned" : "Got it";
+    $("lesson-next").focus({ preventScroll: true });
+    $("lesson").scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" });
+  }
+  $("hud-points").textContent = run.points;
+  $("hud-streak").textContent = run.streak >= 2 ? `streak ${run.streak} · x${multiplier(run.streak)}` : "";
+}
+
+const shieldsLeft = () => ["C", "I", "A"].filter(k => run.shields[k]).length;
+function crackShield(topic) {
+  const order = ["C", "I", "A"];
+  let k = CIA_FOR_TOPIC[topic] || "C";
+  if (!run.shields[k]) k = order.find(x => run.shields[x]);
+  if (!k) return null;
+  run.shields[k] = false;
+  renderNetwork();
+  return k;
+}
+
+function deflect(pts) {
+  const arena = $("arena"), th = $("threat"), dome = $("dome");
+  dome.classList.remove("up"); void dome.offsetWidth; dome.classList.add("up");
+  const r = th.getBoundingClientRect(), a = arena.getBoundingClientRect();
+  const x = r.left - a.left + r.width / 2, y = r.top - a.top + r.height / 2;
+  th.classList.add("gone");
+  const f = document.createElement("div");
+  f.className = "float"; f.textContent = `+${pts}`; f.style.top = `${y - 10}px`;
+  arena.appendChild(f);
+  if (!reduceMotion()) {
+    f.animate([{ opacity: 0, transform: "translate(-50%, 6px)" }, { opacity: 1, transform: "translate(-50%, -14px)", offset: .3 }, { opacity: 0, transform: "translate(-50%, -34px)" }], { duration: 1000, easing: "ease-out" });
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement("div");
+      s.className = "shard";
+      s.style.left = `${x}px`; s.style.top = `${y}px`;
+      if (i % 3 === 0) s.style.background = "var(--gold)";
+      arena.appendChild(s);
+      const ang = (Math.PI * 2 * i) / 12 + Math.random() * .4, dist = 40 + Math.random() * 50;
+      s.animate([{ transform: "translate(0,0) rotate(0)", opacity: 1 }, { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }], { duration: 650, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
+    }
+  }
+  setTimeout(() => f.remove(), 1000);
+}
+
+function impact() {
+  const arena = $("arena"), th = $("threat");
+  const travel = arena.clientHeight - 46 - th.offsetHeight + 8;
+  if (!reduceMotion()) {
+    th.animate([{ transform: th.style.transform || "translate(-50%,0)" }, { transform: `translate(-50%, ${travel}px)` }], { duration: 220, easing: "ease-in", fill: "forwards" }).onfinish = () => {
+      th.classList.add("gone");
+      $("app").classList.remove("shake"); void $("app").offsetWidth; $("app").classList.add("shake");
+      $("network").classList.remove("flash"); void $("network").offsetWidth; $("network").classList.add("flash");
+    };
+  } else {
+    th.classList.add("gone");
+  }
+}
+
+function next() {
+  if (!run) return;
+  $("threat").getAnimations().forEach(a => a.cancel());
+  if (run.mode !== "practice" && shieldsLeft() === 0) return finish(true);
+  run.index += 1;
+  if (run.index >= run.items.length) return finish(false);
+  present();
+}
+
+function markDay() {
+  const d = today(), st = S.streak;
+  if (st.lastDay === d) return false;
+  const gap = st.lastDay === null ? Infinity : d - st.lastDay;
+  if (gap === 1) st.count += 1;
+  else if (gap === 2 && st.skipWeek !== weekOf(d)) { st.count += 1; st.skipWeek = weekOf(d); }
+  else st.count = 1;
+  st.lastDay = d;
+  return true;
+}
+
+function finish(networkDown) {
+  cancelAnimationFrame(raf);
+  const r = run;
+  const newDay = markDay();
+  S.points += r.points;
+  let bossCleared = false;
+  if (r.mode === "boss" && !networkDown) { bossCleared = !prog().bosses[r.topic]; prog().bosses[r.topic] = true; }
+  save();
+
+  const total = r.items.length;
+  const answered = r.results.filter(x => x !== undefined).length;
+  $("sum-eyebrow").textContent = r.mode === "boss" ? `Boss Mission · ${SHORT_TOPIC[r.topic]}` : r.mode === "challenge" ? "Challenge wave" : "Practice wave";
+  if (r.mode === "boss") {
+    $("sum-title").textContent = networkDown ? "Mission failed, lessons kept" : "Mission cleared";
+    $("sum-sub").textContent = networkDown ? "All three shields cracked. Every lesson you saw still counts. Try the mission again when you're ready." : `You defended the ${topicById.get(r.topic).name.en} branch.`;
+  } else if (networkDown) {
+    $("sum-title").textContent = "Network down, lessons kept";
+    $("sum-sub").textContent = `Your shields fell after ${answered} of ${total} threats. Practice mode has no shields if you want more time with these terms.`;
+  } else {
+    $("sum-title").textContent = r.blocked === total ? "Perfect wave" : "Wave survived";
+    $("sum-sub").textContent = r.mode === "challenge" ? `${shieldsLeft()} of 3 shields still standing.` : "Every answer moved your tree forward.";
+  }
+  $("sum-blocked").textContent = `${r.blocked}/${answered}`;
+  $("sum-best").textContent = r.best;
+  $("sum-points").textContent = r.points;
+
+  const earned = [];
+  if (bossCleared) earned.push(`Boss Mission cleared: a gold star on your ${SHORT_TOPIC[r.topic]} branch`);
+  if (r.leveled.size) earned.push(`${r.leveled.size} term${r.leveled.size === 1 ? "" : "s"} leveled up`);
+  const lessons = r.results.filter(x => x === false).length;
+  if (lessons) earned.push(`${lessons} lesson${lessons === 1 ? "" : "s"} learned`);
+  if (newDay) earned.push(`${S.streak.count}-day streak`);
+  if (!earned.length) earned.push(`${r.practiced.size || answered} terms practiced`);
+  $("sum-earned-text").textContent = earned.join(" · ");
+
+  const list = $("sum-levels");
+  if (r.leveled.size) {
+    $("sum-levels-title").textContent = "Terms that leveled up";
+    list.innerHTML = [...r.leveled.values()].map(({ q, from, to }) => `<li class="up"><span class="t">${tx(q.term || q.prompt)}</span><span class="num" style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-3)">${from} → ${to} ${lvlBar(to)}</span></li>`).join("");
+  } else {
+    $("sum-levels-title").textContent = r.mode === "boss" ? "Terms in this mission" : "Terms practiced";
+    const ids = r.mode === "boss" ? branchQuestions(r.topic) : r.items.slice(0, Math.max(answered, 1)).map(i => i.q).filter(q => q.term);
+    list.innerHTML = ids.map(q => `<li><span class="t">${tx(q.term || q.prompt)}</span>${lvlBar(level(q.question_id))}</li>`).join("");
+  }
+  $("sum-again").textContent = r.mode === "boss" ? (networkDown ? "Try again" : "More missions") : "Next wave";
+  $("sum-again").onclick = () => r.mode === "boss" ? (networkDown ? startRun("boss", r.topic) : openBosses()) : startRun(r.mode);
+  run = null;
+  show("summary");
+}
+
+/* ================= Boss Missions ================= */
+function openBosses() {
+  $("boss-timer").checked = S.bossTimer;
+  $("boss-list").innerHTML = TOPICS.map(t => {
+    const b = bossByTopic.get(t.topic_id);
+    const qs = branchQuestions(t.topic_id);
+    const ready = qs.filter(q => level(q.question_id) >= BRANCH_DONE_LEVEL).length;
+    const state = prog().bosses[t.topic_id] ? "cleared" : branchDone(t.topic_id) ? "open" : "locked";
+    const label = state === "cleared" ? "Cleared" : state === "open" ? "Ready" : `${ready}/${qs.length} terms at level ${BRANCH_DONE_LEVEL}`;
+    return `<button class="boss-card ${state}" data-topic="${esc(t.topic_id)}" ${state === "locked" ? 'aria-disabled="true"' : ""}>
+      <span class="bh">${tx(b.title)}</span><span class="state">${label}</span>
+      <span class="bp">${esc(t.name.en)}${state === "locked" ? "" : " · " + esc(b.scenario.en)}</span>
+    </button>`;
+  }).join("");
+  $("boss-list").querySelectorAll(".boss-card").forEach(c => c.addEventListener("click", () => {
+    if (c.classList.contains("locked")) return;
+    openBriefing(c.dataset.topic);
+  }));
+  show("bosses");
+}
+
+function openBriefing(topic) {
+  const b = bossByTopic.get(topic);
+  $("brief-topic").textContent = topicById.get(topic).name.en;
+  $("brief-title").innerHTML = tx(b.title);
+  $("brief-scenario").innerHTML = tx(b.scenario);
+  const steps = b.questions.length + branchQuestions(topic).length;
+  $("brief-note").textContent = `${steps} steps: ${b.questions.length} decisions about this situation, then the branch's terms under pressure. Three shields${S.bossTimer ? `, ${BOSS_SECONDS} seconds per step` : ", no timer"}.`;
+  $("brief-start").onclick = () => startRun("boss", topic);
+  show("briefing");
+}
+
+/* ================= Demo controls ================= */
+function demoFill() {
+  // Every module: first three branches complete, one Boss Mission cleared, the rest partly grown.
+  const d = today();
+  const growing = [2, 1, 0];
+  for (const m of MODULES) {
+    const p = prog(m.module_id);
+    p.terms = {}; p.bosses = {};
+    m.topics.forEach((t, ti) => {
+      branchQuestions(t.topic_id, m).forEach((q, i) => {
+        const box = ti < 3 ? [4, 3, 5][(ti + i) % 3] : growing[(ti + i) % 3];
+        if (box) p.terms[q.question_id] = { box, due: d + (box <= 2 ? 0 : 1) };
+      });
+    });
+    p.bosses[m.topics[1].topic_id] = true;
+  }
+  S.streak = { count: 4, lastDay: d - 1, skipWeek: null };
+  S.events = Math.max(S.events, 46);
+  save();
+  renderHome();
+}
+
+/* ================= Wiring ================= */
+$("go-practice").addEventListener("click", () => startRun("practice"));
+$("go-challenge").addEventListener("click", () => startRun("challenge"));
+$("go-bosses").addEventListener("click", openBosses);
+$("bosses-back").addEventListener("click", () => { renderHome(); show("home"); });
+$("briefing-back").addEventListener("click", openBosses);
+$("quit").addEventListener("click", () => { cancelAnimationFrame(raf); run = null; save(); renderHome(); show("home"); });
+$("lesson-next").addEventListener("click", next);
+$("sum-home").addEventListener("click", () => { renderHome(); show("home"); });
+$("spanish").addEventListener("change", (e) => { S.spanish = e.target.checked; save(); renderHome(); });
+$("boss-timer").addEventListener("change", (e) => { S.bossTimer = e.target.checked; save(); });
+$("demo-day").addEventListener("click", () => { S.dayOffset += 1; save(); renderHome(); });
+$("demo-fill").addEventListener("click", demoFill);
+$("demo-reset").addEventListener("click", () => { const keep = S.current; S = fresh(); S.current = keep; selectedNode = null; save(); renderHome(); $("node-info").textContent = "Progress reset. Start a wave to grow your tree."; });
+document.addEventListener("keydown", (e) => {
+  if ($("play").hidden || !run) return;
+  if (!run.locked && /^[1-4]$/.test(e.key)) {
+    const b = $("answers").querySelectorAll(".ans")[Number(e.key) - 1];
+    if (b) b.click();
+  }
+});
+$("app").addEventListener("animationend", (e) => { if (e.animationName === "shake") $("app").classList.remove("shake"); });
+
+useModule(S.current);
+renderHome();
+})();
+</script>

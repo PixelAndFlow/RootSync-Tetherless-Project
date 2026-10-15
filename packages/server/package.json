@@ -1,0 +1,16 @@
+{
+  "name": "@tetherless/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tetherless API: enrollment, device tokens, idempotent sync, trainer report and JSON export",
+  "type": "module",
+  "engines": { "node": ">=22.18.0" },
+  "scripts": {
+    "start": "node src/main.ts",
+    "admin": "node src/admin.ts",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "pg": "^8.13.0" },
+  "devDependencies": { "@types/node": "^22.18.0", "typescript": "^5.9.0" }
+}
