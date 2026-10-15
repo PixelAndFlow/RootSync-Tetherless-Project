@@ -22,6 +22,10 @@ async function answerMission(page: Page, choiceIndexes: number[]) {
 test.describe("RCO representative mobile profiles", () => {
   test("completes the core learner entry flow with touch-sized controls", async ({ page }) => {
     await page.goto("/#/learner");
+    await expect(page.getByRole("heading", { name: "Learning that travels with you." })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Create profile");
+    await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Learn offline");
+    await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Sync when ready");
     await page.getByLabel("Your name").fill("RCO Tester");
     await page.getByLabel("Username").fill("rco-tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
