@@ -17,3 +17,9 @@ What was built:
 
 Every value and rule in this code (thresholds, event fields, scoring
 definitions, game tuning) is a trial assumption, not a decision.
+
+## Note
+
+2026-10-19: no other changes, this commit exists to test whether the
+Slack `#rootsync-builds` push notification fires for an update to an
+*existing* branch (as opposed to the branch's first, branch-creating push).
