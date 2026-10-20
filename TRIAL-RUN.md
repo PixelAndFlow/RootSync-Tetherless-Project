@@ -23,3 +23,7 @@ definitions, game tuning) is a trial assumption, not a decision.
 2026-10-19: no other changes, this commit exists to test whether the
 Slack `#rootsync-builds` push notification fires for an update to an
 *existing* branch (as opposed to the branch's first, branch-creating push).
+
+**Resolved (2026-10-20):** it does. The Slack GitHub app doesn't notify on
+the push that creates a branch, only on later pushes to one that already
+exists — not a broken or misconfigured subscription.
