@@ -2,7 +2,7 @@
   "name": "@tetherless/server",
   "version": "0.1.0",
   "private": true,
-  "description": "Tetherless API: enrollment, device tokens, idempotent sync, trainer report and JSON export",
+  "description": "Tetherless API: setup codes, device tokens, idempotent sync, staff roles, roster import, module versions, reports and export",
   "type": "module",
   "engines": { "node": ">=22.18.0" },
   "scripts": {

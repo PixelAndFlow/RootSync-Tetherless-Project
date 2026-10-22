@@ -18,6 +18,29 @@ What was built:
 Every value and rule in this code (thresholds, event fields, scoring
 definitions, game tuning) is a trial assumption, not a decision.
 
+## Update, 2026-10-21: spec v1.10 (branch `trial/2026-10-21-spec-v1.10`)
+
+The server, contract, content and analytics packages now follow the API and
+Integration Spec v1.10 (draft for team review, kept in the docs repo). Still a
+trial; nothing here is adopted until the team agrees.
+
+- Setup: one-time setup code + learner-chosen username (`POST /v1/setup`)
+  replaces enrollment codes. Usernames are display names and may repeat; each
+  learner also gets a `learner_code` (cohort name + 4 characters).
+- Staff: Superadmin, Admin and Trainer roles with permissions stored in the
+  database and editable by the Superadmin. All dashboard routes are under
+  `/v1/staff/`.
+- Learners: staff-entered details (names, phone, email, training level, two
+  notes), never sent to phones; roster import from .csv or .xlsx with a check
+  step before anything is saved.
+- Modules: the app's module format (`TetherlessModule`) is the upload format;
+  published versions never change, a change publishes the next version.
+  Assignments to a cohort or one learner; `GET /v1/me/modules` for phones.
+- Sync accepts the phone's own scores and uppercase choice IDs and stores
+  them; scores are still recalculated on the server.
+- Nothing is deleted except by the Superadmin's audited purge; everything else
+  archives.
+
 ## Note
 
 2026-10-19: no other changes, this commit exists to test whether the

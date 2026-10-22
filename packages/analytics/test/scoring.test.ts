@@ -100,3 +100,11 @@ test("idle time beyond the limit is not counted and is flagged", () => {
   assert.equal(r.elapsed_ms, 600_000);
   assert.deepEqual(r.flags.map((f) => [f.kind, f.at_ms, f.gap_ms]), [["idle", 120_000, 480_000]]);
 });
+
+test("status labels: passing beats struggling; untouched modules are not started", async () => {
+  const { statusLabel } = await import("../src/index.ts");
+  assert.equal(statusLabel({ completion: "not_started", passed: null, struggling: false }), "not_started");
+  assert.equal(statusLabel({ completion: "completed", passed: true, struggling: true }), "passing");
+  assert.equal(statusLabel({ completion: "in_progress", passed: null, struggling: true }), "struggling");
+  assert.equal(statusLabel({ completion: "completed", passed: false, struggling: false }), "not_yet_passing");
+});

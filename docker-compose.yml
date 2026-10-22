@@ -5,8 +5,8 @@
 #   docker compose up -d --build
 #   docker compose --profile https up -d --build   # adds Caddy for HTTPS on a public domain
 #
-# Create the first trainer account:
-#   docker compose exec -T api node packages/server/src/admin.ts create-trainer --username trainer2 --name "Trainer 2" <<< 'a-long-password'
+# Create the first staff account (Superadmin):
+#   docker compose exec -T api node packages/server/src/admin.ts create-staff --role superadmin --username marc --name "Marc" <<< 'a-long-password'
 
 services:
   db:
