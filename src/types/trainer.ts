@@ -34,7 +34,7 @@ export interface TrainerLearnerSummary {
 }
 
 export interface TrainerModuleDetail extends TrainerLearnerSummary {
-  contentVersion: string;
+  contentVersion: number;
   firstStartedAt?: string;
   completedAt?: string;
   remediationAttempted: number;

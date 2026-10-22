@@ -3,6 +3,13 @@ import { operationCyberSquad } from "./modules";
 import { validateModule } from "./validateModule";
 
 describe("validateModule", () => {
+  it.each([0, -1, 1.5, NaN, "2.0.0"])("rejects non-positive/integer content version %s", (value) => {
+    const module = { ...operationCyberSquad, content_version: value };
+    expect(validateModule(module as typeof operationCyberSquad)).toContain("Content version must be a positive integer.");
+  });
+  it("accepts staff-only notes and optional activity metadata without changing question content", () => {
+    expect(validateModule({ ...operationCyberSquad, note: "Staff only", activity_type: "multiple_choice" })).toEqual([]);
+  });
   it("accepts the supplied Operation Cyber Squad fixture", () => {
     expect(validateModule(operationCyberSquad)).toEqual([]);
   });

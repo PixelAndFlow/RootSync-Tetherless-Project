@@ -17,6 +17,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .ui-eyebrow { color: var(--rco-magenta-accessible); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.18em; }
 .ui-action { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border-radius: 0.75rem; background: var(--ui-action); padding: 0.75rem 1.25rem; font-weight: 700; color: white; }
 .ui-action:hover { background: var(--ui-action-hover); }
+.ui-action:disabled { cursor: not-allowed; background: #46318d; color: white; }
+.integration-input { min-width: 0; width: 100%; min-height: 44px; border: 1px solid #858585; border-radius: 0.75rem; background: var(--color-ink); color: inherit; padding: 0.75rem 1rem; }
+.integration-input::placeholder { color: #9d9d9d; }
+.app-light-theme .integration-input::placeholder { color: #5c5c5c; }
 .ui-action-secondary { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid #707078; border-radius: 0.75rem; padding: 0.75rem 1.25rem; font-weight: 700; }
 .ui-action-secondary:hover { background: rgb(255 255 255 / 5%); }
 .app-header { z-index: 40; border-color: #3e3e42; background: #181818; }

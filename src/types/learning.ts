@@ -3,6 +3,7 @@ export type SyncStatus =
   | "pending"
   | "syncing"
   | "synced"
+  | "blocked_auth"
   | "retryable_error"
   | "rejected";
 
@@ -21,6 +22,7 @@ export type LearningEventType =
   | "full_retry_started"
   | "full_retry_completed";
 
+/** Legacy local/demo record only. NOT a wire payload. See integration/wireContract.ts. */
 export interface TetherlessEvent<TPayload = unknown> {
   event_id: string;
   schema_version: number;
@@ -112,6 +114,8 @@ export interface SyncSummary {
   pendingEventCount: number;
   lastSyncedAt?: string;
   failureReason?: string;
+  /** Presentation only; DDIL/server code mapping still requires agreement. */
+  authorizationReason?: "invalid_credential" | "revoked_device" | "unknown";
 }
 
 export interface StartSessionInput {

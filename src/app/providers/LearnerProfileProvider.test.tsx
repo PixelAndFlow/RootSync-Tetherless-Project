@@ -35,6 +35,21 @@ describe("LearnerProfileProvider", () => {
     expect(result.result.current.profile).toBeNull();
   });
 
+  it("does not persist unexpected credentials supplied alongside demo setup fields", () => {
+    const result = renderHook(() => useLearnerProfile(), { wrapper });
+    const input = { learnerId: "demo", deviceId: "device", username: "test", learnerCode: "DEMO-001", cohortName: "Demo", device_token: "secret", setup_code: "secret-code" };
+    act(() => result.result.current.acceptDemoSetup(input));
+    const stored = window.localStorage.getItem("tetherless.learner-profile.v1")!;
+    expect(stored).not.toContain("secret");
+    expect(result.result.current.profile).toMatchObject({ learnerCode: "DEMO-001", cohortName: "Demo" });
+  });
+
+  it("rejects malformed typed profile fields", () => {
+    window.localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ learnerId: 7, deviceId: "device", displayName: {}, username: "test" }));
+    const result = renderHook(() => useLearnerProfile(), { wrapper });
+    expect(result.result.current.profile).toBeNull();
+  });
+
   it("safely upgrades profiles saved before display preferences existed", () => {
     window.localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ learnerId: "learner", deviceId: "device", displayName: "Sam", username: "sam" }));
     const result = renderHook(() => useLearnerProfile(), { wrapper });
