@@ -4,7 +4,9 @@ export function validateModule(module: TetherlessModule): string[] {
   const errors: string[] = [];
   if (!module.schema_version.trim()) errors.push("Schema version is required.");
   if (!module.module_id.trim()) errors.push("Module ID is required.");
-  if (!module.content_version.trim()) errors.push("Content version is required.");
+  if (!Number.isSafeInteger(module.content_version) || module.content_version < 1) errors.push("Content version must be a positive integer.");
+  if (module.note !== undefined && typeof module.note !== "string") errors.push("Staff note must be text.");
+  if (module.activity_type !== undefined && typeof module.activity_type !== "string") errors.push("Activity type must be text.");
   if (!module.title.en.trim()) errors.push("Module title is missing an English value.");
   if (!module.questions.length) errors.push("At least one question is required.");
   if (module.settings.question_count !== module.questions.length) {

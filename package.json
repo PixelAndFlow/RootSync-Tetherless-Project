@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "validate:content": "vitest run src/content",
+    "check:shared-content": "node scripts/check-shared-content.mjs",
     "report:spanish-coverage": "node scripts/report-spanish-coverage.mjs",
     "check:android-emulator": "node scripts/check-android-emulator.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",

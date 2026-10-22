@@ -5,6 +5,7 @@ const copy: Record<SyncStatus, string> = {
   pending: "Saved locally - waiting to sync",
   syncing: "Saved locally - syncing",
   synced: "Synced with RCO",
+  blocked_auth: "Saved locally - authorization needed",
   retryable_error: "Saved locally - retry sync",
   rejected: "Saved locally - needs review",
 };

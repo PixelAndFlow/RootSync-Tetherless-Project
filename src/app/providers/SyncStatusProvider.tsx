@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useOfflineLearningGateway } from "./GatewayProvider";
 import type { SyncSummary } from "../../types/learning";
 
@@ -7,49 +7,53 @@ interface SyncStatusContextValue {
   isBrowserOnline: boolean;
   requestSync: () => Promise<void>;
 }
-
 const SyncStatusContext = createContext<SyncStatusContextValue | null>(null);
 
-const initialSummary: SyncSummary = { status: "synced", pendingEventCount: 0 };
-
 export function SyncStatusProvider({ children }: { children: React.ReactNode }) {
-  const offlineLearningGateway = useOfflineLearningGateway();
-  const [gatewaySummary, setGatewaySummary] = useState<SyncSummary>(initialSummary);
-  const [isBrowserOnline, setIsBrowserOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
-
-  const requestSync = async () => {
-    if (!isBrowserOnline) return;
-    await offlineLearningGateway.requestSync();
-  };
+  const gateway = useOfflineLearningGateway();
+  const [gatewaySummary, setGatewaySummary] = useState<SyncSummary>({ status: "pending", pendingEventCount: 0 });
+  const latest = useRef(gatewaySummary);
+  const inFlight = useRef(false);
+  const [isBrowserOnline, setIsBrowserOnline] = useState(() => navigator.onLine);
+  const requestSync = useCallback(async () => {
+    if (!navigator.onLine || inFlight.current || latest.current.status === "blocked_auth") return;
+    inFlight.current = true;
+    try { await gateway.requestSync(); }
+    catch {
+      setGatewaySummary((previous) => ({ ...previous, status: "retryable_error", failureReason: "Sync could not finish. Saved work has not been deleted." }));
+    } finally { inFlight.current = false; }
+  }, [gateway]);
 
   useEffect(() => {
-    const unsubscribe = offlineLearningGateway.subscribeToSyncStatus(setGatewaySummary);
-    void offlineLearningGateway.requestSync();
-    return unsubscribe;
-  }, []);
+    let active = true;
+    let receivedUpdate = false;
+    const unsubscribe = gateway.subscribeToSyncStatus((summary) => {
+      receivedUpdate = true;
+      latest.current = summary;
+      setGatewaySummary(summary);
+    });
+    void gateway.getSyncSummary().then((summary) => {
+      if (active && !receivedUpdate) { latest.current = summary; setGatewaySummary(summary); }
+    }).catch(() => {});
+    return () => { active = false; unsubscribe(); };
+  }, [gateway]);
   useEffect(() => {
-    const handleOffline = () => setIsBrowserOnline(false);
-    const handleOnline = () => {
-      setIsBrowserOnline(true);
-      void offlineLearningGateway.requestSync();
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) void offlineLearningGateway.requestSync();
-    };
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-    document.addEventListener("visibilitychange", handleVisibility);
+    const offline = () => setIsBrowserOnline(false);
+    const online = () => { setIsBrowserOnline(true); void requestSync(); };
+    const visible = () => { if (document.visibilityState === "visible") void requestSync(); };
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    document.addEventListener("visibilitychange", visible);
     return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+      document.removeEventListener("visibilitychange", visible);
     };
-  }, []);
-
-  const summary = !isBrowserOnline
-    ? { ...gatewaySummary, status: "offline" as const }
-    : gatewaySummary;
-  const value = useMemo(() => ({ summary, isBrowserOnline, requestSync }), [summary, isBrowserOnline]);
+  }, [requestSync]);
+  // Authorization/rejections remain visible even when connectivity is also absent.
+  const summary = !isBrowserOnline && !["blocked_auth", "rejected"].includes(gatewaySummary.status)
+    ? { ...gatewaySummary, status: "offline" as const } : gatewaySummary;
+  const value = useMemo(() => ({ summary, isBrowserOnline, requestSync }), [summary, isBrowserOnline, requestSync]);
   return <SyncStatusContext.Provider value={value}>{children}</SyncStatusContext.Provider>;
 }
 

@@ -28,3 +28,7 @@ export function useOfflineLearningGateway(): OfflineLearningGateway {
 export function useTrainerDataGateway(): TrainerDataGateway {
   return useAppGateways().trainerData;
 }
+
+export function useLearnerSetupGateway() {
+  return useAppGateways().learnerSetup;
+}

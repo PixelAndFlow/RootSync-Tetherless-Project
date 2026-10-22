@@ -26,8 +26,8 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Create profile");
     await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Learn offline");
     await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Sync when ready");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await expect(page.getByRole("heading", { name: "Welcome back, RCO." })).toBeVisible();
     await expect(page.getByText("Device storage check")).toBeVisible();
@@ -85,8 +85,8 @@ test.describe("RCO representative mobile profiles", () => {
 
   test("persists learner display preferences without changing the mission data", async ({ page }) => {
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByText("Display preferences", { exact: true }).click();
     await page.getByRole("button", { name: "High contrast: Off" }).click();
@@ -99,8 +99,8 @@ test.describe("RCO representative mobile profiles", () => {
   test("keeps sticky mission navigation below the site header on desktop", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
@@ -115,8 +115,8 @@ test.describe("RCO representative mobile profiles", () => {
 
   test("keeps learner and trainer routes legible in both explicit colour themes", async ({ page }) => {
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByText("Display preferences", { exact: true }).click();
     await page.getByRole("button", { name: "Light mode" }).click();
@@ -173,8 +173,8 @@ test.describe("RCO representative mobile profiles", () => {
 
   test("exposes answer selection and feedback state to assistive technology", async ({ page }) => {
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
@@ -197,8 +197,8 @@ test.describe("RCO representative mobile profiles", () => {
   test("protects the full learner record through practice, review, and retry", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "RCO-Android10-2GB-viewport", "The complete workflow is exercised once on the minimum Android viewport; core checks run on every profile.");
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
@@ -227,11 +227,11 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByText("Attempts saved locally")).toBeVisible();
   });
 
-  test("matches the approved mobile learner visual baseline", async ({ page }) => {
+  test("matches the reviewed integration learner visual baseline", async ({ page }) => {
     test.slow();
     await page.goto("/#/learner");
-    await page.getByLabel("Your name").fill("RCO Tester");
-    await page.getByLabel("Username").fill("rco-tester");
+    await page.getByLabel("Setup code").fill("DEMO-2026");
+    await page.getByLabel("Username").fill("RCO Tester");
     await page.getByRole("button", { name: "Continue to missions" }).click();
     await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission" }).click();
@@ -241,7 +241,7 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(page.getByText(/Correct.*mission insight saved locally/)).toBeVisible();
     await page.evaluate(async () => { await document.fonts.ready; });
     await page.addStyleTag({ content: ".app-header { position: static !important; backdrop-filter: none !important; }" });
-    await expect(page).toHaveScreenshot("rco-minimum-learner-flow.png", { animations: "disabled", fullPage: true, maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot("integration-learner-flow.png", { animations: "disabled", fullPage: true, maxDiffPixelRatio: 0.01 });
   });
 
   test("meets selected WCAG mobile accessibility checks", async ({ page }) => {

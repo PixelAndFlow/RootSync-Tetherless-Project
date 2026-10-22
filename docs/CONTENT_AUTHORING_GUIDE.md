@@ -7,8 +7,17 @@
 3. Write the English learner-facing copy first. Add Spanish Assist translations wherever they are available.
 4. Keep `settings.question_count` equal to the number of questions.
 5. Ensure every `correct_choice` matches a choice ID and every sector question ID exists in the module.
-6. Keep the passing score between 0 and 100. It remains configuration, not a UI hard-code.
+6. Use a positive integer `content_version`. The integration demo starts at 1;
+   do not convert existing published versions without an agreed migration.
+   The server's settings determine passing thresholds; a module's optional
+   `passing_score_percent` is not authoritative. `note` is staff-only, and an
+   `activity_type` does not imply a game renderer exists.
 7. Run `npm run validate:content` before using a changed fixture.
+
+On the integration branch, `npm.cmd run check:shared-content` also checks fixtures
+with Marc's browser-bundled validator at fetched commit `e2ceb7e`. This is a
+read-only compatibility probe, not a second copied validator or a live import
+feature. See [integration status](FRONTEND_INTEGRATION_STATUS.md).
 
 ## What the current validator protects
 

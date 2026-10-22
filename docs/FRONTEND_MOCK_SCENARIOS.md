@@ -4,6 +4,11 @@ The current adapters remain mock-only. These controlled scenarios let the fronte
 
 | Scenario | Adapter control | Expected frontend behavior |
 | --- | --- | --- |
+| Demo setup | Code `DEMO-2026` and a valid username | Create synthetic profile; never redeem a real code or store tokens. |
+| Invalid setup | Any code other than `DEMO-2026` | Show safe validation guidance; remain on setup. |
+| Blocked authorization | `simulateBlockedAuthorization("revoked_device")` | Keep pending records; show paused authorization and disable sync retry, including offline. |
+| Setup service unavailable | Omit optional `learnerSetup` from supplied gateways | Disable setup; never silently substitute a mock adapter. |
+| Clipboard denied | Profile settings with clipboard unavailable | Keep learner code visible for manual copying. |
 | Retryable sync failure | `simulateNextSyncFailure(reason)` | Show retry guidance; keep queued activity and the local record. |
 | Rejected sync | `simulateNextSyncRejection(reason)` | Show review guidance; keep queued activity and never delete learning data. |
 | Failed answer save | `simulateNextSaveFailure(reason)` | Do not reveal answer feedback; keep the question available and show a retry message. |

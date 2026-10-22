@@ -72,8 +72,11 @@ export interface GamificationConfig {
 export interface TetherlessModule {
   schema_version: string;
   module_id: string;
-  content_version: string;
-  program: string;
+  content_version: number;
+  activity_type?: string;
+  /** Staff-only metadata. Never render in learner screens. */
+  note?: string;
+  program?: string;
   level: string;
   level_label?: LocalizedText;
   title: LocalizedText;

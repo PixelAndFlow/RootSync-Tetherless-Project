@@ -2,6 +2,15 @@
 
 ## Purpose
 
+**2026-10-22 integration-branch note:** The original ten learner gateway methods
+remain unchanged. `SyncStatus` now supports `blocked_auth`. Setup/profile UI uses
+an isolated optional mock setup seam; the new cohort-aware reporting adapter is
+opt-in and not yet installed in the app. See
+[current integration status](FRONTEND_INTEGRATION_STATUS.md) for the implemented
+trial API baseline and remaining coordination. The historical undecided-items
+list below describes the pre-integration frontend, not an absence of team server
+code today.
+
 The learner and trainer screens are ready to receive real adapters without coupling to unfinished DDIL or backend logic. The app currently runs entirely with local mock adapters.
 
 `GatewayProvider` is the one composition point for adapters:

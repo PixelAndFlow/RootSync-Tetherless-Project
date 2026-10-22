@@ -1,6 +1,9 @@
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
+import { useLearnerSetupGateway } from "../../app/providers/GatewayProvider";
+import { setupValidation } from "../../services/setup/LearnerSetupGateway";
+import { ApiErrorNotice } from "../../components/common/ApiErrorNotice";
 
 function MissionReadyIcon() {
   return (
@@ -13,15 +16,34 @@ function MissionReadyIcon() {
 
 export function LearnerSetupScreen() {
   const navigate = useNavigate();
-  const { profile, saveProfile } = useLearnerProfile();
-  const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
+  const { profile, acceptDemoSetup } = useLearnerProfile();
+  const gateway = useLearnerSetupGateway();
+  const [setupCode, setSetupCode] = useState("");
   const [username, setUsername] = useState(profile?.username ?? "");
+  const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
+  const [error, setError] = useState<unknown>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ setupCode?: string; username?: string }>({});
+  const [storageError, setStorageError] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!displayName.trim() || !username.trim()) return;
-    saveProfile({ displayName, username });
-    navigate("/learner/missions");
+    if (submitting.current || !gateway || profile) return;
+    const validation = setupValidation({ setupCode, username });
+    setFieldErrors(validation);
+    if (validation.setupCode || validation.username) return;
+    submitting.current = true;
+    setBusy(true);
+    setError(null);
+    setStorageError(false);
+    try {
+      const result = await gateway.setupDevice({ setupCode, username });
+      try { acceptDemoSetup(result); }
+      catch { setStorageError(true); return; }
+      setSetupCode("");
+      navigate("/learner/missions");
+    } catch (reason) { setError(reason); }
+    finally { setBusy(false); submitting.current = false; }
   };
 
   return (
@@ -29,20 +51,28 @@ export function LearnerSetupScreen() {
       <div className="p-6 sm:p-10">
         <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">WELCOME, RECRUIT</p>
         <h1 className="mt-3 text-3xl font-bold">Your offline cyber mission companion.</h1>
-        <p className="mt-4 leading-7 text-slate-300">Set up a learner profile, download a mission, and keep learning when the connection disappears.</p>
-        <form className="mt-8 grid gap-4" onSubmit={handleSubmit}>
-          <label className="grid gap-2 text-sm font-semibold">Your name<input autoComplete="name" className="rounded-xl border border-white/15 bg-ink px-4 py-3 text-base font-normal outline-none ring-violet-400 placeholder:text-slate-500 focus:ring-2" onChange={(event) => setDisplayName(event.target.value)} placeholder="e.g., Alex Rivera" value={displayName} /></label>
-          <label className="grid gap-2 text-sm font-semibold">Username<input autoComplete="username" className="rounded-xl border border-white/15 bg-ink px-4 py-3 text-base font-normal outline-none ring-violet-400 placeholder:text-slate-500 focus:ring-2" onChange={(event) => setUsername(event.target.value)} placeholder="Choose a username" value={username} /></label>
-          <button className="mt-2 rounded-xl bg-violet-600 px-5 py-3 font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={!displayName.trim() || !username.trim()} type="submit">Continue to missions</button>
-        </form>
+        <p className="mt-4 leading-7 text-slate-300">Enter your trainer's setup code and choose a username. Real device setup will require an internet connection.</p>
+        <p className="mt-4 text-sm">Frontend demo: use <strong>DEMO-2026</strong>. This repeatable demo code does not register a real learner. Quiz progress is simulated in memory and resets on reload.</p>
+        {profile ? <div className="mt-8 grid gap-4"><p>This demo profile is already set up.</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="setup-code">Setup code</label>
+          <input id="setup-code" autoComplete="off" spellCheck={false} disabled={busy} aria-invalid={Boolean(fieldErrors.setupCode)} aria-describedby={fieldErrors.setupCode ? "setup-code-error" : undefined} className="integration-input" onChange={(event) => setSetupCode(event.target.value)} placeholder="Enter your setup code" value={setupCode} />
+          {fieldErrors.setupCode && <p id="setup-code-error" role="alert">{fieldErrors.setupCode}</p>}
+          <label className="grid gap-2 text-sm font-semibold" htmlFor="setup-username">Username</label>
+          <input id="setup-username" autoComplete="username" disabled={busy} aria-invalid={Boolean(fieldErrors.username)} aria-describedby="username-help" className="integration-input" onChange={(event) => setUsername(event.target.value)} placeholder="Choose a username" value={username} />
+          <p id="username-help" className="text-sm" role={fieldErrors.username ? "alert" : undefined}>{fieldErrors.username ?? "2–24 letters, numbers, spaces, dots, dashes or underscores."}</p>
+          {error !== null && <ApiErrorNotice error={error} />}
+          {storageError && <p role="alert">The demo profile could not be saved on this device. Check browser storage permissions and try again. Existing data has not been cleared.</p>}
+          {!gateway && <p role="alert">Device setup is not connected. The team must supply the setup adapter.</p>}
+          <button className="ui-action mt-2" disabled={busy || !gateway} type="submit">{busy ? "Setting up…" : "Continue to missions"}</button>
+        </form>}
       </div>
       <aside className="onboarding-readiness border-t p-6 sm:p-10 md:border-l md:border-t-0">
         <div className="mission-ready-icon"><MissionReadyIcon /></div>
         <p className="mt-6 text-xs font-bold tracking-[0.18em]">MISSION READY</p>
         <h2 className="mt-2 text-xl font-bold">Learning that travels with you.</h2>
-        <p className="mt-3 text-sm leading-6">Your progress is saved on this device and syncs when service returns.</p>
+        <p className="mt-3 text-sm leading-6">Designed for learning on your device and syncing when service returns. This preview does not yet provide real offline storage or synchronization.</p>
         <ol aria-label="Your mission path" className="mission-ready-path mt-7 grid gap-4">
-          <li><span>1</span><div><h3>Create profile</h3><p>Set your learner details.</p></div></li>
+          <li><span>1</span><div><h3>Create profile</h3><p>Use your setup code and choose a username.</p></div></li>
           <li><span>2</span><div><h3>Learn offline</h3><p>Complete mission checks at your pace.</p></div></li>
           <li><span>3</span><div><h3>Sync when ready</h3><p>Send saved progress when service returns.</p></div></li>
         </ol>

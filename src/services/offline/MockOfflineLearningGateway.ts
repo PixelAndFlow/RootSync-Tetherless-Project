@@ -153,6 +153,7 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   }
 
   async requestSync(): Promise<SyncSummary> {
+    if (this.syncSummary.status === "blocked_auth") return this.copy(this.syncSummary);
     this.syncSummary = { ...this.syncSummary, status: "syncing" };
     this.notify();
     if (this.nextSyncFailureReason) {
@@ -188,6 +189,13 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
     this.subscribers.add(callback);
     callback(this.copy(this.syncSummary));
     return () => this.subscribers.delete(callback);
+  }
+
+  /** Demo/test-only: keeps all records and pending activity intact. */
+  simulateBlockedAuthorization(reason: SyncSummary["authorizationReason"] = "unknown"): void {
+    this.syncSummary = { ...this.syncSummary, status: "blocked_auth", authorizationReason: reason,
+      failureReason: "Sync paused. This device needs authorization. Saved work has not been deleted." };
+    this.notify();
   }
 
   /** Development/test-only control. It is not part of the production gateway contract. */

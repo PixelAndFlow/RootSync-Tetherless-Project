@@ -1,7 +1,7 @@
 {
   "schema_version": "tetherless.module.v1",
   "module_id": "preview-secure-workspace-basics-001",
-  "content_version": "0.1.0-preview",
+  "content_version": 1,
   "program": "RCO Training Program",
   "level": "beginner",
   "level_label": { "en": "Preview", "es": "Vista previa" },

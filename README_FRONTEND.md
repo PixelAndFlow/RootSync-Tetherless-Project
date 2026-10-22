@@ -4,6 +4,18 @@ Frontend prototype for the Raices Cyber Organization (RCO) Tetherless capstone p
 
 ## Current status
 
+### Integration branch preparation (2026-10-22)
+
+On `chris-frontend-integration`, setup now asks for a setup code and username.
+Use **DEMO-2026** to explore the synthetic demo; real server codes are not accepted.
+The new profile/settings route is `/#/learner/settings`. No device token or setup
+code is persisted by this demo. Quiz progress remains in memory and resets on reload.
+
+An explicit authorization-paused UI, structured API errors, and an opt-in
+cohort-aware Trainer reporting adapter have been prepared. The live adapters are
+**not enabled**. See [integration status](docs/FRONTEND_INTEGRATION_STATUS.md) for
+test evidence, contract boundaries and the remaining team handoff.
+
 The learner and trainer frontend is working locally with typed mock adapters and de-identified fixture data. It is ready for visual review, content iteration, frontend testing, and later replacement of the mock adapters by the agreed DDIL and backend implementations.
 
 This is **not yet a production offline app**. Service-worker caching, IndexedDB/Dexie persistence, outbox mechanics, authentication, real API calls, and server reporting are intentionally deferred until the team agrees the contracts.

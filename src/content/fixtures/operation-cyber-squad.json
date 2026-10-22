@@ -1,7 +1,7 @@
 {
   "schema_version": "tetherless.module.v1",
   "module_id": "rcyc-recruit-cyber-squad-gamified-001",
-  "content_version": "2.0.0",
+  "content_version": 1,
   "program": "RCYC SOC Analyst Program",
   "level": "beginner",
   "level_label": {

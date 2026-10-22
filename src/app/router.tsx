@@ -12,6 +12,7 @@ import { SyncStatusScreen } from "../features/sync-status/SyncStatusScreen";
 import { TrainerLearnerDetailScreen } from "../features/trainer/TrainerLearnerDetailScreen";
 import { RouteErrorScreen, RouteNotFoundScreen } from "../features/system/RouteFallbackScreen";
 import { moduleLibrary } from "../content/modules";
+import { LearnerSettingsScreen } from "../features/settings/LearnerSettingsScreen";
 
 function requireKnownModule({ params }: LoaderFunctionArgs) {
   if (!moduleLibrary.some((module) => module.module_id === params.moduleId)) {
@@ -34,6 +35,7 @@ export const router = createHashRouter([
       { path: "/learner/missions/:moduleId/practice", element: <RemediationScreen />, loader: requireKnownModule },
       { path: "/learner/missions/:moduleId/review", element: <MissionReviewScreen />, loader: requireKnownModule },
       { path: "/learner/sync", element: <SyncStatusScreen /> },
+      { path: "/learner/settings", element: <LearnerSettingsScreen /> },
       { path: "/trainer", element: <TrainerDashboardScreen /> },
       { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
       { path: "*", element: <RouteNotFoundScreen /> },
