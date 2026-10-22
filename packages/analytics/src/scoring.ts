@@ -66,6 +66,11 @@ export interface AttemptSummary {
   answers: AnswerRecord[];
   /** Full attempts only, once completed. */
   score?: Score;
+  /**
+   * The phone's own score from attempt_completed (local_correct/local_total).
+   * Shown next to the server's score for comparison; never used for scoring.
+   */
+  device_score?: { correct: number; total: number };
   /** Set when an attempt had answers but no attempt_started event. */
   missing_start?: true;
 }
@@ -147,10 +152,13 @@ export function scoreModule(
         a.answers.push({ question_id: e.question_id, choice_id: e.payload.choice_id, correct, event_id: e.event_id });
         break;
       }
-      case "attempt_completed":
+      case "attempt_completed": {
         completedSeen.add(a.attempt_id);
         a.ended_at = e.occurred_at;
+        const p = e.payload as { local_correct?: number; local_total?: number };
+        if (typeof p.local_correct === "number" && typeof p.local_total === "number") a.device_score = { correct: p.local_correct, total: p.local_total };
         break;
+      }
       case "attempt_abandoned":
         if (a.status !== "completed") {
           a.status = "abandoned";
@@ -249,4 +257,19 @@ export function scoreModule(
     bosses_completed: bosses,
     attempts: list,
   };
+}
+
+export type StatusLabel = "not_started" | "passing" | "struggling" | "not_yet_passing";
+
+/**
+ * One label per learner and module for the staff dashboard (spec v1.10 §8.3).
+ * Passing wins over struggling: a learner whose best score reached the pass
+ * threshold is passing even if their first attempt was low. Learners never see
+ * these labels, only their own percentages.
+ */
+export function statusLabel(m: Pick<ModuleResult, "completion" | "passed" | "struggling">): StatusLabel {
+  if (m.completion === "not_started") return "not_started";
+  if (m.passed) return "passing";
+  if (m.struggling) return "struggling";
+  return "not_yet_passing";
 }

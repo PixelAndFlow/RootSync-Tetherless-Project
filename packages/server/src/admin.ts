@@ -1,30 +1,54 @@
 /**
- * Administration from the server's command line. There is no trainer
- * self-signup; whoever runs the server creates trainer accounts.
+ * Administration from the server's command line. Use it once, to create the
+ * first Superadmin; after that, staff accounts are made in the app
+ * (POST /v1/staff/accounts), and nobody can sign themselves up.
  *
- *   echo 'a-long-password' | node src/admin.ts create-trainer --username trainer2 --name "Trainer 2"
+ *   echo 'a-long-password' | node src/admin.ts create-staff --role superadmin --username marc --name "Marc"
  *   node src/admin.ts list-cohorts
  *
  * Uses DATABASE_URL like the server.
+ *
+ * Handoff (spec v1.10 §4): RootSync holds the Superadmin account until
+ * handoff. Nick then creates his own Superadmin and disables RootSync's.
  */
 
 import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
+import { STAFF_USERNAME_PATTERN } from "../../contract/src/index.ts";
+import { isRole, type Role } from "./permissions.ts";
 import { hashPassword } from "./security.ts";
+import { MIN_PASSWORD_LENGTH } from "./staff-routes.ts";
 import type { Store } from "./store.ts";
 
-export const MIN_PASSWORD_LENGTH = 12;
+export { MIN_PASSWORD_LENGTH };
 
-export async function createTrainer(store: Store, username: string, name: string, password: string): Promise<void> {
-  if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) throw new Error("Username must be 3–32 lowercase letters, numbers, dots, dashes or underscores.");
-  if (password.length < MIN_PASSWORD_LENGTH) throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-  await store.createTrainer({ trainer_id: randomUUID(), username, name, password_hash: await hashPassword(password) });
+export async function createStaffAccount(
+  store: Store,
+  input: { username: string; displayName: string; role: Role; password: string; mustChangePassword?: boolean; createdBy?: string | null },
+): Promise<string> {
+  const username = input.username.toLowerCase();
+  if (!STAFF_USERNAME_PATTERN.test(username)) throw new Error("Username must be 3–32 lowercase letters, numbers, dots, dashes or underscores.");
+  if (input.password.length < MIN_PASSWORD_LENGTH) throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+  const staff_id = randomUUID();
+  const ok = await store.createStaff({
+    staff_id,
+    username,
+    display_name: input.displayName,
+    role: input.role,
+    password_hash: await hashPassword(input.password),
+    must_change_password: input.mustChangePassword ?? false,
+    created_at: new Date().toISOString(),
+    created_by: input.createdBy ?? null,
+    disabled_at: null,
+  });
+  if (!ok) throw new Error(`Username ${username} is already taken.`);
+  return staff_id;
 }
 
-/** Demo only (in-memory store): trainer "demo" with the given password. */
-export async function seedDemoTrainer(store: Store, password: string): Promise<void> {
-  await createTrainer(store, "demo", "Demo Trainer", password);
-  console.log('Demo trainer "demo" created (in-memory store).');
+/** Demo only (in-memory store): Superadmin "demo" with the given password. */
+export async function seedDemoStaff(store: Store, password: string): Promise<void> {
+  await createStaffAccount(store, { username: "demo", displayName: "Demo Superadmin", role: "superadmin", password });
+  console.log('Demo Superadmin "demo" created (in-memory store).');
 }
 
 async function readStdin(): Promise<string> {
@@ -34,24 +58,25 @@ async function readStdin(): Promise<string> {
 }
 
 async function main() {
-  const { values, positionals } = parseArgs({ allowPositionals: true, options: { username: { type: "string" }, name: { type: "string" } } });
+  const { values, positionals } = parseArgs({ allowPositionals: true, options: { username: { type: "string" }, name: { type: "string" }, role: { type: "string" } } });
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("Set DATABASE_URL to the server's database.");
   const { PgStore } = await import("./pg-store.ts");
   const store = await PgStore.connect(url);
   try {
     switch (positionals[0]) {
-      case "create-trainer": {
-        if (!values.username || !values.name) throw new Error("Give --username and --name; pipe the password on stdin.");
-        await createTrainer(store, values.username.toLowerCase(), values.name, await readStdin());
-        console.log(`Trainer ${values.username} created.`);
+      case "create-staff": {
+        const role = values.role ?? "superadmin";
+        if (!values.username || !values.name || !isRole(role)) throw new Error("Give --role superadmin|admin|trainer, --username and --name; pipe the password on stdin.");
+        await createStaffAccount(store, { username: values.username, displayName: values.name, role, password: await readStdin() });
+        console.log(`${role} ${values.username} created.`);
         break;
       }
       case "list-cohorts":
-        for (const c of await store.listCohorts()) console.log(`${c.cohort_id}  ${c.name}  (${c.learners} learners)`);
+        for (const c of await store.listCohorts(true)) console.log(`${c.cohort_id}  ${c.name}  (${c.learners} learners)${c.archived_at ? "  [archived]" : ""}`);
         break;
       default:
-        console.log("Commands: create-trainer --username <u> --name <n>  (password on stdin) | list-cohorts");
+        console.log("Commands: create-staff --role <superadmin|admin|trainer> --username <u> --name <n>  (password on stdin) | list-cohorts");
     }
   } finally {
     await store.close();

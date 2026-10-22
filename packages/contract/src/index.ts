@@ -9,8 +9,10 @@
  *  - event_id is generated on the phone (UUID) and never reused. Sending the
  *    same event twice is safe: the server answers "duplicate".
  *  - The learner's identity comes from the device token, never from the event.
- *  - Correctness and scores are never sent; the server recalculates them from
- *    the answer key of the module version.
+ *  - Correctness and scores are never trusted. The phone may send what it showed
+ *    the learner (local_is_correct, local_correct, local_total); the server
+ *    stores those for comparison but always recalculates from the answer key
+ *    of the module version (spec v1.10 D-9).
  *  - occurred_at is the phone's wall clock and only advisory. Durations use
  *    monotonic_ms (performance.now() since the session started). The server
  *    adds its own received_at.
@@ -82,17 +84,23 @@ interface AttemptRef {
 }
 export interface AttemptStarted extends EventBase, AttemptRef {
   event_type: "attempt_started";
-  payload: { attempt_kind: AttemptKind; mission_id?: string };
+  /** question_ids: practice attempts only (missed-question practice). */
+  payload: { attempt_kind: AttemptKind; mission_id?: string; question_ids?: string[] };
 }
 export interface AnswerSubmitted extends EventBase, AttemptRef {
   event_type: "answer_submitted";
   question_id: string;
-  /** null when time ran out without an answer. */
-  payload: { choice_id: string | null; response_ms?: number };
+  /**
+   * choice_id: null when time ran out without an answer. Any letter case is
+   * accepted; the server stores it lower-cased.
+   * local_is_correct: what the phone showed the learner. Stored, never scored.
+   */
+  payload: { choice_id: string | null; response_ms?: number; local_is_correct?: boolean };
 }
 export interface AttemptCompleted extends EventBase, AttemptRef {
   event_type: "attempt_completed";
-  payload: Record<string, never>;
+  /** The phone's own score for this attempt. Stored and exported; never used for scoring. */
+  payload: { local_correct?: number; local_total?: number };
 }
 export interface AttemptAbandoned extends EventBase, AttemptRef {
   event_type: "attempt_abandoned";
@@ -189,9 +197,9 @@ const PAYLOAD_KEYS: Record<EventType, Set<string>> = {
   visibility_changed: new Set(["state"]),
   heartbeat: new Set(),
   session_ended: new Set(["reason"]),
-  attempt_started: new Set(["attempt_kind", "mission_id"]),
-  answer_submitted: new Set(["choice_id", "response_ms"]),
-  attempt_completed: new Set(),
+  attempt_started: new Set(["attempt_kind", "mission_id", "question_ids"]),
+  answer_submitted: new Set(["choice_id", "response_ms", "local_is_correct"]),
+  attempt_completed: new Set(["local_correct", "local_total"]),
   attempt_abandoned: new Set(["reason"]),
 };
 
@@ -256,11 +264,26 @@ export function validateEvent(raw: unknown): { ok: true; event: TetherlessEvent 
       if (!(ATTEMPT_KINDS as readonly unknown[]).includes(p.attempt_kind)) return { ok: false, error: fail(`payload.attempt_kind must be one of: ${ATTEMPT_KINDS.join(", ")}.`) };
       if (p.attempt_kind === "boss" && (typeof p.mission_id !== "string" || !ID.test(p.mission_id))) return { ok: false, error: fail("payload.mission_id is required for boss attempts.") };
       if (p.attempt_kind !== "boss" && p.mission_id !== undefined) return { ok: false, error: fail("payload.mission_id is only allowed on boss attempts.") };
+      if (p.question_ids !== undefined) {
+        if (p.attempt_kind !== "practice") return { ok: false, error: fail("payload.question_ids is only allowed on practice attempts.") };
+        if (!Array.isArray(p.question_ids) || p.question_ids.length > 500 || !p.question_ids.every((q) => typeof q === "string" && ID.test(q))) {
+          return { ok: false, error: fail("payload.question_ids must be a list of question IDs.") };
+        }
+      }
       break;
     case "answer_submitted":
       if (typeof raw.question_id !== "string" || !ID.test(raw.question_id)) return { ok: false, error: fail("question_id is required.") };
-      if (p.choice_id !== null && (typeof p.choice_id !== "string" || !/^[a-z0-9]{1,8}$/.test(p.choice_id))) return { ok: false, error: fail("payload.choice_id must be a choice ID or null.") };
+      if (p.choice_id !== null && (typeof p.choice_id !== "string" || !/^[A-Za-z0-9]{1,8}$/.test(p.choice_id))) return { ok: false, error: fail("payload.choice_id must be a choice ID or null.") };
       if (p.response_ms !== undefined && (typeof p.response_ms !== "number" || p.response_ms < 0)) return { ok: false, error: fail("payload.response_ms must be 0 or more.") };
+      if (p.local_is_correct !== undefined && typeof p.local_is_correct !== "boolean") return { ok: false, error: fail("payload.local_is_correct must be true or false.") };
+      break;
+    case "attempt_completed":
+      for (const k of ["local_correct", "local_total"] as const) {
+        if (p[k] !== undefined && (!Number.isSafeInteger(p[k]) || (p[k] as number) < 0)) return { ok: false, error: fail(`payload.${k} must be a whole number of 0 or more.`) };
+      }
+      if (typeof p.local_correct === "number" && typeof p.local_total === "number" && p.local_correct > p.local_total) {
+        return { ok: false, error: fail("payload.local_correct can't be more than payload.local_total.") };
+      }
       break;
     case "attempt_abandoned":
       if (!(ABANDON_REASONS as readonly unknown[]).includes(p.reason)) return { ok: false, error: fail(`payload.reason must be one of: ${ABANDON_REASONS.join(", ")}.`) };
@@ -269,7 +292,9 @@ export function validateEvent(raw: unknown): { ok: true; event: TetherlessEvent 
       break;
   }
 
-  const event = { ...raw, event_id: (raw.event_id as string).toLowerCase(), device_id: (raw.device_id as string).toLowerCase() } as unknown as TetherlessEvent;
+  const normalized: Record<string, unknown> = { ...raw, event_id: (raw.event_id as string).toLowerCase(), device_id: (raw.device_id as string).toLowerCase() };
+  if (type === "answer_submitted" && typeof p.choice_id === "string") normalized.payload = { ...p, choice_id: p.choice_id.toLowerCase() };
+  const event = normalized as unknown as TetherlessEvent;
   return { ok: true, event };
 }
 
@@ -285,24 +310,46 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-// ---------------------------------------------------------------- enrollment
+// ---------------------------------------------------------------- device setup
 
-export interface EnrollRequest {
-  name: string;
+/**
+ * POST /v1/setup (spec v1.10 §6.1). A trainer creates the learner on the
+ * server and hands out a one-time setup code; the learner enters it once,
+ * online, with a username of their choice.
+ */
+export interface SetupRequest {
+  setup_code: string;
+  /** Display name chosen by the learner. Not unique. See normalizeUsername(). */
   username: string;
+  /** UUID created on the phone. */
   device_id: string;
-  /** Trainer-issued cohort code, or a one-time re-link code for a replacement phone. */
-  enrollment_code?: string;
-  relink_code?: string;
 }
 
-export interface EnrollResponse {
-  learner_id: string;
-  device_id: string;
+export interface SetupResponse {
   /** Shown once. The phone stores it and sends it as "Authorization: Bearer <token>". */
   device_token: string;
-  cohort: { cohort_id: string; name: string };
+  learner: {
+    learner_id: string;
+    /** Unique learner ID shown in Settings, e.g. "RCYC-PR-Bootcamp2026-7K3Q". */
+    learner_code: string;
+    username: string;
+    cohort_name: string;
+  };
 }
 
-export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{2,31}$/;
+/**
+ * Learner usernames are display names: 2-24 characters after trimming,
+ * letters (accents allowed), digits, spaces, "." "-" "_". Runs of spaces
+ * collapse to one. Returns null when the name isn't allowed.
+ */
+export function normalizeUsername(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.normalize("NFC").trim().replace(/\s+/g, " ");
+  if (s.length < 2 || s.length > 24) return null;
+  return /^[\p{L}\p{M}\p{N} ._-]+$/u.test(s) ? s : null;
+}
+
+/** Staff sign-in names: 3-32 lowercase letters, digits, ".", "-", "_". */
+export const STAFF_USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{2,31}$/;
+
 export const isUuid = (s: unknown): s is string => typeof s === "string" && UUID.test(s);

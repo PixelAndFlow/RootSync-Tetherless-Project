@@ -4,13 +4,15 @@ import { DEFAULT_THRESHOLDS, DEFAULT_ACTIVE_TIME_OPTIONS, type Thresholds, type 
 export interface Config {
   port: number;
   databaseUrl: string | null;
+  /** Seed modules, published into an empty database on first start. */
   contentDir: string;
   /** Origins allowed to call the API from a browser (the PWA's permanent address). */
   corsOrigins: string[];
-  trainerSessionHours: number;
+  /** Staff sign-in lifetime. */
+  staffSessionHours: number;
   thresholds: Thresholds;
   activeTime: ActiveTimeOptions;
-  /** Requests per minute per client address for enrollment and trainer login. */
+  /** Requests per minute per client address for device setup and staff sign-in. */
   authRateLimitPerMinute: number;
   /** Set when running behind a reverse proxy that sets X-Forwarded-For. */
   trustProxy: boolean;
@@ -24,7 +26,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     databaseUrl: env.DATABASE_URL || null,
     contentDir: env.CONTENT_DIR || fileURLToPath(new URL("../../../content/modules", import.meta.url)),
     corsOrigins: (env.CORS_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
-    trainerSessionHours: num(env.TRAINER_SESSION_HOURS, 12),
+    staffSessionHours: num(env.STAFF_SESSION_HOURS ?? env.TRAINER_SESSION_HOURS, 12),
     thresholds: {
       ...DEFAULT_THRESHOLDS,
       pass_pct: num(env.PASS_PCT, DEFAULT_THRESHOLDS.pass_pct),

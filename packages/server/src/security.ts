@@ -1,13 +1,13 @@
 /**
  * Credentials.
  *
- * Device tokens and trainer session tokens are opaque random strings: 32 bytes
+ * Device tokens and staff session tokens are opaque random strings: 32 bytes
  * from the operating system's secure random generator, Base64URL-encoded. The
  * phone receives its token once; the server stores only a SHA-256 hash, so a
  * copy of the database can't be used to sign in. Device tokens never expire
  * on a timer (learners may be offline for weeks) but can be revoked.
  *
- * Trainer passwords are hashed with scrypt (built into Node), a memory-hard
+ * Staff passwords are hashed with scrypt (built into Node), a memory-hard
  * password hash in the same class as bcrypt and argon2.
  */
 
@@ -41,14 +41,30 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 // No 0/O, 1/I/L: codes are read aloud and typed on phones.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-/** Short code like "K7QM-42RX" for cohorts and re-links. */
-export function newShortCode(): string {
+const randomCode = (n: number): string => {
   let s = "";
-  for (let i = 0; i < 8; i++) s += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
-  return `${s.slice(0, 4)}-${s.slice(4)}`;
+  for (let i = 0; i < n; i++) s += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+  return s;
+};
+
+/**
+ * One-time setup code for one learner, e.g. "MKT4-9WQX-2HPD": 12 characters,
+ * about 59 bits. Shown to staff once; the server keeps only hashSetupCode().
+ */
+export function newSetupCode(): string {
+  const s = randomCode(12);
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
 }
 
-/** Codes are case-insensitive and ignore surrounding spaces. */
-export const normalizeCode = (code: string): string => code.trim().toUpperCase();
+/** Learners may type the code in any case, with or without dashes and spaces. */
+export const normalizeSetupCode = (code: string): string => code.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+export const hashSetupCode = (code: string): string => sha256Hex(`setup:${normalizeSetupCode(code)}`);
+
+/**
+ * Unique learner ID shown in the app's Settings: the cohort name at the time
+ * the learner was created, plus 4 random characters. Never changes, even if
+ * the cohort is renamed (spec v1.10 §9.2).
+ */
+export const newLearnerCode = (cohortName: string): string => `${cohortName.trim().replace(/\s+/g, "-")}-${randomCode(4)}`;

@@ -24,6 +24,10 @@ function contentCheck(e: TetherlessEvent, library: ContentLibrary): { code: Reje
       return { code: "UNKNOWN_QUESTION", message: `Boss Mission ${e.payload.mission_id} is not in ${e.module_id} version ${e.content_version}.` };
     }
   }
+  if (e.event_type === "attempt_started" && e.payload.question_ids) {
+    const missing = e.payload.question_ids.find((q) => !library.questionInVersion(e.module_id, e.content_version, q));
+    if (missing) return { code: "UNKNOWN_QUESTION", message: `Question ${missing} is not in ${e.module_id} version ${e.content_version}.` };
+  }
   if (e.event_type === "answer_submitted") {
     const q = library.questionInVersion(e.module_id, e.content_version, e.question_id);
     if (!q) return { code: "UNKNOWN_QUESTION", message: `Question ${e.question_id} is not in ${e.module_id} version ${e.content_version}.` };
