@@ -57,6 +57,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   private engine: SyncEngine | null = null;
   private deviceId = "";
   private sessionId: string | null = null;
+  /**
+   * performance.now() at session start. monotonic_ms is elapsed time since
+   * then, never a wall clock: active time must not depend on the phone clock.
+   */
+  private sessionStartedAtMonotonic: number | null = null;
   private subscribers = new Set<(summary: SyncSummary) => void>();
   private syncing = false;
 
@@ -68,6 +73,10 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * content package carries its own version (RCO's schema, still open).
    */
   private contentVersion = 1;
+  /** Set from setup; used to start an implicit session if one is missing. */
+  private currentLearnerId: string | null = null;
+  /** Last module touched, so attempt_abandoned can carry module_id. */
+  private lastModuleId: string | null = null;
 
   constructor(opts: DdilGatewayOptions) {
     this.opts = opts;
@@ -103,6 +112,8 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       startedAt: new Date(this.now()).toISOString(),
     };
     this.sessionId = session.id;
+    this.currentLearnerId = input.learnerId;
+    this.sessionStartedAtMonotonic = monotonicNow();
 
     await this.record({
       event_type: "session_started",
@@ -116,6 +127,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   // ---------------------------------------------------------------- attempts
 
   async startAttempt(input: StartAttemptInput): Promise<AttemptRecord> {
+    this.lastModuleId = input.moduleId;
     const attempt: AttemptRecord = {
       id: newId(),
       learnerId: input.learnerId,
@@ -351,6 +363,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     question_id?: string;
   }): Promise<ActivityEvent> {
     const db = this.require();
+    if (!this.sessionId) {
+      // The server requires a UUID session_id on every event and rejects
+      // "no-session". Start one implicitly rather than emit an invalid event.
+      await this.startSession({ learnerId: this.currentLearnerId ?? "", deviceId: this.deviceId });
+    }
     const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
 
     const event: ActivityEvent = {
@@ -359,9 +376,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       event_type: input.event_type,
       device_id: this.deviceId,
       device_seq: seq,
-      session_id: this.sessionId ?? "no-session",
+      session_id: this.sessionId!,
       occurred_at: new Date(this.now()).toISOString(),
-      monotonic_ms: this.now() % 1_000_000_000,
+      monotonic_ms: this.elapsedMonotonic(),
       payload: input.payload,
       ...(input.module_id ? { module_id: input.module_id } : {}),
       ...(input.content_version ? { content_version: input.content_version } : {}),
@@ -399,12 +416,49 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     return this.db;
   }
 
+  /** Milliseconds since this session started, from a monotonic clock. */
+  private elapsedMonotonic(): number {
+    if (this.sessionStartedAtMonotonic === null) return 0;
+    return Math.max(0, Math.round(monotonicNow() - this.sessionStartedAtMonotonic));
+  }
+
   /** Pin the content version stamped onto attempt events. */
   setContentVersion(version: number): void {
     if (!Number.isInteger(version) || version < 1) {
       throw new Error("content_version must be a whole number of 1 or more");
     }
     this.contentVersion = version;
+  }
+
+  /**
+   * Emit a visibility change. Active time on the server depends on these.
+   */
+  async noteVisibility(state: "visible" | "hidden"): Promise<void> {
+    await this.record({ event_type: "visibility_changed", payload: { state } });
+    await this.emit();
+  }
+
+  /**
+   * Emit a heartbeat. The server expects one every 15-30s while visible;
+   * active time is derived from them.
+   */
+  async heartbeat(): Promise<void> {
+    await this.record({ event_type: "heartbeat", payload: {} });
+    await this.emit();
+  }
+
+  /**
+   * Abandon an attempt (N-8). Reason is required by the server.
+   */
+  async abandonAttempt(attemptId: string, reason: "restart" | "quit" | "replaced" = "quit"): Promise<void> {
+    await this.record({
+      event_type: "attempt_abandoned",
+      module_id: this.lastModuleId ?? "",
+      content_version: this.contentVersion,
+      attempt_id: attemptId,
+      payload: { reason },
+    });
+    await this.emit();
   }
 
   /** Read-only view for tests and diagnostics. */
@@ -425,6 +479,12 @@ export class DdilLearningGateway implements OfflineLearningGateway {
  * INVALID_EVENT before anything else is checked. IDs that must survive the
  * wire are bare; purely local ids may be prefixed.
  */
+/** performance.now() when available, else Date.now(). Never a wall clock for durations. */
+function monotonicNow(): number {
+  const perf = (globalThis as { performance?: { now?: () => number } }).performance;
+  return perf?.now ? perf.now() : Date.now();
+}
+
 function newId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
