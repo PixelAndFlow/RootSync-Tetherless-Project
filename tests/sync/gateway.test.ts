@@ -70,6 +70,11 @@ test("the gateway declares no methods outside the contract", () => {
     "require",
     "retainLocal",
     "setContentVersion",
+    // §6.3 N-7/N-8: emitted outside the nine-method gateway for now.
+    "noteVisibility",
+    "heartbeat",
+    "abandonAttempt",
+    "elapsedMonotonic",
   ]);
   const extra = declared.filter((n) => !allowed.has(n) && !internal.has(n));
   assert.deepEqual(extra, [], "unexpected public method — update the contract mirror");
