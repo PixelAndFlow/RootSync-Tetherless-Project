@@ -68,6 +68,8 @@ test("the gateway declares no methods outside the contract", () => {
     "record",
     "emit",
     "require",
+    "retainLocal",
+    "setContentVersion",
   ]);
   const extra = declared.filter((n) => !allowed.has(n) && !internal.has(n));
   assert.deepEqual(extra, [], "unexpected public method — update the contract mirror");
@@ -89,7 +91,8 @@ test("saveAnswer resolves only after the write is committed", async () => {
 
   // The moment saveAnswer resolved, the event is readable from the store.
   const delivery = await gw.deliveryRecords();
-  const answer = delivery.find((d) => d.event_id.startsWith("evt-"));
+  const events = await Promise.all(delivery.map((d) => gw.getEventById(d.event_id)));
+  const answer = events.find((e) => e?.event_type === "answer_submitted");
   assert.ok(answer, "the answer must be on disk when saveAnswer resolves");
 });
 
@@ -121,7 +124,8 @@ test("session and attempt events are recorded with increasing device_seq", async
   const seqs = events.filter((e) => e !== undefined).map((e) => e!.device_seq);
   assert.deepEqual(seqs, [...seqs].sort((a, b) => a - b), "device_seq must be monotonic");
   assert.equal(new Set(seqs).size, seqs.length, "device_seq must not repeat");
-  assert.ok(attempt.id.startsWith("att-"));
+  // IDs that cross the wire must be bare UUIDs, not prefixed.
+  assert.match(attempt.id, /^[0-9a-f-]{36}$/i);
 });
 
 // ---------------------------------------------------------------- sync status
@@ -267,4 +271,62 @@ test("delivery records are readable for diagnostics", async () => {
   assert.ok(records.length > 0);
   // and the underlying store agrees
   assert.equal((await allDelivery((gw as unknown as { db: never }).db)).length, records.length);
+});
+
+// ------------------------------------------------------- wire shape (v1.10)
+
+test("attempt_completed sends local_correct/local_total, never the rejected names", async () => {
+  const { gw } = await gateway();
+  const attempt = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full" });
+
+  await gw.completeAttempt({
+    learnerId: "l1",
+    moduleId: "m1",
+    attemptId: attempt.id,
+    questionsTotal: 5,
+    correctQuestionIds: ["q1", "q2", "q3"],
+  });
+
+  const records = await gw.deliveryRecords();
+  const completed = await Promise.all(records.map((r) => gw.getEventById(r.event_id)));
+  const evt = completed.find((e) => e?.event_type === "attempt_completed");
+  assert.ok(evt, "an attempt_completed event must be recorded");
+
+  assert.deepEqual(evt!.payload, { local_correct: 3, local_total: 5 });
+
+  // The strict schema rejects unknown fields, so these must not appear.
+  for (const banned of ["questions_total", "correct_question_ids", "sector_mastery_awards", "mission_mastery_award"]) {
+    assert.equal(banned in evt!.payload, false, `${banned} would hard-reject as INVALID_EVENT`);
+  }
+});
+
+test("answer_submitted carries local_is_correct, which v1.10 accepts", async () => {
+  const { gw } = await gateway();
+  const attempt = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full" });
+  await gw.saveAnswer({
+    learnerId: "l1",
+    moduleId: "m1",
+    attemptId: attempt.id,
+    answer: { questionId: "q1", selectedChoiceId: "c1", isCorrect: true, answeredAt: "x" },
+    xpAward: 5,
+  });
+
+  const records = await gw.deliveryRecords();
+  const events = await Promise.all(records.map((r) => gw.getEventById(r.event_id)));
+  const answer = events.find((e) => e?.event_type === "answer_submitted");
+  assert.ok(answer);
+  assert.equal(answer!.payload.local_is_correct, true);
+  assert.equal(answer!.payload.choice_id, "c1");
+});
+
+test("practice attempts carry question_ids, which v1.10 accepts", async () => {
+  const { gw } = await gateway();
+  await gw.startRemediation({ learnerId: "l1", moduleId: "m1", questionIds: ["q1", "q2"] });
+
+  const records = await gw.deliveryRecords();
+  const events = await Promise.all(records.map((r) => gw.getEventById(r.event_id)));
+  const started = events.find((e) => e?.event_type === "attempt_started");
+  assert.ok(started);
+  assert.deepEqual(started!.payload.question_ids, ["q1", "q2"]);
+  assert.equal(started!.payload.attempt_kind, "practice");
 });
