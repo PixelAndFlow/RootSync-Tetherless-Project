@@ -29,7 +29,7 @@ This is **not yet a production offline app**. Service-worker caching, IndexedDB/
 - mission library and mission briefing;
 - gateway-aware answer saving: feedback appears only after the current gateway confirms the save, with a learner-safe retry message on failure;
 - Spanish Assist, progress, flagged questions, question navigation, and mobile touch targets;
-- Kahoot-format questions use the original red, blue, amber, and teal answer cards; those colours remain visible after feedback, with a white correct-answer outline or dashed incorrect-selection outline plus written feedback;
+- every four-choice learner question receives one red, blue, amber, and teal answer card; the first Red Team/Blue Team choice keeps its matching colour while repeated team names use an unused palette colour. Colours remain visible after feedback, with a white correct-answer outline or dashed incorrect-selection outline plus written feedback;
 - first-attempt score preservation, remediation, current mastery, full retry, and review flows;
 - engagement-only XP, streaks, sector checkpoints, Cyber Shield, and mission badge;
 - clear local-save, offline, pending, syncing, synced, retryable-error, and rejected status UI;

@@ -13,6 +13,7 @@ describe("Operation Cyber Squad fixture", () => {
     operationCyberSquad.questions.forEach((question) => {
       expect(question.prompt.es).toBeTruthy();
       expect(question.feedback.es).toBeTruthy();
+      expect(question.choices).toHaveLength(4);
       expect(question.choices.some((choice) => choice.id === question.correct_choice)).toBe(true);
     });
     expect(validateModule(operationCyberSquad)).toEqual([]);

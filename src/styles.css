@@ -58,14 +58,12 @@ article + div button:disabled { cursor: not-allowed; opacity: 1; }
 article + div button:not([class~="bg-violet-600"]):disabled { border-color: #707078; background: #2d2d30; color: #9d9d9d; }
 article + div button[class~="bg-violet-600"]:disabled { background: #46318d !important; color: #ffffff; }
 
-/* Preserve the original Kahoot answer colours within Kahoot-format questions only. */
+/* Every four-choice learner question uses this one, unique-colour card palette. */
 .kahoot-answer { color: #ffffff !important; }
-.kahoot-answer-0 { border-color: #fda4af !important; background: linear-gradient(135deg, #dc2626, #991b1b) !important; }
-.kahoot-answer-1 { border-color: #93c5fd !important; background: linear-gradient(135deg, #2563eb, #1e3a8a) !important; }
-.kahoot-answer-2 { border-color: #fde68a !important; background: linear-gradient(135deg, #d97706, #92400e) !important; }
-.kahoot-answer-3 { border-color: #99f6e4 !important; background: linear-gradient(135deg, #0f766e, #134e4a) !important; }
 .kahoot-answer-blue { border-color: #93c5fd !important; background: linear-gradient(135deg, #2563eb, #1e3a8a) !important; }
 .kahoot-answer-red { border-color: #fda4af !important; background: linear-gradient(135deg, #dc2626, #991b1b) !important; }
+.kahoot-answer-orange { border-color: #fde68a !important; background: linear-gradient(135deg, #d97706, #92400e) !important; }
+.kahoot-answer-teal { border-color: #99f6e4 !important; background: linear-gradient(135deg, #0f766e, #134e4a) !important; }
 .kahoot-answer-correct { border-color: #ffffff !important; box-shadow: 0 0 0 2px #ffffff; }
 .kahoot-answer-selected-incorrect { border-style: dashed; }
 
@@ -124,9 +122,6 @@ button[class~="border-white/15"], a[class~="border-white/15"], input[class~="bor
 .app-light-theme .onboarding-readiness > p:nth-of-type(2), .app-light-theme .mission-ready-path p { color: #3b3b3b; }
 .app-light-theme .mission-ready-path li > span { background: #ffffff; color: #5a1ee4; }
 .app-light-theme .mission-ready-path h3 { color: #1e1e1e; }
-.app-light-theme .answer-card-neutral { border-color: #c8c8c8; background: #ffffff; color: #1e1e1e; }
-.app-light-theme .answer-card-neutral:not(:disabled):hover { border-color: #5a1ee4; background: #f3edff; }
-.app-light-theme .answer-card-neutral .answer-card-translation { color: #3b3b3b; }
 
 @media (min-width: 1024px) {
   /* Keep the sticky mission panel clear of the persistent site header. */

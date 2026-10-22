@@ -34,10 +34,16 @@
 - VS Code-style neutral black/gray surfaces use RCO purple (`#5A1EE4`) and magenta (`#C143C0`) for meaningful accents.
 - Learners explicitly choose Dark mode or Light mode; both themes are persisted per browser/device and are covered by mobile accessibility checks.
 - Mission-map and in-mission sector checkpoints share the same RCO-purple line icons.
-- Only `kahoot_cards` questions use the four colourful answer cards. Their colours remain after feedback, with written feedback and non-colour correct/incorrect indicators.
+- Every four-choice learner question uses one each of the Kahoot-inspired red, blue, amber, and teal answer cards. The first Red Team/Blue Team answer keeps its matching colour; repeated named teams and unnamed answers receive an unused colour. Presentation labels such as Mission alert describe context only; colours remain after feedback, with written feedback and non-colour correct/incorrect indicators.
 - Trainer data and access remain local fixture/demo behaviour until backend authentication and authorization are integrated.
 - The learner setup code/username, learner settings, API error presentation, and sync-authorisation states are safe frontend/demo preparation. They do not store credentials or call a live API yet.
 - The live API client and Trainer reports adapter are isolated and opt-in; `GatewayProvider` continues to use the mock gateway. See `docs/FRONTEND_INTEGRATION_BOUNDARY.md` and `docs/FRONTEND_INTEGRATION_STATUS.md`.
+
+## Latest focused UI regression
+
+- All 15 Operation Cyber Squad questions now use four unique answer-card colours, independent of presentation label, including questions with repeated Red Team/Blue Team choices.
+- Focused regression checks passed: 11 answer-card, mission-play, and mission-content tests; 15 content-validation tests; and the production TypeScript/Vite build.
+- The complete device suite was intentionally not rerun for this isolated card-style change.
 
 ## Current baseline
 
