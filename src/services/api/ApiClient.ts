@@ -3,7 +3,7 @@ import { ApiError, parseApiError } from "./ApiError";
 /** Opt-in staff API boundary. No token persistence, learner sync, or automatic retries. */
 export class ApiClient {
   private readonly baseUrl: string;
-  constructor(baseUrl: string, private readonly token: () => string | null, private readonly transport: typeof fetch = fetch) {
+  constructor(baseUrl: string, private readonly token: () => string | null, private readonly transport: typeof fetch = fetch.bind(globalThis)) {
     const url = new URL(baseUrl);
     if (url.username || url.password || url.search || url.hash || (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))) {
       throw new Error("API requires HTTPS (HTTP is allowed only for local testing).");

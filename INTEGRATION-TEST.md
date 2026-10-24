@@ -52,6 +52,57 @@ prove the deployed server and this frontend can talk to each other at all.
 - Nothing loads / `NETWORK_ERROR` → check the Render service is awake (free
   tier sleeps) and that `CORS_ORIGINS` was actually redeployed.
 
+**Verified 2026-10-24**: signed in against the live Render/Neon server with a
+real staff account. See the bug below — it was masking every real request
+with a false "Unable to connect" until fixed.
+
+## Bug found and fixed: `ApiClient` couldn't actually reach the network
+
+**Symptom**: every sign-in attempt failed instantly with "Unable to connect.
+Check your connection and try again." — the generic `NETWORK_ERROR` message —
+regardless of credentials, even though `curl` and a manual `fetch()` run
+directly in the page both proved the server and CORS were fine.
+
+**Root cause**: `ApiClient`'s constructor took the transport as a default
+parameter bound to the bare global:
+
+```ts
+constructor(baseUrl: string, private readonly token: () => string | null, private readonly transport: typeof fetch = fetch) {
+```
+
+Calling it later as `this.transport(url, options)` invokes native `fetch`
+with `this` set to the `ApiClient` instance instead of `window`. Chrome's
+native `fetch` requires `this === window` internally and throws
+`TypeError: Failed to execute 'fetch' on 'Window': Illegal invocation` for
+any other receiver. `post()`/`get()` catch that `TypeError` and rewrap it as
+`ApiError("NETWORK_ERROR")`, which is why the UI showed a network/CORS-looking
+error for what was actually a JavaScript binding bug — every real network
+check (Render awake? CORS headers right?) came back clean because the
+request never actually left the browser.
+
+Confirmed by reproducing the exact pattern standalone in the page console:
+
+```js
+class Probe {
+  constructor(transport = fetch) { this.transport = transport; }
+  async go() { return this.transport("https://example.com"); } // throws Illegal invocation
+}
+```
+
+**Fix** (`src/services/api/ApiClient.ts`): bind the default transport to
+`globalThis` so it carries the right receiver regardless of how it's called:
+
+```ts
+private readonly transport: typeof fetch = fetch.bind(globalThis)
+```
+
+**Scope**: this was already present in Chris's original `get()` method (not
+something introduced by this branch's wiring) — `post()` inherited the same
+pattern when I added it. Any future real caller of `get()` (e.g. wiring
+`ApiTrainerReportsGateway`, which already calls `ApiClient.get()`) would have
+hit the identical failure. Worth back-porting this one-line fix to
+`chris-frontend-integration` directly so it doesn't resurface there.
+
 ## Open questions for Marc (no need to answer before testing — just flag what you find)
 
 1. Does `CORS_ORIGINS` already include anything, or is it unset? If unset,
