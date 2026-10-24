@@ -1,4 +1,4 @@
-import type { SetupCodeReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { SetupCodeReveal, StaffAccountReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
 
 /** Frontend boundary for Marc's StaffAdminGateway. The mock is intentional until API wiring is approved. */
 export interface StaffAdminGateway {
@@ -8,5 +8,6 @@ export interface StaffAdminGateway {
   listStudents(input: { cohortId?: string }): Promise<StaffStudent[]>;
   createStudent(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal>;
   listModules(): Promise<StaffModule[]>;
+  createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal>;
   canManage(role: StaffRole, action: "staff" | "system"): boolean;
 }

@@ -1,6 +1,7 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
-import type { SetupCodeReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { SetupCodeReveal, StaffAccountReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
 function invalid(): never { throw new ApiError("INVALID_RESPONSE"); }
@@ -20,11 +21,16 @@ function mapSession(staff: Record<string, unknown>): StaffSession {
   };
 }
 
+/** Meets the server's MIN_PASSWORD_LENGTH (12); shown once, never retyped, so it's random, not memorable. */
+function generateTemporaryPassword(): string {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
 /**
  * Real staff adapter for the v1.10 server (Render/Neon), written for
- * marc-frontend-integration-test. Only sign-in and password change call the
- * real API: /v1/staff/login and /v1/staff/me/password, the two routes behind
- * every staff screen.
+ * marc-frontend-integration-test. Sign-in, password change and staff-account
+ * creation call the real API: /v1/staff/login, /v1/staff/me/password and
+ * POST /v1/staff/accounts.
  *
  * Cohorts, Students and Modules are NOT wired here. StaffAdminGateway's
  * listCohorts/listStudents/createStudent/listModules assume a shape
@@ -70,6 +76,21 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
 
   async createStudent(): Promise<SetupCodeReveal> {
     throw new ApiError("NOT_IMPLEMENTED", 501);
+  }
+
+  async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
+    const username = input.username.trim().toLowerCase();
+    if (!STAFF_USERNAME_PATTERN.test(username)) throw new ApiError("INVALID_INPUT", 422, false, undefined, [{ field: "username", message: "Check this value and try again." }]);
+    const temporaryPassword = generateTemporaryPassword();
+    const body = record(await this.api.post("/v1/staff/accounts", {
+      role: input.role, username, display_name: input.displayName.trim(), temporary_password: temporaryPassword,
+    }));
+    const account = record(body.account);
+    return {
+      account: { staffId: text(account.staff_id), username: text(account.username), displayName: text(account.display_name), role: role(account.role) },
+      temporaryPassword,
+      shownOnce: true,
+    };
   }
 
   canManage(role: StaffRole, action: "staff" | "system"): boolean {

@@ -1,5 +1,6 @@
 import { ApiError } from "../api/ApiError";
-import type { SetupCodeReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { SetupCodeReveal, StaffAccountReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
 const cohorts: StaffCohort[] = [
@@ -45,5 +46,14 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     return { studentId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
   }
   async listModules(): Promise<StaffModule[]> { return structuredClone(modules); }
+  async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
+    const username = input.username.trim().toLowerCase();
+    if (!STAFF_USERNAME_PATTERN.test(username) || !input.displayName.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return {
+      account: { staffId: crypto.randomUUID(), username, displayName: input.displayName.trim(), role: input.role },
+      temporaryPassword: crypto.randomUUID().replace(/-/g, "").slice(0, 16),
+      shownOnce: true,
+    };
+  }
   canManage(role: StaffRole, action: "staff" | "system"): boolean { return action === "staff" ? role !== "trainer" : role === "superadmin"; }
 }

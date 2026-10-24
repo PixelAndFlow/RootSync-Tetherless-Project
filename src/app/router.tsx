@@ -19,6 +19,7 @@ import { StaffDashboardScreen } from "../features/staff/StaffDashboardScreen";
 import { StaffOperationsScreen } from "../features/staff/StaffOperationsScreen";
 import { StaffContentWorkflowScreen } from "../features/staff/StaffContentWorkflowScreen";
 import { StaffPermissionScreen } from "../features/staff/StaffPermissionScreen";
+import { StaffAccountsScreen } from "../features/staff/StaffAccountsScreen";
 
 function requireKnownModule({ params }: LoaderFunctionArgs) {
   if (!moduleLibrary.some((module) => module.module_id === params.moduleId)) {
@@ -49,7 +50,7 @@ export const router = createHashRouter([
       { path: "/staff", element: <StaffDashboardScreen /> },
       { path: "/staff/operations", element: <StaffOperationsScreen /> },
       { path: "/staff/content", element: <StaffContentWorkflowScreen /> },
-      { path: "/staff/accounts", element: <StaffPermissionScreen permission="staff" /> },
+      { path: "/staff/accounts", element: <StaffAccountsScreen /> },
       { path: "/staff/system", element: <StaffPermissionScreen permission="system" /> },
       { path: "*", element: <RouteNotFoundScreen /> },
     ],
