@@ -45,6 +45,18 @@ These are frontend defaults based on the Thursday RCO discussion and await team 
 3. The frontend replaces the mock gateway at `GatewayProvider` and runs the Student flow through the real React screens.
 4. The team runs local Postgres, hosted HTTPS, Android, and iPhone installed-PWA verification.
 
+## Current mock workflow coverage
+
+- Staff sign-in, forced password change, SuperAdmin/Admin/Trainer role-aware navigation, direct-route access notices, and responsive staff screen layouts.
+- Student roster, one-time setup-code copy layout, print/download handout placeholders, destructive archive confirmation, and safe post-confirmation feedback without a server mutation.
+- Module upload/edit workflow preview: file selection, validation result, preview, publish, and cohort assignment stages. Use `/#/staff/content?scenario=upload-invalid` to view a validation-error state.
+- Student no-assignment empty state at `/#/learner/missions?scenario=no-assigned-modules`.
+- Named fixtures for setup-code-used, archived Student, switched-off device, blocked authentication, no assigned modules, permission denied, and invalid upload. These are UI/test fixtures, not server behavior.
+
+## Runtime configuration preparation
+
+`readFrontendRuntimeConfig()` supports a future `VITE_TETHERLESS_API_BASE_URL`. It defaults to mock mode and accepts only HTTPS outside localhost. It does not enable a real adapter or store credentials.
+
 ## Verification completed for this frontend preparation
 
 - TypeScript production build.

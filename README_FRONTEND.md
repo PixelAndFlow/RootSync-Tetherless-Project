@@ -22,6 +22,8 @@ The learner and trainer frontend is working locally with typed mock adapters and
 
 All visible product language now uses **Student**; existing `learner_*` identifiers remain internal compatibility fields only. Mock-backed SuperAdmin, Admin, Trainer, and Student screen preparation is available at `/#/staff/sign-in`, including staff sign-in, forced password change, role-aware landing pages, cohorts/Students, one-time setup-code presentation, Trainer archive confirmation preparation, and permitted module upload/edit placeholders. It does not make API calls or persist staff credentials. See [Student and staff preparation](docs/FRONTEND_STUDENT_AND_STAFF_PREPARATION.md).
 
+The mock content workflow is available at `/#/staff/content`; append `?scenario=upload-invalid` to review its validation-error state. The Student no-assignment state is available at `/#/learner/missions?scenario=no-assigned-modules`.
+
 This is **not yet a production offline app**. Service-worker caching, IndexedDB/Dexie persistence, outbox mechanics, authentication, real API calls, and server reporting are intentionally deferred until the team agrees the contracts.
 
 ## What is built
