@@ -8,6 +8,7 @@ This guide is for UI review only. The screens use synthetic fixtures and do not 
 2. Enter setup code `DEMO-2026` and any valid username.
 3. Open Missions, profile/settings, and sync status.
 4. To view an empty-assignment experience, open `/#/learner/missions?scenario=no-assigned-modules`.
+5. State the boundary clearly: this preview uses sample data, and no Student or staff action is sent to RCO.
 
 ## 2. Staff roles
 
@@ -37,3 +38,11 @@ Open `/#/staff/sign-in`. Password for all mock accounts: `demo-password-123`.
 - Marc’s backend remains authoritative for authentication, roles, staff actions, content validation/publishing, assignments, and reporting.
 - Naquan’s DDIL layer remains authoritative for Student setup, local durability, offline module storage, outbox/sync behavior, and recovery state.
 - The frontend currently presents those contracts using mock data. Do not use mock credentials or codes outside local review.
+
+## 6. Suggested Demo Day flow
+
+1. Start with the Student setup page and explain that the public preview code is synthetic.
+2. Show a mission question, answer feedback, the Mission navigation panel, and the clear local-save status.
+3. Open Sync status and use its "What to do next" guidance to explain offline, pending, and authorization-paused states.
+4. Sign in as the mock SuperAdmin or Trainer and show role-aware staff views. Explicitly state that all write actions are visual previews until the backend and DDIL adapters are connected.
+5. Keep actual RCO source material and real Student information out of the demo environment.

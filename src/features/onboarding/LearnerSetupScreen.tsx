@@ -51,9 +51,9 @@ export function LearnerSetupScreen() {
       <div className="p-6 sm:p-10">
         <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">WELCOME, RECRUIT</p>
         <h1 className="mt-3 text-3xl font-bold">Your offline cyber mission companion.</h1>
-        <p className="mt-4 leading-7 text-slate-300">Enter your trainer's setup code and choose a username. Real device setup will require an internet connection.</p>
-        <p className="mt-4 text-sm">Frontend demo: use <strong>DEMO-2026</strong>. This repeatable demo code does not register a real Student. Quiz progress is simulated in memory and resets on reload.</p>
-        {profile ? <div className="mt-8 grid gap-4"><p>This demo profile is already set up.</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
+        <p className="mt-4 leading-7 text-slate-300">Enter the setup code from your Trainer and choose a username. Real Student setup requires an internet connection.</p>
+        <p className="mt-4 text-sm">Demo preview: use <strong>DEMO-2026</strong>. This repeatable code does not register a real Student. Mission progress is simulated in memory and resets on reload.</p>
+        {profile ? <div className="mt-8 grid gap-4"><p>This demo Student profile is already set up.</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View Student profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
           <label className="grid gap-2 text-sm font-semibold" htmlFor="setup-code">Setup code</label>
           <input id="setup-code" autoComplete="off" spellCheck={false} disabled={busy} aria-invalid={Boolean(fieldErrors.setupCode)} aria-describedby={fieldErrors.setupCode ? "setup-code-error" : undefined} className="integration-input" onChange={(event) => setSetupCode(event.target.value)} placeholder="Enter your setup code" value={setupCode} />
           {fieldErrors.setupCode && <p id="setup-code-error" role="alert">{fieldErrors.setupCode}</p>}
