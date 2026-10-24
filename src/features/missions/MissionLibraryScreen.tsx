@@ -1,12 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { StorageStatusCard } from "../../components/common/StorageStatusCard";
 import { DisplayPreferences } from "../../components/learner/DisplayPreferences";
 import { learnerCopy } from "../../copy/ui";
+import { EmptyState } from "../../components/common/PageState";
+import { mockScenarioCopy } from "../../services/mockScenarios";
 
 export function MissionLibraryScreen() {
   const { profile, setHighContrast, setReducedMotion, setColorTheme } = useLearnerProfile();
+  const [params] = useSearchParams();
+  const noAssignedModules = params.get("scenario") === "no-assigned-modules";
   return (
     <section>
       <p className="app-section-eyebrow text-xs font-bold tracking-[0.2em]">STUDENT MISSIONS</p>
@@ -14,6 +18,7 @@ export function MissionLibraryScreen() {
       <p className="mt-3 max-w-2xl text-slate-400">{learnerCopy.libraryDescription}</p>
       <StorageStatusCard />
       {profile && <DisplayPreferences colorTheme={profile.colorTheme} highContrast={profile.highContrast} reducedMotion={profile.reducedMotion} onColorThemeChange={setColorTheme} onHighContrastChange={setHighContrast} onReducedMotionChange={setReducedMotion} />}
+      {noAssignedModules ? <div className="mt-8"><EmptyState detail={mockScenarioCopy.no_assigned_modules.detail} title={mockScenarioCopy.no_assigned_modules.title} /></div> :
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {moduleLibrary.map((module) => (
           <article className="relative overflow-hidden rounded-2xl border border-white/10 bg-panel p-6" key={module.module_id}>
@@ -28,6 +33,7 @@ export function MissionLibraryScreen() {
           </article>
         ))}
       </div>
+      }
     </section>
   );
 }

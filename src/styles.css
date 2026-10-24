@@ -128,3 +128,9 @@ button[class~="border-white/15"], a[class~="border-white/15"], input[class~="bor
   aside[class*="lg:sticky"] { top: 5.5rem !important; z-index: 10; }
 }
 .app-light-theme.app-high-contrast { --color-panel: #ffffff; --ui-panel-border: #1e1e1e; color: #000000; }
+
+@media print {
+  .app-header, [aria-label="Development controls"], button, .app-skip-link { display: none !important; }
+  body, html { background: #ffffff; color: #000000; }
+  .ui-panel { box-shadow: none; }
+}
