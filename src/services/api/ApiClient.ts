@@ -27,4 +27,25 @@ export class ApiClient {
     if (!response.ok) throw parseApiError(body, response.status);
     return body;
   }
+  /** `auth: false` for routes called before a token exists, such as staff login. */
+  async post(path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
+    if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
+    const auth = options.auth ?? true;
+    const token = auth ? this.token() : null;
+    if (auth && !token) throw new ApiError("UNAUTHORIZED", 401);
+    let response: Response;
+    try {
+      response = await this.transport(`${this.baseUrl}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(payload),
+        cache: "no-store", credentials: "omit", redirect: "error",
+      });
+    } catch { throw new ApiError("NETWORK_ERROR", 0, true); }
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw response.ok ? new ApiError("INVALID_RESPONSE", response.status) : parseApiError(null, response.status); }
+    if (!response.ok) throw parseApiError(body, response.status);
+    return body;
+  }
 }
