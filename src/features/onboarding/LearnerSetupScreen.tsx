@@ -52,7 +52,7 @@ export function LearnerSetupScreen() {
         <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">WELCOME, RECRUIT</p>
         <h1 className="mt-3 text-3xl font-bold">Your offline cyber mission companion.</h1>
         <p className="mt-4 leading-7 text-slate-300">Enter your trainer's setup code and choose a username. Real device setup will require an internet connection.</p>
-        <p className="mt-4 text-sm">Frontend demo: use <strong>DEMO-2026</strong>. This repeatable demo code does not register a real learner. Quiz progress is simulated in memory and resets on reload.</p>
+        <p className="mt-4 text-sm">Frontend demo: use <strong>DEMO-2026</strong>. This repeatable demo code does not register a real Student. Quiz progress is simulated in memory and resets on reload.</p>
         {profile ? <div className="mt-8 grid gap-4"><p>This demo profile is already set up.</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
           <label className="grid gap-2 text-sm font-semibold" htmlFor="setup-code">Setup code</label>
           <input id="setup-code" autoComplete="off" spellCheck={false} disabled={busy} aria-invalid={Boolean(fieldErrors.setupCode)} aria-describedby={fieldErrors.setupCode ? "setup-code-error" : undefined} className="integration-input" onChange={(event) => setSetupCode(event.target.value)} placeholder="Enter your setup code" value={setupCode} />
@@ -73,7 +73,7 @@ export function LearnerSetupScreen() {
         <p className="mt-3 text-sm leading-6">Designed for learning on your device and syncing when service returns. This preview does not yet provide real offline storage or synchronization.</p>
         <ol aria-label="Your mission path" className="mission-ready-path mt-7 grid gap-4">
           <li><span>1</span><div><h3>Create profile</h3><p>Use your setup code and choose a username.</p></div></li>
-          <li><span>2</span><div><h3>Learn offline</h3><p>Complete mission checks at your pace.</p></div></li>
+          <li><span>2</span><div><h3>Study offline</h3><p>Complete mission checks at your pace.</p></div></li>
           <li><span>3</span><div><h3>Sync when ready</h3><p>Send saved progress when service returns.</p></div></li>
         </ol>
       </aside>

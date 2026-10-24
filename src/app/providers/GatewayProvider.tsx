@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import { mockGateways, type AppGateways } from "../../services/gateways";
 import type { OfflineLearningGateway } from "../../services/offline/OfflineLearningGateway";
 import type { TrainerDataGateway } from "../../services/trainer/TrainerDataGateway";
+import type { StaffAdminGateway } from "../../services/staff/StaffAdminGateway";
 
 const GatewayContext = createContext<AppGateways | null>(null);
 
@@ -31,4 +32,8 @@ export function useTrainerDataGateway(): TrainerDataGateway {
 
 export function useLearnerSetupGateway() {
   return useAppGateways().learnerSetup;
+}
+
+export function useStaffAdminGateway(): StaffAdminGateway | undefined {
+  return useAppGateways().staffAdmin;
 }

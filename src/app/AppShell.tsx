@@ -13,7 +13,7 @@ export function AppShell() {
       <a className="app-skip-link sr-only absolute left-4 top-4 z-50 rounded-lg px-4 py-2 font-bold focus:not-sr-only" href="#main-content">Skip to main content</a>
       <header className="app-header sticky top-0 border-b px-4 py-3 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4" aria-label="Primary navigation">
-          <Link aria-label="Tetherless mission library" className="flex shrink-0 items-center gap-2 sm:gap-3" to="/learner/missions">
+          <Link aria-label="Tetherless Student mission library" className="flex shrink-0 items-center gap-2 sm:gap-3" to="/learner/missions">
             <img alt="Raíces Cyber Organization" className="h-9 w-auto rounded bg-white px-1.5 py-1" src="/brand/rc_color.svg" />
             <span className="app-wordmark hidden text-sm font-bold tracking-[0.16em] min-[390px]:inline">TETHERLESS</span>
           </Link>
@@ -21,6 +21,7 @@ export function AppShell() {
             <Link aria-label="View sync status" className="hidden rounded-full sm:block" to="/learner/sync"><StatusChip status={summary.status} /></Link>
             <NavLink className={({ isActive }) => `app-nav-link inline-flex min-h-11 items-center rounded-lg px-2.5 py-2 sm:px-3 ${isActive ? "app-nav-link-active" : "app-nav-link-inactive"}`} to="/learner/missions">Missions</NavLink>
             <NavLink className={({ isActive }) => `app-nav-link inline-flex min-h-11 items-center rounded-lg px-2.5 py-2 sm:px-3 ${isActive ? "app-nav-link-active" : "app-nav-link-inactive"}`} to="/trainer">Trainer</NavLink>
+            <NavLink className={({ isActive }) => `app-nav-link inline-flex min-h-11 items-center rounded-lg px-2.5 py-2 sm:px-3 ${isActive ? "app-nav-link-active" : "app-nav-link-inactive"}`} to="/staff">Staff</NavLink>
           </div>
         </nav>
       </header>

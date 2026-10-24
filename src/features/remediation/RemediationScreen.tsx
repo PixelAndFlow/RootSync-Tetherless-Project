@@ -33,7 +33,7 @@ export function RemediationScreen() {
     void offlineLearningGateway.startRemediation({ learnerId: profile.learnerId, moduleId: module.module_id, questionIds }).then(setAttempt);
   }, [module.module_id, profile, questionIds, questions.length, record]);
 
-  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up learner profile →</Link></section>;
+  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;
   if (!record) return <section className="rounded-3xl border border-white/10 bg-panel p-8">Loading your local learning record…</section>;
   if (!questions.length) return <section className="rounded-3xl border border-emerald-300/20 bg-panel p-8"><p className="text-xs font-bold tracking-[0.18em] text-emerald-200">MASTERY COMPLETE</p><h1 className="mt-3 text-3xl font-bold">No missed questions need practice.</h1><Link className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-3 font-bold" to={`/learner/missions/${module.module_id}/results`}>Return to debrief</Link></section>;
 

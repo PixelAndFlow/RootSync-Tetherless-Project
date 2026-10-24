@@ -26,7 +26,7 @@ export function MissionReviewScreen() {
     return scope === "correct" ? answer?.isCorrect : scope === "missed" ? !answer?.isCorrect : true;
   }), [firstAttempt, module.questions, scope]);
 
-  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up learner profile →</Link></section>;
+  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;
   if (isLoading) return <LoadingState label="Loading saved mission record…" />;
   if (!firstAttempt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Complete a full mission attempt before opening a read-only review." title="No saved attempt is available." />;
   if (!questions.length) return <EmptyState actionLabel="Return to debrief" actionTo={`/learner/missions/${module.module_id}/results`} detail="No questions match this review filter." title="Nothing matches this review." />;

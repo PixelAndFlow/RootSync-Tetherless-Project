@@ -22,7 +22,7 @@ export function MissionResultsScreen() {
 
   useEffect(() => { if (!profile) return; void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false)); }, [module.module_id, profile]);
 
-  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">Set up your learner profile first.</h1><Link className="mt-5 inline-flex text-cyan-300" to="/learner">Return to setup →</Link></section>;
+  if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">Set up your Student profile first.</h1><Link className="mt-5 inline-flex text-cyan-300" to="/learner">Return to setup →</Link></section>;
   if (isLoading) return <LoadingState label="Loading your saved mission debrief…" />;
   if (!record?.firstCompletedAt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Finish every question to create an initial score and unlock your debrief." title="Your mission debrief is not ready yet." />;
 
