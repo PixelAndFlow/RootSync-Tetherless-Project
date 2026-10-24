@@ -13,6 +13,10 @@ import { TrainerLearnerDetailScreen } from "../features/trainer/TrainerLearnerDe
 import { RouteErrorScreen, RouteNotFoundScreen } from "../features/system/RouteFallbackScreen";
 import { moduleLibrary } from "../content/modules";
 import { LearnerSettingsScreen } from "../features/settings/LearnerSettingsScreen";
+import { StaffSignInScreen } from "../features/staff/StaffSignInScreen";
+import { StaffPasswordChangeScreen } from "../features/staff/StaffPasswordChangeScreen";
+import { StaffDashboardScreen } from "../features/staff/StaffDashboardScreen";
+import { StaffOperationsScreen } from "../features/staff/StaffOperationsScreen";
 
 function requireKnownModule({ params }: LoaderFunctionArgs) {
   if (!moduleLibrary.some((module) => module.module_id === params.moduleId)) {
@@ -38,6 +42,10 @@ export const router = createHashRouter([
       { path: "/learner/settings", element: <LearnerSettingsScreen /> },
       { path: "/trainer", element: <TrainerDashboardScreen /> },
       { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
+      { path: "/staff/sign-in", element: <StaffSignInScreen /> },
+      { path: "/staff/change-password", element: <StaffPasswordChangeScreen /> },
+      { path: "/staff", element: <StaffDashboardScreen /> },
+      { path: "/staff/operations", element: <StaffOperationsScreen /> },
       { path: "*", element: <RouteNotFoundScreen /> },
     ],
   },

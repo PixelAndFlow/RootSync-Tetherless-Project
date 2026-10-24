@@ -9,7 +9,7 @@ export function MissionLibraryScreen() {
   const { profile, setHighContrast, setReducedMotion, setColorTheme } = useLearnerProfile();
   return (
     <section>
-      <p className="app-section-eyebrow text-xs font-bold tracking-[0.2em]">LEARNER MISSIONS</p>
+      <p className="app-section-eyebrow text-xs font-bold tracking-[0.2em]">STUDENT MISSIONS</p>
       <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{profile ? `Welcome back, ${profile.displayName.split(" ")[0]}.` : "Choose your next cyber mission."}</h1>
       <p className="mt-3 max-w-2xl text-slate-400">{learnerCopy.libraryDescription}</p>
       <StorageStatusCard />

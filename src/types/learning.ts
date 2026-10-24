@@ -126,6 +126,8 @@ export interface StartSessionInput {
 export interface StartAttemptInput {
   learnerId: string;
   moduleId: string;
+  /** Server content version; optional only while the DDIL adapter is being expanded. */
+  contentVersion?: number;
   kind: AttemptKind;
 }
 

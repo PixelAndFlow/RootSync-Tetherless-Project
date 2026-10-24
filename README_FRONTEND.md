@@ -18,6 +18,10 @@ test evidence, contract boundaries and the remaining team handoff.
 
 The learner and trainer frontend is working locally with typed mock adapters and de-identified fixture data. It is ready for visual review, content iteration, frontend testing, and later replacement of the mock adapters by the agreed DDIL and backend implementations.
 
+### Student and staff preparation (2026-10-24)
+
+All visible product language now uses **Student**; existing `learner_*` identifiers remain internal compatibility fields only. Mock-backed SuperAdmin, Admin, Trainer, and Student screen preparation is available at `/#/staff/sign-in`, including staff sign-in, forced password change, role-aware landing pages, cohorts/Students, one-time setup-code presentation, Trainer archive confirmation preparation, and permitted module upload/edit placeholders. It does not make API calls or persist staff credentials. See [Student and staff preparation](docs/FRONTEND_STUDENT_AND_STAFF_PREPARATION.md).
+
 This is **not yet a production offline app**. Service-worker caching, IndexedDB/Dexie persistence, outbox mechanics, authentication, real API calls, and server reporting are intentionally deferred until the team agrees the contracts.
 
 ## What is built
