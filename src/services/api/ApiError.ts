@@ -13,6 +13,7 @@ const messages: Record<string, string> = {
   RATE_LIMITED: "Too many requests. Please wait before trying again.",
   NETWORK_ERROR: "Unable to connect. Check your connection and try again.",
   INVALID_RESPONSE: "The service returned an unexpected response. Please contact the team.",
+  NOT_IMPLEMENTED: "This live staff action is not enabled in the current frontend integration.",
 };
 
 export class ApiError extends Error {

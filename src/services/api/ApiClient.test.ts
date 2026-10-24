@@ -9,10 +9,33 @@ describe("staff API boundary", () => {
     expect(await client.get("/v1/staff/cohorts/example/report")).toEqual({ learners: [] });
     expect(fetcher).toHaveBeenCalledWith("http://localhost:8080/v1/staff/cohorts/example/report", expect.objectContaining({ headers: { accept: "application/json", authorization: "Bearer test-only-token" }, credentials: "omit", redirect: "error" }));
   });
+  it("binds the default browser transport to the global scope", async () => {
+    const receiver: unknown[] = [];
+    const globalTransport = function (this: unknown) {
+      receiver.push(this);
+      return Promise.resolve(new Response(JSON.stringify({ learners: [] })));
+    } as unknown as typeof fetch;
+    vi.stubGlobal("fetch", globalTransport);
+    try {
+      await expect(new ApiClient("http://localhost:8080", () => "test-only-token").get("/v1/staff/cohorts")).resolves.toEqual({ learners: [] });
+      expect(receiver).toEqual([globalThis]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it("requires authorization before making a request", async () => {
     const fetcher = vi.fn();
     await expect(new ApiClient("http://localhost:8080", () => null, fetcher).get("/v1/staff/cohorts")).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("allows only explicitly pre-authenticated POST requests without a token", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "session" })));
+    const client = new ApiClient("http://localhost:8080", () => null, fetcher);
+    await expect(client.post("/v1/staff/login", { username: "staff", password: "secret" }, { auth: false })).resolves.toEqual({ token: "session" });
+    expect(fetcher).toHaveBeenCalledWith("http://localhost:8080/v1/staff/login", expect.objectContaining({
+      method: "POST", body: JSON.stringify({ username: "staff", password: "secret" }), headers: { "content-type": "application/json", accept: "application/json" },
+    }));
+    await expect(client.post("/v1/staff/me/password", {})).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
   it.each(["http://example.com", "https://user:secret@example.com", "https://example.com?token=secret"])("rejects unsafe base %s", (url) => {
     expect(() => new ApiClient(url, () => null)).toThrow();

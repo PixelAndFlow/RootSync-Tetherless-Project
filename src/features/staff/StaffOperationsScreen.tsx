@@ -3,11 +3,13 @@ import { Link, Navigate } from "react-router-dom";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
 import { useStaffAdminGateway } from "../../app/providers/GatewayProvider";
+import { readFrontendRuntimeConfig } from "../../services/integration/runtimeConfig";
 import type { SetupCodeReveal, StaffCohort, StaffModule, StaffStudent } from "../../types/staff";
 
 export function StaffOperationsScreen() {
   const { session } = useStaffSession();
   const gateway = useStaffAdminGateway();
+  const integration = readFrontendRuntimeConfig().mode === "integration";
   const [cohorts, setCohorts] = useState<StaffCohort[]>([]);
   const [students, setStudents] = useState<StaffStudent[]>([]);
   const [modules, setModules] = useState<StaffModule[]>([]);
@@ -21,6 +23,7 @@ export function StaffOperationsScreen() {
 
   useEffect(() => { if (gateway && session) void Promise.all([gateway.listCohorts(), gateway.listStudents({}), gateway.listModules()]).then(([nextCohorts, nextStudents, nextModules]) => { setCohorts(nextCohorts); setStudents(nextStudents); setModules(nextModules); setCohortId(nextCohorts[0]?.id ?? ""); }); }, [gateway, session]);
   if (!session) return <Navigate replace to="/staff/sign-in" />;
+  if (integration) return <section className="mx-auto max-w-3xl ui-panel p-6 sm:p-10"><Link className="text-sm font-bold app-wordmark" to="/staff">Back to staff home</Link><p className="ui-eyebrow mt-5">LIVE STAFF SESSION</p><h1 className="mt-3 text-3xl font-bold">Operations are not connected yet</h1><p className="mt-3 leading-7 text-slate-300">The current live integration supports staff sign-in and required password change only. Cohorts, Students, content, assignments, reports, and all staff mutations remain disabled until their API contracts and authorization scope are reviewed.</p></section>;
   const selectedCohort = cohorts.find((cohort) => cohort.id === cohortId);
   const visibleStudents = useMemo(() => students.filter((student) => !cohortId || student.cohortId === cohortId), [students, cohortId]);
   const submit = async (event: FormEvent) => { event.preventDefault(); if (!gateway) return; const next = await gateway.createStudent({ cohortId, firstName, lastName }); setReveal(next); setFirstName(""); setLastName(""); setMessage("Demo setup code revealed. Copy, print, or download the handout before leaving this screen in the production flow."); };

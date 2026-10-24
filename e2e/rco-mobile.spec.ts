@@ -24,7 +24,7 @@ test.describe("RCO representative mobile profiles", () => {
     await page.goto("/#/learner");
     await expect(page.getByRole("heading", { name: "Learning that travels with you." })).toBeVisible();
     await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Create profile");
-    await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Learn offline");
+    await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Study offline");
     await expect(page.getByRole("list", { name: "Your mission path" })).toContainText("Sync when ready");
     await page.getByLabel("Setup code").fill("DEMO-2026");
     await page.getByLabel("Username").fill("RCO Tester");
