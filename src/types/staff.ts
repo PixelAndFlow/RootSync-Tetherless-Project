@@ -41,6 +41,8 @@ export interface StaffAccountSummary {
   username: string;
   displayName: string;
   role: StaffRole;
+  disabled: boolean;
+  createdAt: string;
 }
 
 export interface StaffAccountReveal {

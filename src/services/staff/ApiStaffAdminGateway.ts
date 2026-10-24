@@ -1,11 +1,12 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
-import type { SetupCodeReveal, StaffAccountReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
 function invalid(): never { throw new ApiError("INVALID_RESPONSE"); }
 function record(value: unknown): Record<string, unknown> { return isRecord(value) ? value : invalid(); }
+function array(value: unknown): unknown[] { return Array.isArray(value) ? value : invalid(); }
 function text(value: unknown): string { return typeof value === "string" ? value : invalid(); }
 function bool(value: unknown): boolean { return typeof value === "boolean" ? value : invalid(); }
 const ROLES: readonly string[] = ["superadmin", "admin", "trainer"];
@@ -21,6 +22,17 @@ function mapSession(staff: Record<string, unknown>): StaffSession {
   };
 }
 
+function mapAccount(staff: Record<string, unknown>): StaffAccountSummary {
+  return {
+    staffId: text(staff.staff_id),
+    username: text(staff.username),
+    displayName: text(staff.display_name),
+    role: role(staff.role),
+    disabled: bool(staff.disabled),
+    createdAt: text(staff.created_at),
+  };
+}
+
 /** Meets the server's MIN_PASSWORD_LENGTH (12); shown once, never retyped, so it's random, not memorable. */
 function generateTemporaryPassword(): string {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
@@ -29,8 +41,8 @@ function generateTemporaryPassword(): string {
 /**
  * Real staff adapter for the v1.10 server (Render/Neon), written for
  * marc-frontend-integration-test. Sign-in, password change and staff-account
- * creation call the real API: /v1/staff/login, /v1/staff/me/password and
- * POST /v1/staff/accounts.
+ * list/create call the real API: /v1/staff/login, /v1/staff/me/password and
+ * GET/POST /v1/staff/accounts.
  *
  * Cohorts, Students and Modules are NOT wired here. StaffAdminGateway's
  * listCohorts/listStudents/createStudent/listModules assume a shape
@@ -78,6 +90,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     throw new ApiError("NOT_IMPLEMENTED", 501);
   }
 
+  async listStaffAccounts(): Promise<StaffAccountSummary[]> {
+    const body = record(await this.api.get("/v1/staff/accounts"));
+    return array(body.accounts).map((entry) => mapAccount(record(entry)));
+  }
+
   async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
     const username = input.username.trim().toLowerCase();
     if (!STAFF_USERNAME_PATTERN.test(username)) throw new ApiError("INVALID_INPUT", 422, false, undefined, [{ field: "username", message: "Check this value and try again." }]);
@@ -85,12 +102,7 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const body = record(await this.api.post("/v1/staff/accounts", {
       role: input.role, username, display_name: input.displayName.trim(), temporary_password: temporaryPassword,
     }));
-    const account = record(body.account);
-    return {
-      account: { staffId: text(account.staff_id), username: text(account.username), displayName: text(account.display_name), role: role(account.role) },
-      temporaryPassword,
-      shownOnce: true,
-    };
+    return { account: mapAccount(record(body.account)), temporaryPassword, shownOnce: true };
   }
 
   canManage(role: StaffRole, action: "staff" | "system"): boolean {
