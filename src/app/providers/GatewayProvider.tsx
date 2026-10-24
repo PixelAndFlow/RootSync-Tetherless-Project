@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { mockGateways, type AppGateways } from "../../services/gateways";
+import { appGateways, type AppGateways } from "../../services/gateways";
 import type { OfflineLearningGateway } from "../../services/offline/OfflineLearningGateway";
 import type { TrainerDataGateway } from "../../services/trainer/TrainerDataGateway";
 import type { StaffAdminGateway } from "../../services/staff/StaffAdminGateway";
@@ -12,7 +12,7 @@ interface GatewayProviderProps {
 }
 
 /** Keeps UI code independent of the current mock adapters and future DDIL/API adapters. */
-export function GatewayProvider({ children, gateways = mockGateways }: GatewayProviderProps) {
+export function GatewayProvider({ children, gateways = appGateways }: GatewayProviderProps) {
   return <GatewayContext.Provider value={gateways}>{children}</GatewayContext.Provider>;
 }
 
