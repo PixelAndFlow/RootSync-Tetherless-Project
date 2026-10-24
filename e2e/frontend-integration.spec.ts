@@ -35,7 +35,7 @@ for (const theme of ["dark", "light"] as const) {
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem("tetherless.learner-profile.v1")))!).colorTheme).toBe(theme);
     // Exercise the graceful fallback deterministically rather than depending on OS clipboard permission.
     await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined }));
-    await page.getByRole("button", { name: "Copy learner code" }).click();
+    await page.getByRole("button", { name: "Copy Student code" }).click();
     await expect(page.getByText(/copy it manually/)).toBeVisible();
     const accessibility = await new AxeBuilder({ page }).withRules(["color-contrast", "button-name", "label", "heading-order"]).analyze();
     expect(accessibility.violations).toEqual([]);

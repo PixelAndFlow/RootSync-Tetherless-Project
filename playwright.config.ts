@@ -11,13 +11,15 @@ const mobileUse = {
 // These are Chromium viewport/touch/UA simulations, not Android or iOS emulators.
 // They cannot certify Safari/WebKit behavior, 2 GB memory pressure, storage eviction,
 // or installed-PWA persistence; those require Android Studio/Xcode and real devices.
+const explicitBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: explicitBaseUrl ?? "http://127.0.0.1:4173",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
@@ -28,7 +30,7 @@ export default defineConfig({
     { name: "RCO-iPhone8-viewport", use: { ...mobileUse, viewport: { width: 375, height: 667 }, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X) AppleWebKit/605.1.15 Version/16.4 Mobile/15E148 Safari/604.1" } },
     { name: "RCO-iPhoneSE2-viewport", use: { ...mobileUse, viewport: { width: 375, height: 667 }, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_4 like Mac OS X) AppleWebKit/605.1.15 Version/16.4 Mobile/15E148 Safari/604.1" } },
   ],
-  webServer: {
+  webServer: explicitBaseUrl ? undefined : {
     command: "npm run preview -- --host 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
