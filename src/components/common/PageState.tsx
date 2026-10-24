@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
-  return <div aria-live="polite" className="ui-panel p-8 text-slate-300"><span aria-hidden="true" className="mr-3 inline-block h-4 w-4 animate-spin rounded-full border-2 border-cyan-300 border-t-transparent" />{label}</div>;
+  return <div aria-live="polite" className="ui-panel p-8 text-slate-300" role="status"><span aria-hidden="true" className="mr-3 inline-block h-4 w-4 animate-spin rounded-full border-2 border-cyan-300 border-t-transparent" />{label}</div>;
 }
 
 export function EmptyState({ title, detail, actionTo, actionLabel }: { title: string; detail: string; actionTo?: string; actionLabel?: string }) {

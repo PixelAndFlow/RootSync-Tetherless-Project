@@ -11,8 +11,8 @@ export function DisplayPreferences({ highContrast, reducedMotion, colorTheme, on
   return (
     <details className="mt-5 rounded-2xl border border-white/10 bg-panel p-4">
       <summary className="cursor-pointer font-bold text-slate-100">Display preferences</summary>
-      <p className="mt-2 text-sm leading-6 text-slate-300">These choices stay on this device. They change presentation only, never mission scores or learning records.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <p className="mt-2 text-sm leading-6 text-slate-300" id="display-preferences-help">These choices stay on this device. They change presentation only, never mission scores or learning records. Theme choices do not follow your phone setting.</p>
+      <div aria-describedby="display-preferences-help" aria-label="Display settings" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="group">
         <button aria-pressed={highContrast} className={`min-h-11 rounded-xl border px-4 py-3 text-left font-bold ${highContrast ? "app-preference-active" : "app-preference-inactive"}`} onClick={() => onHighContrastChange(!highContrast)} type="button">
           High contrast: {highContrast ? "On" : "Off"}
         </button>

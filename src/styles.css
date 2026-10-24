@@ -23,7 +23,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .app-light-theme .integration-input::placeholder { color: #5c5c5c; }
 .ui-action-secondary { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid #707078; border-radius: 0.75rem; padding: 0.75rem 1.25rem; font-weight: 700; }
 .ui-action-secondary:hover { background: rgb(255 255 255 / 5%); }
+.ui-action-secondary:disabled { cursor: not-allowed; border-color: #707078; background: #2d2d30; color: #9d9d9d; opacity: 1; }
 .app-header { z-index: 40; border-color: #3e3e42; background: #181818; }
+.app-demo-notice, .app-sync-next-step { border-color: #3e3e42; background: #2d2d30; color: #cccccc; }
+.app-demo-notice strong, .app-sync-next-step strong { color: var(--rco-purple-accessible); }
 .app-wordmark { color: var(--rco-purple-accessible); }
 .app-section-eyebrow { color: var(--rco-magenta-accessible); }
 .app-skip-link, .app-preference-active { border-color: var(--rco-purple); background: var(--rco-purple); color: #fff; }
@@ -103,7 +106,10 @@ button[class~="border-white/15"], a[class~="border-white/15"], input[class~="bor
 .app-light-theme [class~="bg-white/[0.03]"] { background-color: #e8e8e8; }
 .app-light-theme .app-preference-inactive { border-color: #858585; background: #e8e8e8; color: #1e1e1e; }
 .app-light-theme .app-preference-active, .app-light-theme .app-skip-link { color: #ffffff; }
+.app-light-theme .ui-action-secondary:disabled { border-color: #858585; background: #e8e8e8; color: #5c5c5c; }
 .app-light-theme .app-storage-status { border-color: #c8c8c8; background: #e8e8e8; }
+.app-light-theme .app-demo-notice, .app-light-theme .app-sync-next-step { border-color: #c8c8c8; background: #e8e8e8; color: #1e1e1e; }
+.app-light-theme .app-demo-notice strong, .app-light-theme .app-sync-next-step strong { color: #5a1ee4; }
 .app-light-theme .app-storage-status > :first-child { color: #5a1ee4; }
 .app-light-theme .app-status-chip, .app-light-theme .app-offline-badge, .app-light-theme .app-nav-link-active { color: #ffffff; }
 .app-light-theme .app-nav-link-inactive { color: #1e1e1e; }
