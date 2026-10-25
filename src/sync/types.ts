@@ -3,36 +3,24 @@
  *
  * Boundary note: these are LOCAL types. They deliberately do not redefine
  * the shared sync contract. The wire shapes (SyncRequest / SyncResponse /
- * per-event status codes) are owned by whoever lands TR-12, and the adapter
- * in ../transport/adapter.ts is the only place that converts between these
- * and the wire. When Marc and Chris confirm the contract, only the adapter
- * changes.
+ * per-event status codes) are owned by whoever lands TR-12. As of the
+ * `integration` branch, packages/contract/src/index.ts is that contract and
+ * the server already enforces it. There is currently no adapter —
+ * ../transport/http-transport.ts sends ActivityEvent straight over the
+ * wire, unconverted, which only works because its shape is kept matching
+ * the contract's by hand below. If that stops being true, this is where it
+ * breaks.
  */
-
-/** Every event the learner produces is one of these. */
-export type EventType =
-  | "session_started"
-  | "visibility_changed"
-  | "heartbeat"
-  | "session_ended"
-  | "attempt_started"
-  | "answer_submitted"
-  | "attempt_completed"
-  | "attempt_abandoned";
 
 /**
- * An immutable record of one learner action.
- *
- * Written once, at the moment the learner acts, and never updated. If this
- * record is wrong, the learner's work is wrong, so nothing in the sync loop
- * is permitted to mutate it.
+ * Fields every event carries, filled in by the gateway when it records the
+ * event. A caller of record() never supplies these.
  */
-export interface ActivityEvent {
+interface ActivityEventEnvelope {
   /** UUID generated on the device. Never regenerated, including on retry. */
   event_id: string;
   /** Local schema version. Separate from the wire schema version. */
   schema_version: 1;
-  event_type: EventType;
   /** Stable per install. A wiped device enrolls again and gets a new one. */
   device_id: string;
   /**
@@ -49,15 +37,101 @@ export interface ActivityEvent {
   occurred_at: string;
   /** Milliseconds since the session started, from a monotonic clock. */
   monotonic_ms: number;
-  /** Per event type. Unknown fields are rejected by the server, not ignored. */
-  payload: Record<string, unknown>;
-  /** Attempt events only. */
-  module_id?: string;
-  content_version?: number;
-  attempt_id?: string;
-  /** answer_submitted only. */
-  question_id?: string;
 }
+
+/**
+ * Shared by every event that belongs to one attempt. The contract requires
+ * all three together: module_id alone, or any one of these omitted, is
+ * rejected as INVALID_EVENT (see packages/contract/src/index.ts's
+ * ALLOWED_KEYS / "module_id is required." check).
+ */
+interface AttemptFields {
+  module_id: string;
+  content_version: number;
+  attempt_id: string;
+}
+
+export interface SessionStartedEvent extends ActivityEventEnvelope {
+  event_type: "session_started";
+  payload: Record<string, unknown>;
+}
+export interface VisibilityChangedEvent extends ActivityEventEnvelope {
+  event_type: "visibility_changed";
+  payload: Record<string, unknown>;
+}
+export interface HeartbeatEvent extends ActivityEventEnvelope {
+  event_type: "heartbeat";
+  payload: Record<string, unknown>;
+}
+export interface SessionEndedEvent extends ActivityEventEnvelope {
+  event_type: "session_ended";
+  payload: Record<string, unknown>;
+}
+export interface AttemptStartedEvent extends ActivityEventEnvelope, AttemptFields {
+  event_type: "attempt_started";
+  payload: Record<string, unknown>;
+}
+export interface AnswerSubmittedEvent extends ActivityEventEnvelope, AttemptFields {
+  event_type: "answer_submitted";
+  /** Required alongside module_id/content_version/attempt_id. */
+  question_id: string;
+  payload: Record<string, unknown>;
+}
+export interface AttemptCompletedEvent extends ActivityEventEnvelope, AttemptFields {
+  event_type: "attempt_completed";
+  payload: Record<string, unknown>;
+}
+export interface AttemptAbandonedEvent extends ActivityEventEnvelope, AttemptFields {
+  event_type: "attempt_abandoned";
+  payload: Record<string, unknown>;
+}
+
+/**
+ * An immutable record of one learner action.
+ *
+ * Written once, at the moment the learner acts, and never updated. If this
+ * record is wrong, the learner's work is wrong, so nothing in the sync loop
+ * is permitted to mutate it.
+ *
+ * This is a discriminated union, not one flat shape with optional fields:
+ * module_id, content_version and attempt_id are required TOGETHER on every
+ * attempt-related event and absent on every other event — the same grouping
+ * the contract enforces on the wire. A caller that forgets one of them is
+ * now a compile error here, not a gap the server discovers later and
+ * permanently rejects. (The flat-optional shape this replaced let exactly
+ * that happen in DdilLearningGateway.abandonAttempt() — see the docs repo
+ * for the write-up.)
+ */
+export type ActivityEvent =
+  | SessionStartedEvent
+  | VisibilityChangedEvent
+  | HeartbeatEvent
+  | SessionEndedEvent
+  | AttemptStartedEvent
+  | AnswerSubmittedEvent
+  | AttemptCompletedEvent
+  | AttemptAbandonedEvent;
+
+/** Every event the learner produces is one of these. */
+export type EventType = ActivityEvent["event_type"];
+
+/**
+ * What a caller passes to record one event: the same shape as ActivityEvent,
+ * minus the envelope fields the gateway generates itself. Written out
+ * explicitly rather than derived with Omit<ActivityEvent, ...>, because Omit
+ * does not distribute over a union the way a reader would expect — each
+ * variant below must keep its own required fields, not the fields common to
+ * all eight.
+ */
+export type ActivityEventInput =
+  | { event_type: "session_started"; payload: Record<string, unknown> }
+  | { event_type: "visibility_changed"; payload: Record<string, unknown> }
+  | { event_type: "heartbeat"; payload: Record<string, unknown> }
+  | { event_type: "session_ended"; payload: Record<string, unknown> }
+  | ({ event_type: "attempt_started"; payload: Record<string, unknown> } & AttemptFields)
+  | ({ event_type: "answer_submitted"; question_id: string; payload: Record<string, unknown> } & AttemptFields)
+  | ({ event_type: "attempt_completed"; payload: Record<string, unknown> } & AttemptFields)
+  | ({ event_type: "attempt_abandoned"; payload: Record<string, unknown> } & AttemptFields);
 
 /**
  * Delivery state. Mutable, and separable from the event on purpose: a bug in
