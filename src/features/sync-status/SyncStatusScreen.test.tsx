@@ -18,6 +18,7 @@ describe("authorization-paused sync", () => {
     render(<MemoryRouter><GatewayProvider gateways={gateways}><SyncStatusProvider><SyncStatusScreen /></SyncStatusProvider></GatewayProvider></MemoryRouter>);
     expect(await screen.findByRole("heading", { name: /Sync paused/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Sync now" })).toBeDisabled();
+    expect(screen.getByText(/Do not clear this device or create a new setup/)).toBeVisible();
     act(() => window.dispatchEvent(new Event("offline")));
     expect(screen.getByRole("heading", { name: /Sync paused/ })).toBeVisible();
     act(() => window.dispatchEvent(new Event("online")));
@@ -29,7 +30,7 @@ describe("authorization-paused sync", () => {
     const gateways = createMockGateways();
     (gateways.offlineLearning as MockOfflineLearningGateway).simulateBlockedAuthorization();
     render(<MemoryRouter><GatewayProvider gateways={gateways}><SyncStatusProvider><SyncStatusScreen /></SyncStatusProvider></GatewayProvider></MemoryRouter>);
-    expect(await screen.findByText(/Contact your trainer/)).toBeVisible();
+    expect(await screen.findByText(/Ask your Trainer for help/)).toBeVisible();
     expect(screen.queryByText(/resume on its own/)).not.toBeInTheDocument();
   });
 });

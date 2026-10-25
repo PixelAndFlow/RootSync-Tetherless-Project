@@ -167,6 +167,23 @@ docs/                  Handoff, integration, content, and design references
 - Trainer fixture data is de-identified and only for frontend development.
 - UI code should display learner-friendly sync information, never raw event IDs, backend internals, or device implementation details.
 
+## Documentation boundary
+
+This repository contains runnable frontend code and the concise documentation
+needed to build, test, and integrate it. The canonical project documentation
+belongs in the separate [Tetherless docs repository](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs):
+
+- approved PRDs belong in [`prd/`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs/tree/main/prd);
+- project and delivery plans belong in [`roadmap/`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs/tree/main/roadmap);
+- API/DDIL contracts belong in [`architecture/`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs/tree/main/architecture);
+- project decisions and test evidence belong in [`decisions/`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs/tree/main/decisions) and [`testing/`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs/tree/main/testing).
+
+Do not copy raw RCO-provided source material into this public code repository.
+Keep it local-only unless the project owner explicitly approves an appropriate
+restricted documentation location. The two JSON files in `src/content/fixtures/`
+are internally created frontend fixtures and remain required by the app and its
+tests.
+
 ## Deferred until team integration
 
 - service worker and offline app-shell caching;

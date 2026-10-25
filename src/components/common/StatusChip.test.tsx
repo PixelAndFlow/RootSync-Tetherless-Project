@@ -19,5 +19,6 @@ describe("StatusChip", () => {
     const chip = within(container).getByRole("status");
     expect(chip).toHaveTextContent(label);
     expect(chip).toHaveAttribute("aria-live", "polite");
+    expect(chip).toHaveAttribute("aria-label", `Sync status: ${label}`);
   });
 });
