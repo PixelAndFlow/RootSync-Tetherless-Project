@@ -1,0 +1,29 @@
+{
+  "schema_version": "tetherless.module.v1",
+  "module_id": "preview-secure-workspace-basics-001",
+  "content_version": 1,
+  "program": "RCO Training Program",
+  "level": "beginner",
+  "level_label": { "en": "Preview", "es": "Vista previa" },
+  "title": { "en": "Secure Workspace Basics", "es": "Fundamentos del espacio de trabajo seguro" },
+  "subtitle": { "en": "A frontend-only content preview; not published to learners.", "es": "Una vista previa de contenido solo para frontend; no publicada para estudiantes." },
+  "mission_brief": { "en": "Use this fixture to verify multilingual cards, immediate feedback, and content validation before approved curriculum is available.", "es": "Use este recurso para verificar tarjetas multilingües, retroalimentación inmediata y validación de contenido antes de que esté disponible el currículo aprobado." },
+  "settings": { "question_count": 1, "timer_seconds": null, "show_immediate_feedback": true, "allow_retry": true, "spanish_assist_default": true, "passing_score_percent": 80, "allow_full_retry": true, "allow_missed_practice": true, "allow_correct_review": true, "allow_all_review": true },
+  "questions": [
+    {
+      "id": "q01",
+      "topic": "workspace_security",
+      "type": "scenario_mc",
+      "presentation": "mission_alert",
+      "prompt": { "en": "You step away from a shared training computer. What should you do first?", "es": "Se aleja de una computadora de capacitación compartida. ¿Qué debe hacer primero?" },
+      "scenario": { "en": "The device contains practice materials and is in a shared room.", "es": "El dispositivo contiene materiales de práctica y está en una sala compartida." },
+      "choices": [
+        { "id": "A", "en": "Lock the screen before leaving", "es": "Bloquear la pantalla antes de irse" },
+        { "id": "B", "en": "Leave it open for the next person", "es": "Dejarla abierta para la siguiente persona" }
+      ],
+      "correct_choice": "A",
+      "feedback": { "en": "Locking the screen protects the session while you are away.", "es": "Bloquear la pantalla protege la sesión mientras está ausente." }
+    }
+  ],
+  "gamification": { "mission_name": { "en": "Workspace Preview", "es": "Vista previa del espacio de trabajo" }, "sectors": [{ "id": "secure-start", "order": 1, "name": { "en": "Secure start", "es": "Inicio seguro" }, "question_ids": ["q01"] }] }
+}
