@@ -1,0 +1,15 @@
+{
+  "assignments": [
+    {
+      "assignment_id": "3f7cfb28-cba2-44b0-82e1-bad3f6328d30",
+      "module_id": "security-tools",
+      "module_name": "Security Tools",
+      "content_version": null,
+      "target": "cohort",
+      "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+      "learner_id": null,
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "created_by": "75172b08-21d5-4ded-9eb0-634e6994ed91"
+    }
+  ]
+}
