@@ -1,6 +1,6 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
-import type { SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
@@ -31,8 +31,11 @@ function mapSession(value: unknown): StaffSession {
 
 /**
  * In-memory staff-session adapter for Marc's v1 API. It intentionally enables
- * sign-in, password change and staff account list/create; all cohort, learner, content and
- * assignment mutations remain disabled until their UI contracts are reviewed.
+ * sign-in, password change and staff account list/create. Cohorts, learners
+ * and modules are server-matched in type (see packages/contract/src/
+ * staff-api.ts) but not yet wired to real routes — each throws
+ * NOT_IMPLEMENTED rather than returning an empty list, so a caller can't
+ * mistake "not built yet" for "no records exist."
  */
 export class ApiStaffAdminGateway implements StaffAdminGateway {
   private token: string | null = null;
@@ -53,10 +56,10 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     return mapSession(await this.api.get("/v1/staff/me"));
   }
 
-  async listCohorts(): Promise<StaffCohort[]> { return []; }
-  async listStudents(_input: { cohortId?: string } = {}): Promise<StaffStudent[]> { return []; }
-  async listModules(): Promise<StaffModule[]> { return []; }
-  async createStudent(_input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
+  async listCohorts(): Promise<Cohort[]> { throw new ApiError("NOT_IMPLEMENTED", 501); }
+  async listLearnerRecords(_input: { cohortId?: string } = {}): Promise<LearnerRecord[]> { throw new ApiError("NOT_IMPLEMENTED", 501); }
+  async listModules(): Promise<ModuleListing[]> { throw new ApiError("NOT_IMPLEMENTED", 501); }
+  async createLearner(_input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
     throw new ApiError("NOT_IMPLEMENTED", 501);
   }
   async listStaffAccounts(): Promise<StaffAccountSummary[]> {

@@ -1,19 +1,19 @@
 import { ApiError } from "../api/ApiError";
-import type { SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
-const cohorts: StaffCohort[] = [
-  { id: "cohort-demo-001", name: "RCYC-PR-Bootcamp2026", studentCount: 3 },
-  { id: "cohort-demo-002", name: "Cyber Foundations", studentCount: 2 },
+const cohorts: Cohort[] = [
+  { cohort_id: "cohort-demo-001", name: "RCYC-PR-Bootcamp2026", learner_count: 3, created_at: "2026-01-01T00:00:00.000Z", created_by: "superadmin-demo-001", archived: false },
+  { cohort_id: "cohort-demo-002", name: "Cyber Foundations", learner_count: 2, created_at: "2026-01-01T00:00:00.000Z", created_by: "superadmin-demo-001", archived: false },
 ];
-const students: StaffStudent[] = [
-  { id: "student-demo-001", displayName: "Alex Rivera", username: "alex.r", cohortId: "cohort-demo-001", status: "active" },
-  { id: "student-demo-002", displayName: "Jordan Lee", username: "jordan.l", cohortId: "cohort-demo-001", status: "active" },
-  { id: "student-demo-003", displayName: "Sam Ortiz", username: "sam.o", cohortId: "cohort-demo-001", status: "active" },
+const students: LearnerRecord[] = [
+  { learner_id: "student-demo-001", learner_code: "RCYC-PR-Bootcamp2026-0001", cohort_id: "cohort-demo-001", first_name: "Alex", last_name: "Rivera", username: "alex.r", phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "active", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
+  { learner_id: "student-demo-002", learner_code: "RCYC-PR-Bootcamp2026-0002", cohort_id: "cohort-demo-001", first_name: "Jordan", last_name: "Lee", username: "jordan.l", phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "active", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
+  { learner_id: "student-demo-003", learner_code: "RCYC-PR-Bootcamp2026-0003", cohort_id: "cohort-demo-001", first_name: "Sam", last_name: "Ortiz", username: null, phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "awaiting_setup", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
 ];
-const modules: StaffModule[] = [
-  { id: "rcyc-recruit-cyber-squad-gamified-001", title: "Operation Cyber Squad", contentVersion: 1, status: "published" },
+const modules: ModuleListing[] = [
+  { module_id: "rcyc-recruit-cyber-squad-gamified-001", module_name: "Operation Cyber Squad", title: { en: "Operation Cyber Squad" }, level: "beginner", note: null, activity_type: "multiple_choice", latest_version: 1, versions: [1], question_count: 10, used: false, archived: false, created_by: "superadmin-demo-001", created_at: "2026-01-01T00:00:00.000Z" },
 ];
 const accounts: StaffAccountSummary[] = [
   { staffId: "superadmin-demo-001", username: "demo", displayName: "Demo SuperAdmin", role: "superadmin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
@@ -42,15 +42,15 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     if (input.currentPassword !== "demo-password-123" || input.newPassword.length < 12) throw new ApiError("INVALID_INPUT", 422);
     return { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", passwordChangeRequired: false };
   }
-  async listCohorts(): Promise<StaffCohort[]> { return structuredClone(cohorts); }
-  async listStudents(input: { cohortId?: string } = {}): Promise<StaffStudent[]> {
-    return structuredClone(input.cohortId ? students.filter((student) => student.cohortId === input.cohortId) : students);
+  async listCohorts(): Promise<Cohort[]> { return structuredClone(cohorts); }
+  async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {
+    return structuredClone(input.cohortId ? students.filter((student) => student.cohort_id === input.cohortId) : students);
   }
-  async createStudent(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
-    if (!cohorts.some((cohort) => cohort.id === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
-    return { studentId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
+  async createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
+    if (!cohorts.some((cohort) => cohort.cohort_id === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return { learnerId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
   }
-  async listModules(): Promise<StaffModule[]> { return structuredClone(modules); }
+  async listModules(): Promise<ModuleListing[]> { return structuredClone(modules); }
   async listStaffAccounts(): Promise<StaffAccountSummary[]> { return structuredClone(accounts); }
   async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
     const username = input.username.trim().toLowerCase();
