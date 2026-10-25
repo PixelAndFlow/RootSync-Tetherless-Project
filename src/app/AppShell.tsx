@@ -2,11 +2,13 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { StatusChip } from "../components/common/StatusChip";
 import { useSyncStatus } from "./providers/SyncStatusProvider";
 import { useLearnerProfile } from "./providers/LearnerProfileProvider";
+import { readFrontendRuntimeConfig } from "../services/integration/runtimeConfig";
 
 export function AppShell() {
   const { summary } = useSyncStatus();
   const { profile, resetProfile } = useLearnerProfile();
   const navigate = useNavigate();
+  const liveStaff = readFrontendRuntimeConfig().mode === "integration";
 
   return (
     <div className={`min-h-screen bg-ink text-slate-50 ${profile?.colorTheme === "light" ? "app-light-theme" : ""} ${profile?.highContrast ? "app-high-contrast" : ""} ${profile?.reducedMotion ? "app-reduced-motion" : ""}`}>
@@ -26,7 +28,7 @@ export function AppShell() {
         </nav>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8" id="main-content" tabIndex={-1}>
-        <div className="app-demo-notice mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm" role="status"><p><strong>Demo preview.</strong> Sample data is shown and sync is simulated; no Student or staff change is sent to RCO.</p>{profile && <Link className="ui-action-secondary" to="/learner/settings">Student profile and settings</Link>}</div>
+        <div className="app-demo-notice mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm" role="status"><p><strong>Demo preview.</strong> {liveStaff ? "Student data and sync are simulated; staff sign-in and password changes use the configured API." : "Sample data is shown and sync is simulated; no Student or staff change is sent to RCO."}</p>{profile && <Link className="ui-action-secondary" to="/learner/settings">Student profile and settings</Link>}</div>
         <Outlet />
       </main>
       {import.meta.env.DEV && <aside className="mx-auto mb-6 max-w-6xl px-4" aria-label="Development controls"><div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-amber-300/25 bg-amber-300/5 px-4 py-3 text-xs text-amber-100"><span>Development-only controls never appear in a production build.</span><button className="rounded-lg border border-amber-300/35 px-3 py-2 font-bold hover:bg-amber-300/10" onClick={() => { resetProfile(); navigate("/learner"); }} type="button">Reset local demo</button></div></aside>}
