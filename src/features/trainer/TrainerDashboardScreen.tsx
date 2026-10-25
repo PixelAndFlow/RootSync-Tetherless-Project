@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ReturnLink } from "../../components/common/ReturnLink";
 import { MetricCard } from "../../components/trainer/MetricCard";
 import { ErrorState, LoadingState } from "../../components/common/PageState";
 import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
@@ -35,10 +36,11 @@ export function TrainerDashboardScreen() {
   const waitingSync = learners.filter((learner) => learner.syncStatus !== "synced").length;
 
   if (isLoading) return <LoadingState label="Loading trainer fixture data…" />;
-  if (error) return <ErrorState actionLabel="Return to missions" actionTo="/learner/missions" detail={error} title="Trainer overview unavailable" />;
+  if (error) return <ErrorState actionLabel="Return to staff dashboard" actionTo="/staff" detail={error} title="Trainer overview unavailable" />;
 
   return (
     <section>
+      <ReturnLink to="/staff">Staff dashboard</ReturnLink>
       <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.2em] text-cyan-300">TRAINER VIEW · FIXTURE DATA</p><h1 className="mt-3 text-3xl font-bold sm:text-4xl">See learning signals, not raw device internals.</h1><p className="mt-3 max-w-2xl text-slate-400">This preview uses de-identified fixture data. Live trainer data will come from the backend after server authorization is in place.</p></div><span className="rounded-full border border-violet-300/25 bg-violet-300/10 px-3 py-2 text-xs font-bold text-violet-100">Operation Cyber Squad</span></div>
       <div className="mt-8 grid gap-4 sm:grid-cols-3"><MetricCard detail="de-identified fixture Students" label="Students" value={learners.length} /><MetricCard detail="have completed this mission" label="Completion" value={`${completedCount}/${learners.length}`} /><MetricCard detail="current cohort learning signal" label="Avg. mastery" value={`${averageMastery}%`} /></div>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm text-amber-100"><span><strong>{waitingSync}</strong> Student record{waitingSync === 1 ? " is" : "s are"} waiting to sync or resolve.</span><span>Sync state is separate from score and mastery.</span></div>

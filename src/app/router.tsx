@@ -19,6 +19,8 @@ import { StaffDashboardScreen } from "../features/staff/StaffDashboardScreen";
 import { StaffOperationsScreen } from "../features/staff/StaffOperationsScreen";
 import { StaffContentWorkflowScreen } from "../features/staff/StaffContentWorkflowScreen";
 import { StaffPermissionScreen } from "../features/staff/StaffPermissionScreen";
+import { StaffAccountsScreen } from "../features/staff/StaffAccountsScreen";
+import { StaffPasswordGate } from "../features/staff/StaffPasswordGate";
 
 function requireKnownModule({ params }: LoaderFunctionArgs) {
   if (!moduleLibrary.some((module) => module.module_id === params.moduleId)) {
@@ -46,11 +48,11 @@ export const router = createHashRouter([
       { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
       { path: "/staff/sign-in", element: <StaffSignInScreen /> },
       { path: "/staff/change-password", element: <StaffPasswordChangeScreen /> },
-      { path: "/staff", element: <StaffDashboardScreen /> },
-      { path: "/staff/operations", element: <StaffOperationsScreen /> },
-      { path: "/staff/content", element: <StaffContentWorkflowScreen /> },
-      { path: "/staff/accounts", element: <StaffPermissionScreen permission="staff" /> },
-      { path: "/staff/system", element: <StaffPermissionScreen permission="system" /> },
+      { path: "/staff", element: <StaffPasswordGate><StaffDashboardScreen /></StaffPasswordGate> },
+      { path: "/staff/operations", element: <StaffPasswordGate><StaffOperationsScreen /></StaffPasswordGate> },
+      { path: "/staff/content", element: <StaffPasswordGate><StaffContentWorkflowScreen /></StaffPasswordGate> },
+      { path: "/staff/accounts", element: <StaffPasswordGate><StaffAccountsScreen /></StaffPasswordGate> },
+      { path: "/staff/system", element: <StaffPasswordGate><StaffPermissionScreen permission="system" /></StaffPasswordGate> },
       { path: "*", element: <RouteNotFoundScreen /> },
     ],
   },

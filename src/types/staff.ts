@@ -36,6 +36,28 @@ export interface StaffModule {
   status: "draft" | "published";
 }
 
+export interface StaffAccountSummary {
+  staffId: string;
+  username: string;
+  displayName: string;
+  role: StaffRole;
+  disabled: boolean;
+  createdAt: string;
+}
+
+export interface StaffAccountReveal {
+  account: StaffAccountSummary;
+  temporaryPassword: string;
+  shownOnce: true;
+}
+
+/** Demo Day defaults (spec v1.10 §4): which roles a signed-in role may create. Server-enforced; this is UX only. */
+export function creatableRoles(signedInRole: StaffRole): StaffRole[] {
+  if (signedInRole === "superadmin") return ["trainer", "admin", "superadmin"];
+  if (signedInRole === "admin") return ["trainer"];
+  return [];
+}
+
 export interface StaffPermission {
   label: string;
   description: string;

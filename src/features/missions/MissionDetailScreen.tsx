@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { ReturnLink } from "../../components/common/ReturnLink";
 import { moduleLibrary } from "../../content/modules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { learnerCopy } from "../../copy/ui";
@@ -22,6 +23,7 @@ export function MissionDetailScreen() {
   return (
     <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
       <div className="rounded-3xl border border-violet-300/20 bg-panel p-6 sm:p-10">
+        <ReturnLink to="/learner/missions">Mission library</ReturnLink>
         <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">{module.level.toUpperCase()} MISSION</p>
         <h1 className="mt-3 text-4xl font-bold sm:text-5xl">{module.title.en}</h1>
         <p className="mt-5 max-w-2xl leading-7 text-slate-300">Your first training mission is ready. Learn how cybersecurity teams work and how to make safe, authorized decisions.</p>

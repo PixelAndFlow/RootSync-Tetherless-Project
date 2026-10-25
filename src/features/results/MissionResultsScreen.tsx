@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ReturnLink } from "../../components/common/ReturnLink";
 import { StatusChip } from "../../components/common/StatusChip";
 import { CyberShield } from "../../components/gamification/CyberShield";
 import { EngagementStrip } from "../../components/gamification/EngagementStrip";
@@ -34,6 +35,7 @@ export function MissionResultsScreen() {
 
   return (
     <section className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-panel p-6 shadow-2xl shadow-black/25 sm:p-10">
+      <ReturnLink to="/learner/missions">Mission library</ReturnLink>
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.18em] text-cyan-300">MISSION COMPLETE</p><h1 className="mt-3 text-3xl font-bold sm:text-4xl">Recruit Mission Debrief</h1><p className="mt-3 max-w-xl leading-7 text-slate-300">{summary}</p></div><StatusChip status={syncSummary.status} /></div>
       <div className="mt-8 grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-violet-300/25 bg-violet-400/10 p-5"><p className="text-xs font-bold uppercase tracking-wider text-violet-200">Initial score</p><p className="mt-2 text-4xl font-extrabold">{record.initialScorePercent}%</p><p className="mt-2 text-sm text-slate-300">First completed full attempt</p></div><div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-5"><p className="text-xs font-bold uppercase tracking-wider text-cyan-100">Current mastery</p><p className="mt-2 text-4xl font-extrabold">{record.currentMasteryPercent}%</p><p className="mt-2 text-sm text-slate-300">Updates through practice</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Learning record</p><p className="mt-2 text-4xl font-extrabold">{record.attempts.length}</p><p className="mt-2 text-sm text-slate-300">Attempt{record.attempts.length === 1 ? "" : "s"} saved locally</p></div></div>
       <div className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-ink/40 p-5 sm:grid-cols-3"><p className="text-sm text-slate-300"><strong className="block text-lg text-white">{module.questions.length - initialMissed}/{module.questions.length}</strong>Correct on first attempt</p><p className="text-sm text-slate-300"><strong className="block text-lg text-white">{initialMissed} → {record.stillUnmasteredCount}</strong>Missed → still unmastered</p><p className="text-sm text-slate-300"><strong className="block text-lg text-white">{record.masteredQuestionIds.length}/{module.questions.length}</strong>Concepts mastered</p></div>
