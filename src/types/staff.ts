@@ -1,3 +1,9 @@
+// Cohorts, learners and modules use the contract's own types directly —
+// no second, frontend-only set of names for the same data (Tetherless_
+// Contract_Drift_and_Naming_Proposal_v1.00_2026-10-25.md §2.2). Screens
+// still say "Student"; that's display text, not a code name.
+export type { Cohort, LearnerRecord, LearnerStatus, ModuleListing } from "../../packages/contract/src/staff-api";
+
 export const STAFF_ROLES = ["superadmin", "admin", "trainer"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 
@@ -9,31 +15,10 @@ export interface StaffSession {
   passwordChangeRequired: boolean;
 }
 
-export interface StaffCohort {
-  id: string;
-  name: string;
-  studentCount: number;
-}
-
-export interface StaffStudent {
-  id: string;
-  displayName: string;
-  username?: string;
-  cohortId: string;
-  status: "active" | "archived";
-}
-
 export interface SetupCodeReveal {
-  studentId: string;
+  learnerId: string;
   setupCode: string;
   shownOnce: true;
-}
-
-export interface StaffModule {
-  id: string;
-  title: string;
-  contentVersion: number;
-  status: "draft" | "published";
 }
 
 export interface StaffAccountSummary {

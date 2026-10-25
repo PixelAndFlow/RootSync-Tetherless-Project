@@ -14,6 +14,6 @@ describe("MockStaffAdminGateway", () => {
     expect(gateway.canManage("superadmin", "system")).toBe(true);
     expect(gateway.canManage("admin", "system")).toBe(false);
     expect(gateway.canManage("trainer", "staff")).toBe(false);
-    await expect(gateway.createStudent({ cohortId: "cohort-demo-001", firstName: "Taylor", lastName: "King" })).resolves.toMatchObject({ shownOnce: true, setupCode: expect.stringMatching(/^DEMO-/) });
+    await expect(gateway.createLearner({ cohortId: "cohort-demo-001", firstName: "Taylor", lastName: "King" })).resolves.toMatchObject({ shownOnce: true, setupCode: expect.stringMatching(/^DEMO-/) });
   });
 });

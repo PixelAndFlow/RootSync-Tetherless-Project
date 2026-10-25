@@ -33,7 +33,14 @@ describe("ApiStaffAdminGateway", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "session-token", staff: { ...staff, role: "unknown" } })));
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
     await expect(gateway.signIn({ username: "test-admin", password: "temporary-password" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
-    await expect(gateway.createStudent({ cohortId: "cohort", firstName: "Test", lastName: "Student" })).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
+    await expect(gateway.createLearner({ cohortId: "cohort", firstName: "Test", lastName: "Student" })).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
+  });
+
+  it("leaves cohorts, learner records and modules unimplemented rather than returning an empty list", async () => {
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", vi.fn());
+    await expect(gateway.listCohorts()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
+    await expect(gateway.listLearnerRecords()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
+    await expect(gateway.listModules()).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
   });
 
   it("maps account lists and sends validated account creation to the staff API", async () => {
