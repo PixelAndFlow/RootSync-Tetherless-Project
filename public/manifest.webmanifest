@@ -1,0 +1,17 @@
+{
+  "name": "Tetherless - RCO Cyber Learning",
+  "short_name": "Tetherless",
+  "description": "Offline-first cybersecurity learning for Raices Cyber Organization.",
+  "start_url": "/#/learner",
+  "display": "standalone",
+  "background_color": "#061127",
+  "theme_color": "#061127",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
