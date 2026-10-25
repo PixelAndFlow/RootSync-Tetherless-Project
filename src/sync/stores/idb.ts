@@ -25,15 +25,15 @@ export interface IDBTransactionLike {
 export interface IDBObjectStoreLike {
   put(value: unknown, key?: unknown): IDBRequestLike<unknown>;
   add(value: unknown, key?: unknown): IDBRequestLike<unknown>;
-  get(key: unknown): IDBRequestLike<unknown>;
-  getAll(): IDBRequestLike<unknown[]>;
+  get(key: unknown): IDBRequestLike<any>;
+  getAll(): IDBRequestLike<any[]>;
   delete(key: unknown): IDBRequestLike<unknown>;
   openCursor(): IDBRequestLike<unknown>;
   index(name: string): IDBIndexLike;
 }
 
 export interface IDBIndexLike {
-  getAll(query?: unknown): IDBRequestLike<unknown[]>;
+  getAll(query?: unknown): IDBRequestLike<any[]>;
   openCursor(query?: unknown): IDBRequestLike<unknown>;
 }
 
