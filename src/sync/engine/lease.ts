@@ -163,7 +163,7 @@ export async function withSyncLock<T>(
         request<R>(
           name: string,
           opts: { mode: string; ifAvailable: boolean },
-          cb: () => Promise<R>,
+          cb: (lock: unknown) => Promise<R>,
         ): Promise<R | null>;
       }
     | undefined;
