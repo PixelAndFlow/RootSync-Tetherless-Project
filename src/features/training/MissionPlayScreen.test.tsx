@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GatewayProvider } from "../../app/providers/GatewayProvider";
 import { LearnerProfileProvider } from "../../app/providers/LearnerProfileProvider";
 import { SyncStatusProvider } from "../../app/providers/SyncStatusProvider";
@@ -42,15 +42,11 @@ function renderMission(offlineLearning: MockOfflineLearningGateway) {
     highContrast: false,
     reducedMotion: false,
   }));
-  const router = createMemoryRouter([
-    { path: "/learner/missions/:moduleId/play", element: <MissionPlayScreen /> },
-  ], { initialEntries: ["/learner/missions/rcyc-recruit-cyber-squad-gamified-001/play"] });
-
   return render(
     <GatewayProvider gateways={{ offlineLearning, trainerData: new MockTrainerDataGateway() }}>
       <LearnerProfileProvider>
         <SyncStatusProvider>
-          <RouterProvider router={router} />
+          <MemoryRouter initialEntries={["/learner/missions/rcyc-recruit-cyber-squad-gamified-001/play"]}><Routes><Route path="/learner/missions/:moduleId/play" element={<MissionPlayScreen />} /><Route path="/learner/missions/:moduleId" element={<p>Mission details</p>} /></Routes></MemoryRouter>
         </SyncStatusProvider>
       </LearnerProfileProvider>
     </GatewayProvider>,
@@ -70,10 +66,23 @@ describe("MissionPlayScreen local-save feedback", () => {
 
     expect(screen.getByText("Saving your answer locally...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Blue Team/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Exit mission" })).toBeDisabled();
     expect(screen.queryByText(/mission insight saved locally/i)).not.toBeInTheDocument();
 
     await act(async () => gateway.completePendingSave());
     await waitFor(() => expect(screen.getByText(/mission insight saved locally/i)).toBeInTheDocument());
+  });
+
+  it("asks before leaving an unfinished mission and allows cancel or exit", async () => {
+    const user = userEvent.setup();
+    renderMission(new MockOfflineLearningGateway());
+    await user.click(await screen.findByRole("button", { name: "Exit mission" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("cannot be resumed");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Exit mission" }));
+    await user.click(screen.getByRole("button", { name: "Exit to mission details" }));
+    expect(await screen.findByText("Mission details")).toBeVisible();
   });
 
   it("keeps the question available and explains what to do when the gateway rejects a save", async () => {

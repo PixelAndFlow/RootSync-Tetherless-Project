@@ -35,4 +35,29 @@ describe("ApiStaffAdminGateway", () => {
     await expect(gateway.signIn({ username: "test-admin", password: "temporary-password" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     await expect(gateway.createStudent({ cohortId: "cohort", firstName: "Test", lastName: "Student" })).rejects.toMatchObject({ code: "NOT_IMPLEMENTED", status: 501 });
   });
+
+  it("maps account lists and sends validated account creation to the staff API", async () => {
+    const account = { staff_id: "staff-1", username: "new-trainer", display_name: "New Trainer", role: "trainer", disabled: false, created_at: "2026-01-01" };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ accounts: [account] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ account })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+    await expect(gateway.listStaffAccounts()).resolves.toMatchObject([{ username: "new-trainer", role: "trainer" }]);
+    const reveal = await gateway.createStaffAccount({ role: "trainer", username: " New-Trainer ", displayName: " New Trainer " });
+    expect(reveal.temporaryPassword).toHaveLength(16);
+    expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ username: "new-trainer", display_name: "New Trainer", temporary_password: reveal.temporaryPassword });
+    await expect(gateway.createStaffAccount({ role: "trainer", username: "!", displayName: "Test" })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects malformed account lists", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ accounts: "invalid" })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+    await expect(gateway.listStaffAccounts()).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
 });

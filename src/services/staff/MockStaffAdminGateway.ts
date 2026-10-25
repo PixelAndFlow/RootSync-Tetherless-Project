@@ -1,5 +1,6 @@
 import { ApiError } from "../api/ApiError";
-import type { SetupCodeReveal, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import type { SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffCohort, StaffModule, StaffRole, StaffSession, StaffStudent } from "../../types/staff";
+import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
 const cohorts: StaffCohort[] = [
@@ -13,6 +14,11 @@ const students: StaffStudent[] = [
 ];
 const modules: StaffModule[] = [
   { id: "rcyc-recruit-cyber-squad-gamified-001", title: "Operation Cyber Squad", contentVersion: 1, status: "published" },
+];
+const accounts: StaffAccountSummary[] = [
+  { staffId: "superadmin-demo-001", username: "demo", displayName: "Demo SuperAdmin", role: "superadmin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
+  { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
+  { staffId: "trainer-demo-001", username: "trainer", displayName: "Demo Trainer", role: "trainer", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
 ];
 
 /**
@@ -45,5 +51,14 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     return { studentId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
   }
   async listModules(): Promise<StaffModule[]> { return structuredClone(modules); }
+  async listStaffAccounts(): Promise<StaffAccountSummary[]> { return structuredClone(accounts); }
+  async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
+    const username = input.username.trim().toLowerCase();
+    if (!STAFF_USERNAME_PATTERN.test(username) || !input.displayName.trim()) throw new ApiError("INVALID_INPUT", 422);
+    if (accounts.some((account) => account.username === username)) throw new ApiError("USERNAME_TAKEN", 409);
+    const account: StaffAccountSummary = { staffId: crypto.randomUUID(), username, displayName: input.displayName.trim(), role: input.role, disabled: false, createdAt: new Date().toISOString() };
+    accounts.push(account);
+    return { account, temporaryPassword: crypto.randomUUID().replace(/-/g, "").slice(0, 16), shownOnce: true };
+  }
   canManage(role: StaffRole, action: "staff" | "system"): boolean { return action === "staff" ? role !== "trainer" : role === "superadmin"; }
 }

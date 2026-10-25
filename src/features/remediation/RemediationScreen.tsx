@@ -7,6 +7,7 @@ import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, LearnerModuleRecord } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
+import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 
 export function RemediationScreen() {
   const { moduleId } = useParams();
@@ -21,6 +22,8 @@ export function RemediationScreen() {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exitOpen, setExitOpen] = useState(false);
+  const exitRef = useRef<HTMLButtonElement | null>(null);
   const started = useRef(false);
 
   useEffect(() => { if (profile) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord); }, [module.module_id, profile]);
@@ -66,6 +69,7 @@ export function RemediationScreen() {
 
   return (
     <section className="mx-auto max-w-3xl rounded-3xl border border-violet-300/20 bg-panel p-6 shadow-2xl shadow-black/25 sm:p-8">
+      <button className="ui-action-secondary mb-3" disabled={Boolean(savingQuestionId)} onClick={() => setExitOpen(true)} ref={exitRef} type="button">Exit practice</button>
       <div className="flex flex-wrap justify-between gap-3">
         <div>
           <p className="text-xs font-bold tracking-[0.18em] text-violet-200">PRACTICE MISSED QUESTIONS</p>
@@ -92,6 +96,7 @@ export function RemediationScreen() {
           ? <button className="rounded-xl bg-violet-600 px-4 py-3 font-bold disabled:opacity-40" disabled={Object.keys(revealed).length !== questions.length} onClick={() => void finish()} type="button">Update mastery</button>
           : <button className="rounded-xl bg-violet-600 px-4 py-3 font-bold disabled:opacity-40" disabled={!revealed[question.id]} onClick={() => setIndex(index + 1)} type="button">Next question</button>}
       </div>
+      {exitOpen && <ConfirmationDialog title="Exit practice?" detail="Saved answers may remain in the current learning record, but this unfinished practice session cannot be resumed here. Starting again begins a new session; unsaved answers may be lost. In demo mode, progress resets on reload." confirmLabel="Exit to mission debrief" onCancel={() => setExitOpen(false)} onConfirm={() => navigate(`/learner/missions/${module.module_id}/results`)} returnFocusTo={exitRef.current} />}
     </section>
   );
 }
