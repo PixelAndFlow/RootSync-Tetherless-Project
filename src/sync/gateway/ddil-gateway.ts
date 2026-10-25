@@ -35,7 +35,7 @@ import type {
   StartSessionInput,
   SyncSummary,
 } from "./contract.ts";
-import type { ActivityEvent, DeliveryRecord, EventType } from "../types.ts";
+import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptCompletedEvent, DeliveryRecord } from "../types.ts";
 
 export interface DdilGatewayOptions {
   idb: IDBFactoryLike;
@@ -270,9 +270,10 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   async getModuleProgress(learnerId: string, moduleId: string): Promise<ModuleProgress> {
     const events = await allEvents(this.require());
     const mine = events.filter(
-      (e) => e.module_id === moduleId && (e.event_type === "answer_submitted" || e.event_type === "attempt_completed"),
+      (e): e is AnswerSubmittedEvent | AttemptCompletedEvent =>
+        (e.event_type === "answer_submitted" || e.event_type === "attempt_completed") && e.module_id === moduleId,
     );
-    const answers = mine.filter((e) => e.event_type === "answer_submitted");
+    const answers = mine.filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted");
     const distinctQuestions = new Set(answers.map((e) => e.question_id).filter(Boolean));
 
     return {
@@ -353,15 +354,18 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   // -------------------------------------------------------------- internals
 
-  /** Record one event durably, then advance the sequence. */
-  private async record(input: {
-    event_type: EventType;
-    payload: Record<string, unknown>;
-    module_id?: string;
-    content_version?: number;
-    attempt_id?: string;
-    question_id?: string;
-  }): Promise<ActivityEvent> {
+  /**
+   * Record one event durably, then advance the sequence.
+   *
+   * `input` is typed as the full ActivityEventInput union, so module_id /
+   * content_version / attempt_id (and question_id, for answer_submitted)
+   * are required together at every call site below — the compiler rejects
+   * a call that forgets one, instead of silently building an event the
+   * server will reject later. The cast at the end is safe because `input`
+   * is already checked against that union at the call site; the envelope
+   * fields added here are valid on every member.
+   */
+  private async record(input: ActivityEventInput): Promise<ActivityEvent> {
     const db = this.require();
     if (!this.sessionId) {
       // The server requires a UUID session_id on every event and rejects
@@ -370,21 +374,16 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     }
     const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
 
-    const event: ActivityEvent = {
+    const event = {
       event_id: newId(),
       schema_version: 1,
-      event_type: input.event_type,
       device_id: this.deviceId,
       device_seq: seq,
       session_id: this.sessionId!,
       occurred_at: new Date(this.now()).toISOString(),
       monotonic_ms: this.elapsedMonotonic(),
-      payload: input.payload,
-      ...(input.module_id ? { module_id: input.module_id } : {}),
-      ...(input.content_version ? { content_version: input.content_version } : {}),
-      ...(input.attempt_id ? { attempt_id: input.attempt_id } : {}),
-      ...(input.question_id ? { question_id: input.question_id } : {}),
-    };
+      ...input,
+    } as ActivityEvent;
 
     // Durability: this awaits the transaction commit, not the write queue.
     await recordEvent(db, event, this.now());
@@ -449,11 +448,24 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   /**
    * Abandon an attempt (N-8). Reason is required by the server.
+   *
+   * Bug fixed here: this used to default to `this.lastModuleId ?? ""` when
+   * no module had been touched yet. "" is falsy, so the old flat-optional
+   * record() silently omitted module_id/content_version/attempt_id rather
+   * than send an empty one — but the contract requires those three
+   * together on every attempt_abandoned event, so the server would have
+   * rejected it as INVALID_EVENT ("module_id is required."), and per the
+   * DDIL rule that a rejection is final, that event would have been lost
+   * for good. There is nothing meaningful to abandon if no attempt has
+   * started, so recording nothing is the correct outcome.
    */
   async abandonAttempt(attemptId: string, reason: "restart" | "quit" | "replaced" = "quit"): Promise<void> {
+    const moduleId = this.lastModuleId;
+    if (!moduleId) return;
+
     await this.record({
       event_type: "attempt_abandoned",
-      module_id: this.lastModuleId ?? "",
+      module_id: moduleId,
       content_version: this.contentVersion,
       attempt_id: attemptId,
       payload: { reason },

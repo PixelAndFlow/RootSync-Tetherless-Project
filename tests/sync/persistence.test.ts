@@ -26,11 +26,11 @@ import {
   STORE_LOG,
   STORE_META,
 } from "../../src/sync/stores/db.ts";
-import type { ActivityEvent } from "../../src/sync/types.ts";
+import type { ActivityEvent, AnswerSubmittedEvent } from "../../src/sync/types.ts";
 
 const NOW = 1_700_000_000_000;
 
-function event(over: Partial<ActivityEvent> = {}): ActivityEvent {
+function event(over: Partial<AnswerSubmittedEvent> = {}): ActivityEvent {
   return {
     event_id: "evt-1",
     schema_version: 1,

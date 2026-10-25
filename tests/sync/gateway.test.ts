@@ -133,6 +133,35 @@ test("session and attempt events are recorded with increasing device_seq", async
   assert.match(attempt.id, /^[0-9a-f-]{36}$/i);
 });
 
+test("abandonAttempt records attempt_abandoned with the module that was in progress", async () => {
+  const { gw } = await gateway();
+  const attempt = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full" });
+
+  await gw.abandonAttempt(attempt.id, "quit");
+
+  const delivery = await gw.deliveryRecords();
+  const events = await Promise.all(delivery.map((d) => gw.getEventById(d.event_id)));
+  const abandoned = events.find((e) => e?.event_type === "attempt_abandoned");
+  assert.ok(abandoned, "attempt_abandoned must be recorded when an attempt is in progress");
+  assert.equal((abandoned as { module_id?: string }).module_id, "m1");
+});
+
+test("abandonAttempt records nothing when no attempt has touched a module yet", async () => {
+  const { gw } = await gateway();
+  await gw.startSession({ learnerId: "l1", deviceId: "device-1" });
+  const before = await gw.deliveryRecords();
+
+  // Regression for the bug fixed in ddil-gateway.ts: this used to default
+  // module_id to "" and silently emit an attempt_abandoned event the
+  // contract requires module_id/content_version/attempt_id on, which the
+  // server would reject as INVALID_EVENT and, being a rejection, lose for
+  // good. There is nothing to abandon here, so nothing should be recorded.
+  await gw.abandonAttempt("attempt-that-never-started");
+
+  const after = await gw.deliveryRecords();
+  assert.equal(after.length, before.length, "no event should be recorded with no module in progress");
+});
+
 // ---------------------------------------------------------------- sync status
 
 test("sync summary reports pending work, then synced after a pass", async () => {
