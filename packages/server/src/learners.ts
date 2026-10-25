@@ -4,6 +4,7 @@
  * on the server and are never sent to a phone.
  */
 
+import type { LearnerRecord } from "../../contract/src/staff-api.ts";
 import type { ErrorDetail } from "./http.ts";
 import type { Device, Learner, LearnerFields } from "./store.ts";
 
@@ -85,5 +86,5 @@ export function staffLearnerView(l: Learner, devices: Device[], extra: { cohort_
     archived_at: l.archived_at,
     ...(extra.last_synced_at !== undefined ? { last_synced_at: extra.last_synced_at } : {}),
     ...(extra.includeDevices ? { devices: devices.map((d) => ({ device_id: d.device_id, set_up_at: d.created_at, switched_off_at: d.revoked_at })) } : {}),
-  };
+  } satisfies LearnerRecord;
 }
