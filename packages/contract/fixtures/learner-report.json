@@ -11,12 +11,12 @@
     "maxSilenceMs": 90000
   },
   "learner": {
-    "learner_id": "2acafd86-5ad3-40a9-9dab-7ec4dbade31d",
-    "learner_code": "Fixture-Cohort-73VT",
+    "learner_id": "8ed8fad1-62e9-4e8a-8e1a-68b5b7bb22ca",
+    "learner_code": "Fixture-Cohort-4FRS",
     "first_name": "Active",
     "last_name": "Fixture",
     "username": "Active Learner",
-    "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+    "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
     "archived": false
   },
   "modules": [

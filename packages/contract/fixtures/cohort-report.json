@@ -1,9 +1,9 @@
 {
   "cohort": {
-    "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+    "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
     "name": "Fixture Cohort",
     "created_at": "2026-10-25T09:00:00.000Z",
-    "created_by": "fcc5a44a-8146-4efd-a1f7-4b118d4e1391",
+    "created_by": "5e9f6cc3-8b14-4c01-bf7c-ddc473086fc4",
     "archived": false
   },
   "generated_at": "2026-10-25T09:00:00.000Z",
@@ -23,12 +23,12 @@
   "learners": [
     {
       "learner": {
-        "learner_id": "2acafd86-5ad3-40a9-9dab-7ec4dbade31d",
-        "learner_code": "Fixture-Cohort-73VT",
+        "learner_id": "8ed8fad1-62e9-4e8a-8e1a-68b5b7bb22ca",
+        "learner_code": "Fixture-Cohort-4FRS",
         "first_name": "Active",
         "last_name": "Fixture",
         "username": "Active Learner",
-        "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+        "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
         "archived": false
       },
       "modules": [
@@ -88,12 +88,12 @@
     },
     {
       "learner": {
-        "learner_id": "2d34e797-e158-4e7a-aca7-efa0a42a6ba7",
-        "learner_code": "Fixture-Cohort-UT86",
+        "learner_id": "08b1fcbb-06ed-4df6-8c4d-d874e28a6ad4",
+        "learner_code": "Fixture-Cohort-USJQ",
         "first_name": "Awaiting",
         "last_name": "Fixture",
         "username": null,
-        "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+        "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
         "archived": false
       },
       "modules": [
@@ -153,12 +153,12 @@
     },
     {
       "learner": {
-        "learner_id": "007e4c00-8f7c-4cb9-adf5-ae58611c547a",
-        "learner_code": "Fixture-Cohort-QW9P",
+        "learner_id": "4755e827-01ba-4c8c-ab09-742561450b6a",
+        "learner_code": "Fixture-Cohort-BQEG",
         "first_name": "SwitchedOff",
         "last_name": "Fixture",
         "username": "Switched Off Learner",
-        "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+        "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
         "archived": false
       },
       "modules": [
