@@ -1,0 +1,65 @@
+{
+  "modules": [
+    {
+      "module_id": "phishing-basics",
+      "module_name": "Phishing Basics",
+      "title": {
+        "en": "Phishing Basics",
+        "es": "Conceptos básicos de phishing"
+      },
+      "level": "beginner",
+      "note": null,
+      "activity_type": "multiple_choice",
+      "latest_version": 1,
+      "versions": [
+        1
+      ],
+      "question_count": 15,
+      "used": false,
+      "archived": false,
+      "created_by": null,
+      "created_at": "2026-10-25T09:00:00.000Z"
+    },
+    {
+      "module_id": "pr-bootcamp-security-tools",
+      "module_name": "Security Tools Basics",
+      "title": {
+        "en": "Security Tools Basics",
+        "es": "Conceptos básicos de herramientas de seguridad"
+      },
+      "level": "beginner",
+      "note": null,
+      "activity_type": "multiple_choice",
+      "latest_version": 2,
+      "versions": [
+        1,
+        2
+      ],
+      "question_count": 15,
+      "used": false,
+      "archived": false,
+      "created_by": null,
+      "created_at": "2026-10-25T09:00:00.000Z"
+    },
+    {
+      "module_id": "security-tools",
+      "module_name": "Security Tools",
+      "title": {
+        "en": "Security Tools",
+        "es": "Herramientas de seguridad"
+      },
+      "level": "beginner",
+      "note": "Week 1",
+      "activity_type": "multiple_choice",
+      "latest_version": 1,
+      "versions": [
+        1
+      ],
+      "question_count": 2,
+      "used": false,
+      "archived": false,
+      "created_by": "75172b08-21d5-4ded-9eb0-634e6994ed91",
+      "created_at": "2026-10-25T09:00:00.000Z"
+    }
+  ]
+}

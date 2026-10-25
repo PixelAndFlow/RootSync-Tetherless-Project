@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Some fields need fixing.",
+    "request_id": "req-51d3b982",
+    "retryable": false,
+    "details": [
+      {
+        "field": "first_name",
+        "code": "REQUIRED",
+        "message": "First name is missing."
+      }
+    ]
+  }
+}

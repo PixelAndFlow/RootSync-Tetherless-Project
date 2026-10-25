@@ -1,0 +1,72 @@
+{
+  "learners": [
+    {
+      "learner_id": "2acafd86-5ad3-40a9-9dab-7ec4dbade31d",
+      "learner_code": "Fixture-Cohort-73VT",
+      "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+      "first_name": "Active",
+      "last_name": "Fixture",
+      "username": "Active Learner",
+      "phone": null,
+      "email": null,
+      "training_level": null,
+      "note_1": null,
+      "note_2": null,
+      "status": "active",
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "archived_at": null,
+      "last_synced_at": null
+    },
+    {
+      "learner_id": "93c97b44-c074-44b1-879f-5e245094fdcc",
+      "learner_code": "Fixture-Cohort-5JNX",
+      "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+      "first_name": "Archived",
+      "last_name": "Fixture",
+      "username": null,
+      "phone": null,
+      "email": null,
+      "training_level": null,
+      "note_1": null,
+      "note_2": null,
+      "status": "archived",
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "archived_at": "2026-10-25T09:00:00.000Z",
+      "last_synced_at": null
+    },
+    {
+      "learner_id": "2d34e797-e158-4e7a-aca7-efa0a42a6ba7",
+      "learner_code": "Fixture-Cohort-UT86",
+      "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+      "first_name": "Awaiting",
+      "last_name": "Fixture",
+      "username": null,
+      "phone": null,
+      "email": null,
+      "training_level": null,
+      "note_1": null,
+      "note_2": null,
+      "status": "awaiting_setup",
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "archived_at": null,
+      "last_synced_at": null
+    },
+    {
+      "learner_id": "007e4c00-8f7c-4cb9-adf5-ae58611c547a",
+      "learner_code": "Fixture-Cohort-QW9P",
+      "cohort_id": "2518d31c-cb60-4cd5-839c-9c1f30a5de32",
+      "first_name": "SwitchedOff",
+      "last_name": "Fixture",
+      "username": "Switched Off Learner",
+      "phone": null,
+      "email": null,
+      "training_level": null,
+      "note_1": null,
+      "note_2": null,
+      "status": "phone_switched_off",
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "archived_at": null,
+      "last_synced_at": null
+    }
+  ]
+}
