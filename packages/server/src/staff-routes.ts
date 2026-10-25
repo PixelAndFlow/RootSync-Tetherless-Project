@@ -23,6 +23,16 @@
 
 import { randomUUID } from "node:crypto";
 import { isUuid, STAFF_USERNAME_PATTERN } from "../../contract/src/index.ts";
+import type {
+  Assignment as AssignmentApi,
+  Cohort as CohortApi,
+  CohortModuleSummary,
+  CohortReport,
+  LearnerReport,
+  LearnerReportRow,
+  ModuleListing,
+  StaffAccount,
+} from "../../contract/src/staff-api.ts";
 import { buildLearnerReport, statusLabel, type ModuleResult, type Thresholds } from "../../analytics/src/index.ts";
 import { checkNewVersion, validateTetherlessModule, type Issue, type TetherlessModule } from "../../content/src/index.ts";
 import type { Env } from "./app.ts";
@@ -37,26 +47,28 @@ export const MIN_PASSWORD_LENGTH = 12;
 const MAX_MODULE_BYTES = 1024 * 1024;
 const ROSTER_IMPORT_TTL_MS = 3600_000;
 
-const staffView = (s: Staff, permissions?: string[]) => ({
-  staff_id: s.staff_id,
-  username: s.username,
-  display_name: s.display_name,
-  role: s.role,
-  must_change_password: s.must_change_password,
-  disabled: !!s.disabled_at,
-  created_at: s.created_at,
-  created_by: s.created_by,
-  ...(permissions ? { permissions } : {}),
-});
+const staffView = (s: Staff, permissions?: string[]) =>
+  ({
+    staff_id: s.staff_id,
+    username: s.username,
+    display_name: s.display_name,
+    role: s.role,
+    must_change_password: s.must_change_password,
+    disabled: !!s.disabled_at,
+    created_at: s.created_at,
+    created_by: s.created_by,
+    ...(permissions ? { permissions } : {}),
+  }) satisfies StaffAccount;
 
-const cohortView = (c: Cohort & { learners?: number }) => ({
-  cohort_id: c.cohort_id,
-  name: c.name,
-  ...(c.learners !== undefined ? { learner_count: c.learners } : {}),
-  created_at: c.created_at,
-  created_by: c.created_by,
-  archived: !!c.archived_at,
-});
+const cohortView = (c: Cohort & { learners?: number }) =>
+  ({
+    cohort_id: c.cohort_id,
+    name: c.name,
+    ...(c.learners !== undefined ? { learner_count: c.learners } : {}),
+    created_at: c.created_at,
+    created_by: c.created_by,
+    archived: !!c.archived_at,
+  }) satisfies CohortApi;
 
 const issueDetails = (issues: Issue[]): ErrorDetail[] =>
   issues.map((i) => ({ ...(i.location?.row !== undefined ? { row: i.location.row } : {}), ...(i.location?.field ? { field: i.location.field } : {}), code: i.code, message: i.message }));
@@ -385,7 +397,7 @@ export function registerStaffRoutes(env: Env): void {
             archived: !!row.archived_at,
             created_by: row.created_by,
             created_at: row.created_at,
-          };
+          } satisfies ModuleListing;
         }),
       ),
     };
@@ -420,17 +432,18 @@ export function registerStaffRoutes(env: Env): void {
 
   // ------------------------------------------------------------ assignments
 
-  const assignmentView = (a: { assignment_id: string; module_id: string; content_version: number | null; cohort_id: string | null; learner_id: string | null; created_at: string; created_by: string | null }) => ({
-    assignment_id: a.assignment_id,
-    module_id: a.module_id,
-    module_name: latestBody(a.module_id)?.title.en ?? a.module_id,
-    content_version: a.content_version,
-    target: a.cohort_id ? "cohort" : "learner",
-    cohort_id: a.cohort_id,
-    learner_id: a.learner_id,
-    created_at: a.created_at,
-    created_by: a.created_by,
-  });
+  const assignmentView = (a: { assignment_id: string; module_id: string; content_version: number | null; cohort_id: string | null; learner_id: string | null; created_at: string; created_by: string | null }) =>
+    ({
+      assignment_id: a.assignment_id,
+      module_id: a.module_id,
+      module_name: latestBody(a.module_id)?.title.en ?? a.module_id,
+      content_version: a.content_version,
+      target: a.cohort_id ? "cohort" : "learner",
+      cohort_id: a.cohort_id,
+      learner_id: a.learner_id,
+      created_at: a.created_at,
+      created_by: a.created_by,
+    }) satisfies AssignmentApi;
 
   router.add("GET", "/v1/staff/assignments", async (ctx) => {
     await requireStaff(ctx, "results.view");
@@ -505,8 +518,8 @@ export function registerStaffRoutes(env: Env): void {
       modules: report.modules.map((m) => ({ ...m, module_name: latestBody(m.module_id)?.title.en ?? m.module_id, status_label: statusLabel(m) })),
       time: report.time,
       // The server can't see a phone's unsent work; never read missing results as "not done".
-      sync: { ...report.sync, may_have_unsynced_work: true },
-    };
+      sync: { ...report.sync, may_have_unsynced_work: true as const },
+    } satisfies LearnerReportRow;
     return { row, events, rejected };
   };
 
@@ -517,7 +530,14 @@ export function registerStaffRoutes(env: Env): void {
     const t = await env.thresholds();
     const moduleIds = await reportModuleIds(cohort.cohort_id, learners, ctx.query.get("module_id"));
     const rows = await Promise.all(learners.map((l) => learnerRow(l, moduleIds, t)));
-    return { cohort: cohortView(cohort), generated_at: ctx.now, thresholds: t, active_time: config.activeTime, module_ids: moduleIds, learners: rows.map((r) => r.row) };
+    return {
+      cohort: cohortView(cohort),
+      generated_at: ctx.now,
+      thresholds: t,
+      active_time: config.activeTime,
+      module_ids: moduleIds,
+      learners: rows.map((r) => r.row),
+    } satisfies CohortReport;
   });
 
   router.add("GET", "/v1/staff/learners/:id/report", async (ctx) => {
@@ -526,7 +546,7 @@ export function registerStaffRoutes(env: Env): void {
     const t = await env.thresholds();
     const moduleIds = await reportModuleIds(learner.cohort_id, [learner], ctx.query.get("module_id"));
     const { row } = await learnerRow(learner, moduleIds, t);
-    return { generated_at: ctx.now, thresholds: t, active_time: config.activeTime, ...row };
+    return { generated_at: ctx.now, thresholds: t, active_time: config.activeTime, ...row } satisfies LearnerReport;
   });
 
   router.add("GET", "/v1/staff/cohorts/:id/modules/:moduleId/summary", async (ctx) => {
@@ -552,7 +572,7 @@ export function registerStaffRoutes(env: Env): void {
       passing_count: results.filter((m) => statusLabel(m) === "passing").length,
       struggling_count: results.filter((m) => statusLabel(m) === "struggling").length,
       not_yet_passing_count: results.filter((m) => statusLabel(m) === "not_yet_passing").length,
-    };
+    } satisfies CohortModuleSummary;
   });
 
   router.add("GET", "/v1/staff/cohorts/:id/export", async (ctx) => {
