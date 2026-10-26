@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GatewayProvider } from "../../app/providers/GatewayProvider";
 import { LearnerProfileProvider } from "../../app/providers/LearnerProfileProvider";
@@ -56,6 +56,29 @@ function renderMission(offlineLearning: MockOfflineLearningGateway) {
 afterEach(() => window.localStorage.clear());
 
 describe("MissionPlayScreen local-save feedback", () => {
+  it("waits for the session to be saved before starting an attempt", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const startSession = gateway.startSession.bind(gateway);
+    vi.spyOn(gateway, "startSession").mockImplementation(async (input) => { await pending; return startSession(input); });
+    const startAttempt = vi.spyOn(gateway, "startAttempt");
+    renderMission(gateway);
+    expect(startAttempt).not.toHaveBeenCalled();
+    await act(async () => { release(); });
+    await screen.findByRole("button", { name: /Red Team/i });
+    expect(startAttempt).toHaveBeenCalledOnce();
+  });
+
+  it("offers a retry when preparing the local session fails", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const startSession = gateway.startSession.bind(gateway);
+    vi.spyOn(gateway, "startSession").mockRejectedValueOnce(new Error("storage unavailable")).mockImplementation(startSession);
+    renderMission(gateway);
+    await screen.findByText(/Unable to prepare a local mission record/);
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("button", { name: /Red Team/i })).toBeVisible();
+  });
   it("keeps choices disabled and withholds answer feedback until the gateway confirms a save", async () => {
     const user = userEvent.setup();
     const gateway = new DeferredSaveGateway();

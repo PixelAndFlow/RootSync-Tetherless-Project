@@ -90,7 +90,7 @@ export function mapReportLearner(value: unknown): ReportLearner {
   };
 }
 
-/** Opt-in read-only adapter for e2ceb7e, NOT installed in GatewayProvider yet.
+/** Read-only staff reports adapter.
  * A separate report model avoids inventing XP, streaks, device sync status,
  * sector mastery or other fields that the server does not supply.
  */

@@ -38,6 +38,8 @@ export function MissionPlayScreen() {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
+  const [startError, setStartError] = useState(false);
+  const [startRetry, setStartRetry] = useState(0);
   const [engagement, setEngagement] = useState<EngagementSummary>({ xp: 0, currentStreak: 0, bestStreak: 0, xpAwardedQuestionIds: [], completedSectorIds: [], earnedBadgeIds: [] });
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -54,11 +56,13 @@ export function MissionPlayScreen() {
     const attemptKey = profile ? `${profile.learnerId}:${module.module_id}` : null;
     if (!profile || startedFor.current === attemptKey) return;
     startedFor.current = attemptKey;
-    void Promise.all([
-      offlineLearningGateway.startSession({ learnerId: profile.learnerId, deviceId: profile.deviceId }),
-      offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, kind: "full" }),
-    ]).then(([, createdAttempt]) => setAttempt(createdAttempt));
-  }, [module.module_id, profile]);
+    setStartError(false);
+    void (async () => {
+      await offlineLearningGateway.startSession({ learnerId: profile.learnerId, deviceId: profile.deviceId });
+      const createdAttempt = await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, kind: "full" });
+      setAttempt(createdAttempt);
+    })().catch(() => { startedFor.current = null; setStartError(true); });
+  }, [module.module_id, profile, offlineLearningGateway, startRetry]);
 
   useEffect(() => {
     if (!revealed[question.id] || focusedFeedbackQuestionId.current === question.id) return;
@@ -78,6 +82,7 @@ export function MissionPlayScreen() {
   }, [index]);
 
   if (!profile) return <Navigate replace to="/learner" />;
+  if (startError) return <section role="alert"><p>Unable to prepare a local mission record. Check device storage and try again.</p><button className="ui-action mt-4" onClick={() => setStartRetry((value) => value + 1)} type="button">Try again</button></section>;
   if (!attempt) return <LoadingState label="Preparing your local mission record…" />;
 
   const awards = gamificationAwards(module);

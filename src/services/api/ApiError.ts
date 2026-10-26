@@ -10,6 +10,7 @@ const messages: Record<string, string> = {
   FORBIDDEN: "You do not have permission to view this information.",
   NOT_FOUND: "The requested record is not available.",
   INVALID_INPUT: "Check the highlighted fields and try again.",
+  VALIDATION_FAILED: "Check the student details and try again.",
   RATE_LIMITED: "Too many requests. Please wait before trying again.",
   NETWORK_ERROR: "Unable to connect. Check your connection and try again.",
   INVALID_RESPONSE: "The service returned an unexpected response. Please contact the team.",
@@ -39,7 +40,7 @@ export function parseApiError(body: unknown, status: number): ApiError {
   const code = typeof error.code === "string" ? error.code : status === 401 ? "UNAUTHORIZED" : "UNKNOWN_ERROR";
   const requestId = typeof error.request_id === "string" && /^[\w-]{1,100}$/.test(error.request_id) ? error.request_id : undefined;
   const details = Array.isArray(error.details) ? error.details.flatMap((detail): FieldIssue[] => {
-    if (!isRecord(detail) || !["username", "setup_code", "cohort_id", "module_id"].includes(String(detail.field))) return [];
+    if (!isRecord(detail) || !["username", "setup_code", "cohort_id", "module_id", "first_name", "last_name"].includes(String(detail.field))) return [];
     return [{ field: String(detail.field), message: "Check this value and try again." }];
   }) : [];
   return new ApiError(code, status, typeof error.retryable === "boolean" ? error.retryable : status >= 500 || status === 429, requestId, details);
