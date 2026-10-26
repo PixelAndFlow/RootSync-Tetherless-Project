@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LearnerProfileProvider } from "../../app/providers/LearnerProfileProvider";
 import { GatewayProvider } from "../../app/providers/GatewayProvider";
 import { createMockGateways } from "../../services/gateways";
+import type { OfflineLearningGateway } from "../../services/offline/OfflineLearningGateway";
 import { ApiError } from "../../services/api/ApiError";
 import { LearnerSetupScreen } from "./LearnerSetupScreen";
 
@@ -38,7 +39,7 @@ describe("mock-backed device setup", () => {
   });
   it("handles used-code errors without leaking server details", async () => {
     const gateways = createMockGateways();
-    vi.spyOn(gateways.learnerSetup!, "setupDevice").mockRejectedValue(new ApiError("SETUP_CODE_USED", 409, false, "request-test"));
+    vi.spyOn(gateways.offlineLearning as Required<OfflineLearningGateway>, "setupDevice").mockRejectedValue(new ApiError("SETUP_CODE_USED", 409, false, "request-test"));
     setup(gateways); fill();
     fireEvent.click(screen.getByRole("button", { name: "Continue to missions" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("already been used");
@@ -47,7 +48,7 @@ describe("mock-backed device setup", () => {
   });
   it("prevents duplicate submission while setup is pending", async () => {
     const gateways = createMockGateways();
-    const spy = vi.spyOn(gateways.learnerSetup!, "setupDevice").mockImplementation(() => new Promise(() => {}));
+    const spy = vi.spyOn(gateways.offlineLearning as Required<OfflineLearningGateway>, "setupDevice").mockImplementation(() => new Promise(() => {}));
     setup(gateways); fill();
     const button = screen.getByRole("button", { name: "Continue to missions" });
     fireEvent.click(button); fireEvent.click(button);
@@ -65,7 +66,7 @@ describe("mock-backed device setup", () => {
     spy.mockRestore();
   });
   it("does not silently substitute mocks if the setup adapter is absent", () => {
-    const gateways = createMockGateways(); delete gateways.learnerSetup;
+    const gateways = createMockGateways(); gateways.offlineLearning.setupDevice = undefined;
     setup(gateways);
     expect(screen.getByRole("alert")).toHaveTextContent("not connected");
     expect(screen.getByRole("button", { name: "Continue to missions" })).toBeDisabled();

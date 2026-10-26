@@ -75,6 +75,14 @@ test("the gateway declares no methods outside the contract", () => {
     "heartbeat",
     "abandonAttempt",
     "elapsedMonotonic",
+    // API Spec v1.30 §8.1: agreed optional additions beyond the ten.
+    "setupDevice",
+    "getLearnerProfile",
+    "listAssignedModules",
+    "prepareModuleForOffline",
+    "getModule",
+    "fetchAndCacheModule",
+    "moduleKey",
   ]);
   const extra = declared.filter((n) => !allowed.has(n) && !internal.has(n));
   assert.deepEqual(extra, [], "unexpected public method — update the contract mirror");
@@ -137,7 +145,7 @@ test("abandonAttempt records attempt_abandoned with the module that was in progr
   const { gw } = await gateway();
   const attempt = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full" });
 
-  await gw.abandonAttempt(attempt.id, "quit");
+  await gw.abandonAttempt({ attemptId: attempt.id, moduleId: "m1", reason: "quit" });
 
   const delivery = await gw.deliveryRecords();
   const events = await Promise.all(delivery.map((d) => gw.getEventById(d.event_id)));
@@ -146,7 +154,7 @@ test("abandonAttempt records attempt_abandoned with the module that was in progr
   assert.equal((abandoned as { module_id?: string }).module_id, "m1");
 });
 
-test("abandonAttempt records nothing when no attempt has touched a module yet", async () => {
+test("abandonAttempt records nothing when called without a moduleId", async () => {
   const { gw } = await gateway();
   await gw.startSession({ learnerId: "l1", deviceId: "device-1" });
   const before = await gw.deliveryRecords();
@@ -155,8 +163,9 @@ test("abandonAttempt records nothing when no attempt has touched a module yet", 
   // module_id to "" and silently emit an attempt_abandoned event the
   // contract requires module_id/content_version/attempt_id on, which the
   // server would reject as INVALID_EVENT and, being a rejection, lose for
-  // good. There is nothing to abandon here, so nothing should be recorded.
-  await gw.abandonAttempt("attempt-that-never-started");
+  // good. moduleId now comes from the caller (API Spec v1.30 §8.1); an
+  // empty one still must not produce an event.
+  await gw.abandonAttempt({ attemptId: "attempt-that-never-started", moduleId: "", reason: "quit" });
 
   const after = await gw.deliveryRecords();
   assert.equal(after.length, before.length, "no event should be recorded with no module in progress");

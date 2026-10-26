@@ -1,15 +1,10 @@
-/** Isolated frontend preparation boundary, NOT a replacement for the agreed DDIL contract. */
+/** API Spec v1.30 §8.1 LearnerProfile. Retained here since LearnerProfileProvider and the setup screen both predate that naming. */
 export interface SetupProfile {
   learnerId: string;
   deviceId: string;
   username: string;
   learnerCode: string;
   cohortName: string;
-}
-
-export interface LearnerSetupGateway {
-  readonly mode: "mock";
-  setupDevice(input: { setupCode: string; username: string }): Promise<SetupProfile>;
 }
 
 export function setupValidation(input: { setupCode: string; username: string }): { setupCode?: string; username?: string } {

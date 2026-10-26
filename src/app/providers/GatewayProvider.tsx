@@ -26,16 +26,17 @@ export function useOfflineLearningGateway(): OfflineLearningGateway {
   return useAppGateways().offlineLearning;
 }
 
+/** Resolves once offlineLearning is ready; undefined in mock mode, where it is ready immediately. */
+export function useOfflineLearningGatewayReady(): Promise<void> | undefined {
+  return useAppGateways().offlineLearningReady;
+}
+
 export function useTrainerDataGateway(): TrainerDataGateway {
   return useAppGateways().trainerData;
 }
 
 export function useTrainerReportsGateway() {
   return useAppGateways().trainerReports;
-}
-
-export function useLearnerSetupGateway() {
-  return useAppGateways().learnerSetup;
 }
 
 export function useStaffAdminGateway(): StaffAdminGateway | undefined {
