@@ -105,8 +105,14 @@ export async function recordEvent(
   const t = db.transaction([STORE_EVENTS, STORE_DELIVERY], "readwrite");
   t.objectStore(STORE_EVENTS).add(event);
   t.objectStore(STORE_DELIVERY).add(delivery);
-  await tx(t);
-  return delivery;
+  try {
+    await tx(t);
+    return delivery;
+  } catch (err) {
+    const fallback = await getDelivery(db, event.event_id);
+    if (fallback) return fallback;
+    throw err;
+  }
 }
 
 export function getEvent(db: IDBDatabaseLike, eventId: string): Promise<ActivityEvent | undefined> {
