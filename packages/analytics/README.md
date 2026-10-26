@@ -7,7 +7,8 @@ server accepted and the published answer keys.
 
 - `scoreModule`: initial, best and latest full-attempt scores; first-try
   accuracy; mastery; abandoned attempts; weak topics; pass (≥ 70%) and
-  struggling (< 60%) flags. Thresholds are settings.
+  struggling (< 50%) flags, with a "not yet passing" band in between
+  (50–69%, D-10). Thresholds are settings.
 - `computeActiveTime`: time while the app is visible, measured with the
   monotonic clock, stopping after 30 minutes without interaction and at any
   gap with no heartbeat (frozen or killed app). Gaps are flagged.
