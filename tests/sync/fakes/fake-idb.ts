@@ -73,11 +73,11 @@ class FakeIndex implements IDBIndexLike {
 class FakeStore implements IDBObjectStoreLike {
   /** key -> Row */
   readonly rows = new Map<unknown, Row>();
-  private seq = 0;
+  seq = 0;
 
   readonly name: string;
-  private readonly keyPath: string | undefined;
-  private readonly autoIncrement: boolean;
+  readonly keyPath: string | undefined;
+  readonly autoIncrement: boolean;
 
   constructor(name: string, keyPath: string | undefined, autoIncrement: boolean) {
     this.name = name;
@@ -86,6 +86,9 @@ class FakeStore implements IDBObjectStoreLike {
   }
 
   private keyOf(value: unknown, explicit?: unknown): unknown {
+    if (this.keyPath !== undefined && explicit !== undefined) {
+      throw new DOMException("The object store uses in-line keys and the key parameter was provided.", "DataError");
+    }
     if (explicit !== undefined) return explicit;
     if (this.keyPath) return (value as Record<string, unknown>)[this.keyPath];
     return undefined;
@@ -146,11 +149,16 @@ class FakeTransaction implements IDBTransactionLike {
 
   private readonly db: FakeDatabase;
   private readonly names: string[];
+  readonly mode: string;
 
-  constructor(db: FakeDatabase, names: string[]) {
+  constructor(db: FakeDatabase, names: string[], mode = "readonly") {
     this.db = db;
     this.names = names;
-    for (const n of names) this.buffers.set(n, new Map());
+    this.mode = mode;
+    for (const n of names) {
+      this.buffers.set(n, new Map());
+      this.deletions.set(n, new Set());
+    }
   }
 
   objectStore(name: string): IDBObjectStoreLike {
@@ -164,22 +172,32 @@ class FakeTransaction implements IDBTransactionLike {
     return {
       name,
       put(value: unknown, key?: unknown) {
+        if (tx.mode === "readonly") {
+          throw new DOMException("The transaction is read-only.", "ReadOnlyError");
+        }
+        if (base.keyPath !== undefined && key !== undefined) {
+          throw new DOMException("The object store uses in-line keys and the key parameter was provided.", "DataError");
+        }
         const k =
           key ??
-          (base as unknown as { keyPath?: string }).keyPath
-            ? ((value as Record<string, unknown>)[
-                (base as unknown as { keyPath: string }).keyPath
-              ] as unknown)
-            : undefined;
-        const finalKey = k ?? ++(tx.seqCounter);
+          (base.keyPath
+            ? ((value as Record<string, unknown>)[base.keyPath] as unknown)
+            : undefined);
+        const finalKey = k ?? ++(base.seq);
         tx.buffers.get(name)!.set(finalKey, { key: finalKey, value: structuredClone(value) });
         tx.deletions.get(name)?.delete(finalKey);
         return resolved(finalKey);
       },
       add(value: unknown, key?: unknown) {
-        const kp = (base as unknown as { keyPath?: string }).keyPath;
+        if (tx.mode === "readonly") {
+          throw new DOMException("The transaction is read-only.", "ReadOnlyError");
+        }
+        if (base.keyPath !== undefined && key !== undefined) {
+          throw new DOMException("The object store uses in-line keys and the key parameter was provided.", "DataError");
+        }
+        const kp = base.keyPath;
         const k = key ?? (kp ? (value as Record<string, unknown>)[kp] : undefined);
-        const finalKey = k ?? ++tx.seqCounter;
+        const finalKey = k ?? ++base.seq;
         const committed = base.rows.has(finalKey);
         const buffered = tx.buffers.get(name)!.has(finalKey);
         if (committed || buffered) {
@@ -207,6 +225,9 @@ class FakeTransaction implements IDBTransactionLike {
         return resolved([...out.values()]);
       },
       delete(key: unknown) {
+        if (tx.mode === "readonly") {
+          throw new DOMException("The transaction is read-only.", "ReadOnlyError");
+        }
         tx.buffers.get(name)!.delete(key);
         tx.deletions.get(name)!.add(key);
         return resolved(undefined);
@@ -219,8 +240,6 @@ class FakeTransaction implements IDBTransactionLike {
       },
     } as IDBObjectStoreLike;
   }
-
-  seqCounter = 0;
 
   abort(): void {
     this.aborted = true;
@@ -280,8 +299,8 @@ class FakeDatabase implements IDBDatabaseLike {
     return s;
   }
 
-  transaction(names: string[], _mode?: string): IDBTransactionLike {
-    const t = new FakeTransaction(this, names);
+  transaction(names: string[], mode = "readonly"): IDBTransactionLike {
+    const t = new FakeTransaction(this, names, mode);
     // The real API auto-commits when the microtask queue drains. Tests that
     // need to assert rollback call abort() first.
     queueMicrotask(() => {

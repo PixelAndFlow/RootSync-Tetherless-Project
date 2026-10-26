@@ -18,6 +18,7 @@
 import { openDatabase, allDelivery, allEvents, getEvent, getMeta, recordEvent, setMeta } from "../stores/db.ts";
 import type { IDBDatabaseLike, IDBFactoryLike } from "../stores/idb.ts";
 import { SyncEngine } from "../engine/sync.ts";
+import { withDeviceSeqLock } from "../engine/lease.ts";
 import type { SyncTransport } from "../transport/transport.ts";
 import { summarize } from "./status-map.ts";
 import type {
@@ -50,6 +51,8 @@ export interface DdilGatewayOptions {
   isOnline?: () => boolean;
   maxEventsPerBatch?: number;
   maxAttempts?: number;
+  backoff?: import("../engine/retry.ts").BackoffOptions;
+  reopenFailedOnStart?: boolean;
 }
 
 export class DdilLearningGateway implements OfflineLearningGateway {
@@ -62,6 +65,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * then, never a wall clock: active time must not depend on the phone clock.
    */
   private sessionStartedAtMonotonic: number | null = null;
+  private sessionStartedAtWall: number | null = null;
   private subscribers = new Set<(summary: SyncSummary) => void>();
   private syncing = false;
 
@@ -91,6 +95,19 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     this.deviceId = this.opts.deviceId ?? (await getMeta<string>(db, "device_id")) ?? newId();
     await setMeta(db, "device_id", this.deviceId);
 
+    const savedSession = await getMeta<string>(db, "active_session_id");
+    if (savedSession) {
+      this.sessionId = savedSession;
+    }
+    const savedLearner = await getMeta<string>(db, "active_learner_id");
+    if (savedLearner) {
+      this.currentLearnerId = savedLearner;
+    }
+    const savedStartWall = await getMeta<number>(db, "session_start_wall_ms");
+    if (savedStartWall) {
+      this.sessionStartedAtWall = savedStartWall;
+    }
+
     this.engine = new SyncEngine({
       db,
       transport: this.opts.transport,
@@ -98,6 +115,8 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       now: this.now,
       maxEventsPerBatch: this.opts.maxEventsPerBatch,
       maxAttempts: this.opts.maxAttempts,
+      backoff: this.opts.backoff,
+      reopenFailedOnStart: this.opts.reopenFailedOnStart,
     });
   }
 
@@ -114,6 +133,14 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     this.sessionId = session.id;
     this.currentLearnerId = input.learnerId;
     this.sessionStartedAtMonotonic = monotonicNow();
+    this.sessionStartedAtWall = this.now();
+
+    await setMeta(db, "active_session_id", session.id);
+    await setMeta(db, "active_learner_id", input.learnerId);
+    await setMeta(db, "session_start_wall_ms", this.sessionStartedAtWall);
+
+    // Unblock any records waiting in blocked_auth
+    await this.engine?.unblockAuth();
 
     await this.record({
       event_type: "session_started",
@@ -176,7 +203,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       },
     });
 
-    this.retainLocal({
+    await this.retainLocal({
       kind: "answer_ui",
       attempt_id: input.attemptId,
       question_id: input.answer.questionId,
@@ -368,28 +395,31 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       // "no-session". Start one implicitly rather than emit an invalid event.
       await this.startSession({ learnerId: this.currentLearnerId ?? "", deviceId: this.deviceId });
     }
-    const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
 
-    const event: ActivityEvent = {
-      event_id: newId(),
-      schema_version: 1,
-      event_type: input.event_type,
-      device_id: this.deviceId,
-      device_seq: seq,
-      session_id: this.sessionId!,
-      occurred_at: new Date(this.now()).toISOString(),
-      monotonic_ms: this.elapsedMonotonic(),
-      payload: input.payload,
-      ...(input.module_id ? { module_id: input.module_id } : {}),
-      ...(input.content_version ? { content_version: input.content_version } : {}),
-      ...(input.attempt_id ? { attempt_id: input.attempt_id } : {}),
-      ...(input.question_id ? { question_id: input.question_id } : {}),
-    };
+    return withDeviceSeqLock(async () => {
+      const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
 
-    // Durability: this awaits the transaction commit, not the write queue.
-    await recordEvent(db, event, this.now());
-    await setMeta(db, "device_seq", seq);
-    return event;
+      const event: ActivityEvent = {
+        event_id: newId(),
+        schema_version: 1,
+        event_type: input.event_type,
+        device_id: this.deviceId,
+        device_seq: seq,
+        session_id: this.sessionId!,
+        occurred_at: new Date(this.now()).toISOString(),
+        monotonic_ms: this.elapsedMonotonic(),
+        payload: input.payload,
+        ...(input.module_id ? { module_id: input.module_id } : {}),
+        ...(input.content_version ? { content_version: input.content_version } : {}),
+        ...(input.attempt_id ? { attempt_id: input.attempt_id } : {}),
+        ...(input.question_id ? { question_id: input.question_id } : {}),
+      };
+
+      // Durability: this awaits the transaction commit, not the write queue.
+      await recordEvent(db, event, this.now());
+      await setMeta(db, "device_seq", seq);
+      return event;
+    });
   }
 
   private async emit(): Promise<void> {
@@ -405,10 +435,10 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * because the event envelope cannot carry it yet. It lives in `meta` under
    * a keyed slot until the contract grows a home for it.
    */
-  private retainLocal(record: { kind: string; attempt_id: string; [k: string]: unknown }): void {
+  private async retainLocal(record: { kind: string; attempt_id: string; [k: string]: unknown }): Promise<void> {
     const db = this.db;
     if (!db) return;
-    void setMeta(db, `local:${record.kind}:${record.attempt_id}`, record);
+    await setMeta(db, `local:${record.kind}:${record.attempt_id}`, record);
   }
 
   private require(): IDBDatabaseLike {
@@ -418,8 +448,13 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   /** Milliseconds since this session started, from a monotonic clock. */
   private elapsedMonotonic(): number {
-    if (this.sessionStartedAtMonotonic === null) return 0;
-    return Math.max(0, Math.round(monotonicNow() - this.sessionStartedAtMonotonic));
+    if (this.sessionStartedAtMonotonic !== null) {
+      return Math.max(0, Math.round(monotonicNow() - this.sessionStartedAtMonotonic));
+    }
+    if (this.sessionStartedAtWall !== null) {
+      return Math.max(0, Math.round(this.now() - this.sessionStartedAtWall));
+    }
+    return 0;
   }
 
   /** Pin the content version stamped onto attempt events. */

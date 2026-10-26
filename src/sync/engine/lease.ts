@@ -175,3 +175,27 @@ export async function withSyncLock<T>(
     return fn();
   });
 }
+
+let deviceSeqChain: Promise<unknown> = Promise.resolve();
+
+/**
+ * Ensures sequential assignment and persistence of device_seq across concurrent calls in memory
+ * and cross-tab via Web Locks when available.
+ */
+export async function withDeviceSeqLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = (globalThis as { navigator?: { locks?: unknown } }).navigator?.locks as
+    | {
+        request<R>(name: string, opts: { mode: string }, cb: () => Promise<R>): Promise<R>;
+      }
+    | undefined;
+
+  const runLocally = (): Promise<T> => {
+    const res = (deviceSeqChain as Promise<void>).then(() => fn(), () => fn());
+    deviceSeqChain = res.then(() => {}, () => {});
+    return res;
+  };
+
+  if (!locks) return runLocally();
+
+  return locks.request("tetherless-device-seq", { mode: "exclusive" }, () => runLocally());
+}
