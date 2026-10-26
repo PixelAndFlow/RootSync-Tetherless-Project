@@ -19,6 +19,7 @@ import {
   appendAttempt,
   allDelivery,
   allEvents,
+  getDelivery,
   getMeta,
   putDelivery,
   setMeta,
@@ -50,6 +51,8 @@ export interface SyncOptions {
   backoff?: BackoffOptions;
   /** Re-open `failed` events once, at the start of a pass. */
   reopenFailedOnStart?: boolean;
+  /** Re-open `blocked_auth` events at the start of a pass. */
+  unblockAuthOnStart?: boolean;
 }
 
 export interface SyncPassResult {
@@ -91,6 +94,26 @@ export class SyncEngine {
   }
 
   /**
+   * Transition any `blocked_auth` records back to `pending`.
+   * Call after credentials/tokens are restored.
+   */
+  async unblockAuth(now = this.now()): Promise<number> {
+    const records = await allDelivery(this.opts.db);
+    let count = 0;
+    for (const r of records) {
+      if (r.status !== "blocked_auth") continue;
+      await putDelivery(this.opts.db, {
+        ...r,
+        status: "pending",
+        next_attempt_at: now,
+        last_error: null,
+      });
+      count += 1;
+    }
+    return count;
+  }
+
+  /**
    * Run one sync pass.
    *
    * Safe to call concurrently: the lock and the lease together make a
@@ -104,6 +127,11 @@ export class SyncEngine {
   private async pass(): Promise<SyncPassResult> {
     const { db } = this.opts;
     const out: SyncPassResult = { ...EMPTY };
+
+    // Recovery from blocked_auth on start if configured
+    if (this.opts.unblockAuthOnStart) {
+      await this.unblockAuth(this.now());
+    }
 
     // Step 2 — recovery. A crash or force-quit left work inflight; return it
     // to pending without spending an attempt.
@@ -223,6 +251,24 @@ export class SyncEngine {
     error?: string,
     extra?: { code?: string; retryAfterSec?: number; receivedAt?: string | null },
   ): Promise<void> {
+    // Guard against stale overwrites from expired leases (N4)
+    const current = await getDelivery(this.opts.db, record.event_id);
+    if (current) {
+      if (current.status === "acknowledged") {
+        return;
+      }
+      if (current.lease_owner !== null && current.lease_owner !== this.opts.owner) {
+        return;
+      }
+      if (
+        record.lease_expires_at !== null &&
+        record.lease_expires_at < this.now() &&
+        current.status !== "inflight"
+      ) {
+        return;
+      }
+    }
+
     const { record: next, shouldRetry } = transition({
       record,
       response,
