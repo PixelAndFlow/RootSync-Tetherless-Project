@@ -3,12 +3,12 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { randomUUID } from "node:crypto";
-import { createApp } from "../src/app.ts";
-import { loadConfig } from "../src/config.ts";
-import { ContentRegistry } from "../src/content.ts";
-import { MemoryStore } from "../src/memory-store.ts";
-import { createStaffAccount } from "../src/admin.ts";
-import { ApiStaffAdminGateway } from "../../../src/services/staff/ApiStaffAdminGateway";
+import { createApp } from "../../packages/server/src/app.ts";
+import { loadConfig } from "../../packages/server/src/config.ts";
+import { ContentRegistry } from "../../packages/server/src/content.ts";
+import { MemoryStore } from "../../packages/server/src/memory-store.ts";
+import { createStaffAccount } from "../../packages/server/src/admin.ts";
+import { ApiStaffAdminGateway } from "../../src/services/staff/ApiStaffAdminGateway";
 
 const store = new MemoryStore();
 let server: Server;
