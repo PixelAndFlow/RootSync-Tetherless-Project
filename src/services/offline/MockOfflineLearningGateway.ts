@@ -10,7 +10,11 @@ import type {
   StartSessionInput,
   SyncSummary,
 } from "../../types/learning";
-import type { OfflineLearningGateway } from "./OfflineLearningGateway";
+import type { LearnerProfile, OfflineLearningGateway } from "./OfflineLearningGateway";
+import { setupValidation } from "../setup/LearnerSetupGateway";
+import { ApiError } from "../api/ApiError";
+
+export const DEMO_SETUP_CODE = "DEMO-2026";
 
 const defaultProgress = (learnerId: string, moduleId: string): ModuleProgress => ({
   learnerId,
@@ -29,6 +33,29 @@ export class MockOfflineLearningGateway implements OfflineLearningGateway {
   private nextSaveFailureReason: string | null = null;
   private nextSyncFailureReason: string | null = null;
   private nextSyncRejectionReason: string | null = null;
+  private profile: LearnerProfile | null = null;
+  private readonly learnerId = crypto.randomUUID();
+  private readonly deviceId = crypto.randomUUID();
+
+  /** Repeatable synthetic demo only. Does not redeem server codes or store tokens. */
+  async setupDevice(input: { setupCode: string; username: string }): Promise<LearnerProfile> {
+    const errors = setupValidation(input);
+    if (errors.username) throw new ApiError("USERNAME_INVALID", 422);
+    if (input.setupCode.trim().toUpperCase() !== DEMO_SETUP_CODE) throw new ApiError("SETUP_CODE_INVALID", 422);
+    this.profile = { learnerId: this.learnerId, deviceId: this.deviceId, username: input.username.trim(), learnerCode: "DEMO-001", cohortName: "Frontend demo cohort" };
+    return this.copy(this.profile);
+  }
+
+  async getLearnerProfile(): Promise<LearnerProfile | null> {
+    return this.profile ? this.copy(this.profile) : null;
+  }
+
+  async abandonAttempt(input: { attemptId: string; moduleId: string; reason: "restart" | "quit" | "replaced" }): Promise<void> {
+    const record = this.records.get(this.key(this.profile?.learnerId ?? this.learnerId, input.moduleId));
+    if (!record) return;
+    const attempt = record.attempts.find((candidate) => candidate.id === input.attemptId);
+    if (attempt && attempt.status === "in_progress") this.queueLocalEvent();
+  }
 
   async startSession(input: StartSessionInput): Promise<SessionRecord> {
     const session = {

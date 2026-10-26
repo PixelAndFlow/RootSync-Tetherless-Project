@@ -1,7 +1,7 @@
 import { FormEvent, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { useLearnerSetupGateway } from "../../app/providers/GatewayProvider";
+import { useOfflineLearningGateway, useOfflineLearningGatewayReady } from "../../app/providers/GatewayProvider";
 import { setupValidation } from "../../services/setup/LearnerSetupGateway";
 import { ApiErrorNotice } from "../../components/common/ApiErrorNotice";
 
@@ -17,7 +17,8 @@ function MissionReadyIcon() {
 export function LearnerSetupScreen() {
   const navigate = useNavigate();
   const { profile, acceptDemoSetup } = useLearnerProfile();
-  const gateway = useLearnerSetupGateway();
+  const gateway = useOfflineLearningGateway();
+  const gatewayReady = useOfflineLearningGatewayReady();
   const [setupCode, setSetupCode] = useState("");
   const [username, setUsername] = useState(profile?.username ?? "");
   const [busy, setBusy] = useState(false);
@@ -28,7 +29,7 @@ export function LearnerSetupScreen() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (submitting.current || !gateway || profile) return;
+    if (submitting.current || !gateway.setupDevice || profile) return;
     const validation = setupValidation({ setupCode, username });
     setFieldErrors(validation);
     if (validation.setupCode || validation.username) return;
@@ -37,6 +38,7 @@ export function LearnerSetupScreen() {
     setError(null);
     setStorageError(false);
     try {
+      if (gatewayReady) await gatewayReady;
       const result = await gateway.setupDevice({ setupCode, username });
       try { acceptDemoSetup(result); }
       catch { setStorageError(true); return; }
@@ -62,8 +64,8 @@ export function LearnerSetupScreen() {
           <p id="username-help" className="text-sm" role={fieldErrors.username ? "alert" : undefined}>{fieldErrors.username ?? "2–24 letters, numbers, spaces, dots, dashes or underscores."}</p>
           {error !== null && <ApiErrorNotice error={error} />}
           {storageError && <p role="alert">The demo profile could not be saved on this device. Check browser storage permissions and try again. Existing data has not been cleared.</p>}
-          {!gateway && <p role="alert">Device setup is not connected. The team must supply the setup adapter.</p>}
-          <button className="ui-action mt-2" disabled={busy || !gateway} type="submit">{busy ? "Setting up…" : "Continue to missions"}</button>
+          {!gateway.setupDevice && <p role="alert">Device setup is not connected. The team must supply the setup adapter.</p>}
+          <button className="ui-action mt-2" disabled={busy || !gateway.setupDevice} type="submit">{busy ? "Setting up…" : "Continue to missions"}</button>
         </form>}
       </div>
       <aside className="onboarding-readiness border-t p-6 sm:p-10 md:border-l md:border-t-0">

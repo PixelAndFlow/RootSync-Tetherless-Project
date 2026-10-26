@@ -6,7 +6,10 @@ import { GatewayProvider } from "./app/providers/GatewayProvider";
 import { LearnerProfileProvider } from "./app/providers/LearnerProfileProvider";
 import { StaffSessionProvider } from "./app/providers/StaffSessionProvider";
 import { SyncStatusProvider } from "./app/providers/SyncStatusProvider";
+import { appGateways, startLiveHeartbeat } from "./services/gateways";
 import "./styles.css";
+
+startLiveHeartbeat(appGateways);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode><GatewayProvider><StaffSessionProvider><LearnerProfileProvider><SyncStatusProvider><RouterProvider router={router} /></SyncStatusProvider></LearnerProfileProvider></StaffSessionProvider></GatewayProvider></StrictMode>,
