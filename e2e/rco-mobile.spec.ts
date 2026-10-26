@@ -250,13 +250,16 @@ test.describe("RCO representative mobile profiles", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("exposes install metadata without claiming offline caching is active", async ({ page }) => {
+  test("exposes install metadata and caches the app shell for offline launch", async ({ page }) => {
     await page.goto("/#/learner");
     await expect(page.locator("link[rel='manifest']")).toHaveAttribute("href", "/manifest.webmanifest");
     const manifestResponse = await page.request.get("/manifest.webmanifest");
     expect(manifestResponse.ok()).toBe(true);
     const manifest = await manifestResponse.json();
     expect(manifest).toMatchObject({ name: "Tetherless - RCO Cyber Learning", display: "standalone", start_url: "/#/learner" });
-    expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(1);
+    const shellCaches = await page.evaluate(async () => (await caches.keys()).filter((key) => key.startsWith("tetherless-shell-")));
+    expect(shellCaches).toHaveLength(1);
   });
 });
