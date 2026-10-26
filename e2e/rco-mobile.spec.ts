@@ -65,10 +65,10 @@ test.describe("RCO representative mobile profiles", () => {
 
   test("sorts and filters trainer fixture learners without changing their data", async ({ page }) => {
     await page.goto("/#/trainer");
-    await page.getByLabel("Sort learners").selectOption("mastery_desc");
+    await page.getByLabel("Sort Students").selectOption("mastery_desc");
     await expect(page.locator("tbody tr").first()).toContainText("Sam Ortiz");
-    await page.getByLabel("Search learners").fill("nobody");
-    await expect(page.getByText("No fixture learners match this filter.")).toBeVisible();
+    await page.getByLabel("Search Students").fill("nobody");
+    await expect(page.getByText("No fixture Students match this filter.")).toBeVisible();
   });
 
   test("returns a friendly route fallback for an unknown link", async ({ page }) => {
@@ -144,9 +144,9 @@ test.describe("RCO representative mobile profiles", () => {
     await lightFlagAction.click();
     await expect(page.getByRole("button", { name: "Flagged for review" })).toHaveAttribute("aria-pressed", "true");
     await page.locator("main aside").first().getByRole("button", { name: "Question 4" }).click();
-    const neutralAnswer = page.locator("article").first().getByRole("button", { name: /Good intentions/ });
-    await expect(neutralAnswer).toHaveCSS("background-color", "rgb(255, 255, 255)");
-    await expect(neutralAnswer).toHaveCSS("color", "rgb(30, 30, 30)");
+    const answer = page.locator("article").first().getByRole("button", { name: /Good intentions/ });
+    await expect(answer).toHaveClass(/kahoot-answer/);
+    await expect(answer).toHaveCSS("color", "rgb(255, 255, 255)");
     const lightMissionResults = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(lightMissionResults.violations).toEqual([]);
 

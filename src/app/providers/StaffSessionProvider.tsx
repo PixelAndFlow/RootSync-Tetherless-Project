@@ -19,7 +19,7 @@ export function StaffSessionProvider({ children }: { children: React.ReactNode }
     session,
     signIn: async (input) => { const next = await gateway?.signIn(input); if (!next) throw new Error("Staff sign-in is not connected."); setSession(next); return next; },
     changePassword: async (input) => { const next = await gateway?.changePassword(input); if (!next) throw new Error("Staff password change is not connected."); setSession(next); return next; },
-    signOut: () => setSession(null),
+    signOut: () => { gateway?.signOut(); setSession(null); },
   }), [gateway, session]);
   return <StaffSessionContext.Provider value={value}>{children}</StaffSessionContext.Provider>;
 }

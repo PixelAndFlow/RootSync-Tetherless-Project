@@ -6,8 +6,15 @@ import { ErrorState, LoadingState } from "../../components/common/PageState";
 import { moduleLibrary } from "../../content/modules";
 import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import type { TrainerModuleDetail } from "../../types/trainer";
+import { useTrainerReportsGateway } from "../../app/providers/GatewayProvider";
+import { LiveTrainerLearnerDetail } from "./LiveTrainerReports";
 
 export function TrainerLearnerDetailScreen() {
+  const reports = useTrainerReportsGateway();
+  return reports ? <LiveTrainerLearnerDetail reports={reports} /> : <MockTrainerLearnerDetail />;
+}
+
+function MockTrainerLearnerDetail() {
   const { learnerId } = useParams();
   const trainerDataGateway = useTrainerDataGateway();
   const module = moduleLibrary[0];

@@ -5,10 +5,17 @@ import { MetricCard } from "../../components/trainer/MetricCard";
 import { ErrorState, LoadingState } from "../../components/common/PageState";
 import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import type { TrainerLearnerSummary } from "../../types/trainer";
+import { useTrainerReportsGateway } from "../../app/providers/GatewayProvider";
+import { LiveTrainerDashboard } from "./LiveTrainerReports";
 
 type SortOption = "name" | "mastery_desc" | "initial_desc" | "sync";
 
 export function TrainerDashboardScreen() {
+  const reports = useTrainerReportsGateway();
+  return reports ? <LiveTrainerDashboard reports={reports} /> : <MockTrainerDashboard />;
+}
+
+function MockTrainerDashboard() {
   const trainerDataGateway = useTrainerDataGateway();
   const [learners, setLearners] = useState<TrainerLearnerSummary[]>([]);
   const [query, setQuery] = useState("");

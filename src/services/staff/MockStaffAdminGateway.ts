@@ -26,6 +26,7 @@ const accounts: StaffAccountSummary[] = [
  * Accounts: demo / demo-password-123 (SuperAdmin), admin / demo-password-123, trainer / demo-password-123.
  */
 export class MockStaffAdminGateway implements StaffAdminGateway {
+  signOut(): void { /* No session token in demo mode. */ }
   async signIn(input: { username: string; password: string }): Promise<StaffSession> {
     if (input.password !== "demo-password-123") throw new ApiError("UNAUTHORIZED", 401);
     const roleByUsername: Record<string, StaffRole> = { demo: "superadmin", admin: "admin", trainer: "trainer" };

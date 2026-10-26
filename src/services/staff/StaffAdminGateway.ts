@@ -3,6 +3,7 @@ import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccoun
 /** Frontend boundary for Marc's StaffAdminGateway. The mock is intentional until API wiring is approved. */
 export interface StaffAdminGateway {
   signIn(input: { username: string; password: string }): Promise<StaffSession>;
+  signOut(): void;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession>;
   listCohorts(): Promise<Cohort[]>;
   listLearnerRecords(input: { cohortId?: string }): Promise<LearnerRecord[]>;

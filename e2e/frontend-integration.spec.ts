@@ -22,7 +22,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.getByLabel("Setup code").fill("DEMO-2026");
     await page.getByLabel("Username").fill("Test Learner");
     await page.getByRole("button", { name: "Continue to missions" }).click();
-    await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
+    await page.getByRole("link", { name: "Student profile and settings", exact: true }).click();
     await expect(page.getByText("DEMO-001", { exact: true })).toBeVisible();
     await expect(page.getByText("Frontend demo cohort", { exact: true })).toBeVisible();
     await page.getByText("Display preferences", { exact: true }).click();
