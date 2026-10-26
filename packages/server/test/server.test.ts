@@ -342,7 +342,7 @@ test("cohort report matches the hand-worked dataset and adds status labels", asy
   const r = await call("GET", `/v1/staff/cohorts/${s.cohort}/report?module_id=pr-bootcamp-security-tools`, undefined, s.trainer);
   assert.equal(r.status, 200);
   assert.equal(r.body.thresholds.pass_pct, 70);
-  assert.equal(r.body.thresholds.struggling_pct, 60);
+  assert.equal(r.body.thresholds.struggling_pct, 50);
   assert.deepEqual(r.body.module_ids, ["pr-bootcamp-security-tools"]);
   for (const l of LEARNERS) {
     const row = findRow(r.body.learners, l.key) as unknown as {
@@ -512,7 +512,7 @@ test("disabling an account ends its sessions; enabling restores sign-in", async 
 });
 
 test("thresholds are server settings: read by staff, changed only by the Superadmin", async () => {
-  assert.deepEqual((await call("GET", "/v1/staff/settings/thresholds", undefined, s.trainer)).body, { pass_pct: 70, struggling_pct: 60, weak_topic_pct: 60, weak_topic_min_answers: 2 });
+  assert.deepEqual((await call("GET", "/v1/staff/settings/thresholds", undefined, s.trainer)).body, { pass_pct: 70, struggling_pct: 50, weak_topic_pct: 60, weak_topic_min_answers: 2 });
   assert.equal((await call("PUT", "/v1/staff/settings/thresholds", { pass_pct: 75 }, s.trainer)).status, 403);
   assert.equal((await call("PUT", "/v1/staff/settings/thresholds", { pass_pct: 50, struggling_pct: 60 }, s.marc)).status, 422);
   assert.equal((await call("PUT", "/v1/staff/settings/thresholds", { pass_pct: 101 }, s.marc)).status, 422);

@@ -18,9 +18,11 @@
  *    shown to trainers (stops "restart after seeing the answers").
  *  - Within one attempt only the first answer to a question counts.
  *  - Review attempts change nothing.
- *  - Pass: best score ≥ 70%. Struggling: initial < 60%, or (no completed full
- *    attempt yet) first-try accuracy < 60% after answering at least half the
- *    questions, or any weak topic (< 60% with at least 2 answers).
+ *  - Pass: best score ≥ 70%. Struggling: initial < 50%, or (no completed full
+ *    attempt yet) first-try accuracy < 50% after answering at least half the
+ *    questions, or any weak topic (< 60% with at least 2 answers). Between
+ *    struggling and passing (50–69%, no completed attempt reaching 70% yet)
+ *    is "not yet passing" (D-10, 2026-10-25).
  */
 
 import type { StoredEvent, AttemptKind } from "../../contract/src/index.ts";
@@ -36,7 +38,7 @@ export interface Thresholds {
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
   pass_pct: 70,
-  struggling_pct: 60,
+  struggling_pct: 50,
   weak_topic_pct: 60,
   weak_topic_min_answers: 2,
 };

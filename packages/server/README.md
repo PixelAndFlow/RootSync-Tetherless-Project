@@ -51,7 +51,7 @@ Backups: `scripts/backup.sh` (run daily from cron) and `scripts/restore.sh <file
 | `PORT` | 8080 | Listening port |
 | `CONTENT_DIR` | `content/modules` | Seed modules, published only when the database has none. New versions go through `POST /v1/staff/modules` |
 | `CORS_ORIGINS` | none | Browser origins allowed to call the API |
-| `PASS_PCT` / `STRUGGLING_PCT` | 70 / 60 | Starting thresholds; staff with `settings.manage` can change them |
+| `PASS_PCT` / `STRUGGLING_PCT` | 70 / 50 | Starting thresholds; staff with `settings.manage` can change them |
 | `WEAK_TOPIC_PCT` | 60 | Topic accuracy below this is weak |
 | `IDLE_LIMIT_MINUTES` | 30 | Active time stops after this long without interaction |
 | `STAFF_SESSION_HOURS` | 12 | Staff sign-in lifetime (`TRAINER_SESSION_HOURS` still read) |

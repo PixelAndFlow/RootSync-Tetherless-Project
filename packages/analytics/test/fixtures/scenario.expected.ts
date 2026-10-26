@@ -1,5 +1,5 @@
 /**
- * Hand-worked expected results for scenario.ts (thresholds: pass 70, struggling 60,
+ * Hand-worked expected results for scenario.ts (thresholds: pass 70, struggling 50,
  * weak topic < 60% with at least 2 answers; idle limit 30 min; max silence 90 s).
  *
  * Topics in pr-bootcamp-security-tools v2:
@@ -35,7 +35,8 @@ export const EXPECTED = {
     // ever right: 1,3,4,5,7,10,12,15 (attempt 2) + 2,6,8,9 (practice) = 12; review of q11 doesn't count
     mastery: { correct: 12, total: 15, pct: 80 },
     passed: false,
-    struggling_reasons: ["initial_below_threshold", "weak_topic:edr-xdr", "weak_topic:password-managers", "weak_topic:backups"],
+    // initial 53.3% is above the 50% struggling threshold (D-10, 2026-10-25) but below passing: not yet passing, not struggling-by-score
+    struggling_reasons: ["weak_topic:edr-xdr", "weak_topic:password-managers", "weak_topic:backups"],
     abandoned_before_first_completion: 1,
     completion: "completed",
     // firewalls: A1 q01✓ q02✗, A2 q01✓ q02✗, P q02✓ = 3/5 (60%: not weak)
