@@ -6,8 +6,8 @@ import { ApiError } from "../../services/api/ApiError";
 import type { ReportLearner, TrainerReportsGateway } from "../../services/trainer/ApiTrainerReportsGateway";
 import { LiveTrainerDashboard, LiveTrainerLearnerDetail } from "./LiveTrainerReports";
 
-const state = vi.hoisted(() => ({ staff: { listCohorts: vi.fn() } }));
-vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => ({ session: { role: "trainer" } }) }));
+const state = vi.hoisted(() => ({ staff: { listCohorts: vi.fn() }, session: { session: { role: "trainer" } } }));
+vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => state.session }));
 vi.mock("../../app/providers/GatewayProvider", () => ({ useStaffAdminGateway: () => state.staff }));
 const learner: ReportLearner = { learnerId: "learner-1", learnerCode: "TEST-1", displayName: "Test Student", username: null, cohortId: "cohort-1", activeEngagementSeconds: 62, lastReceivedAt: null, acceptedEventCount: 2, rejectedEventCount: 0, mayHaveUnsyncedWork: true, modules: [{ moduleId: "module-1", moduleTitle: "Safety", contentVersion: 1, completionStatus: "in_progress", performanceStatus: "not_yet_passing", initialScorePercent: null, bestScorePercent: null, latestScorePercent: null, currentMasteryPercent: 25, questionsAnswered: 1, questionsTotal: 4 }] };
 const cohorts = [{ cohort_id: "cohort-1", name: "First cohort" }, { cohort_id: "cohort-2", name: "Second cohort" }];
