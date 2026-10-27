@@ -1,0 +1,93 @@
+name: Integration checks
+
+# The one CI run the integration branch needs (Tetherless_Contract_Drift_
+# and_Naming_Proposal_v1.00_2026-10-25.md §2.3, point 4): the app's checks,
+# the server's tests and type check, and the contract checks, in one place.
+#
+# The frontend job here is deliberately light (install/build/unit-test
+# only) — the full Playwright/visual/performance-budget suite is already
+# owned by frontend-quality.yml, which runs on every pull_request
+# regardless of target branch. Duplicating that heavier suite here would
+# just double the CI time for no new coverage.
+#
+# The backend job runs the server's tests against both store backends —
+# MemoryStore (via scripts/test-all.sh, which also covers packages/content
+# and packages/analytics) and a real Postgres service container — because
+# "no behavior change" on either backend was the condition for step 2's
+# satisfies additions, and nothing before this enforced that on every PR.
+
+on:
+  push:
+    branches: [integration]
+  pull_request:
+    branches: [integration]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      # DDIL's node:test suite lives outside vitest's include paths, so it needs its own step.
+      - run: npm run test:ddil
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/server/package-lock.json
+      - name: Install the server's one runtime dependency (pg)
+        working-directory: packages/server
+        run: npm ci
+      - name: Server type check
+        working-directory: packages/server
+        run: npm run typecheck
+      - name: contract + content + analytics + server tests (MemoryStore), plus the game build
+        run: sh scripts/test-all.sh
+      - name: Server tests again against real Postgres
+        working-directory: packages/server
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/contract/package-lock.json
+      - run: npm ci
+        working-directory: packages/contract
+      - name: Contract type check
+        working-directory: packages/contract
+        run: npm run typecheck
+      - name: Contract validation tests
+        working-directory: packages/contract
+        run: npm test

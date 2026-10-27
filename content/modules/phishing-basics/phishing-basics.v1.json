@@ -1,0 +1,1397 @@
+{
+  "schema_version": 1,
+  "module_id": "phishing-basics",
+  "content_version": 1,
+  "title": {
+    "en": "Phishing Basics",
+    "es": "Conceptos básicos de phishing"
+  },
+  "topics": [
+    {
+      "topic_id": "what-is-phishing",
+      "name": {
+        "en": "What phishing is",
+        "es": "Qué es el phishing"
+      }
+    },
+    {
+      "topic_id": "red-flags",
+      "name": {
+        "en": "Red flags",
+        "es": "Señales de alerta"
+      }
+    },
+    {
+      "topic_id": "links-attachments",
+      "name": {
+        "en": "Links and attachments",
+        "es": "Enlaces y archivos adjuntos"
+      }
+    },
+    {
+      "topic_id": "texts-calls",
+      "name": {
+        "en": "Texts and calls",
+        "es": "Mensajes de texto y llamadas"
+      }
+    },
+    {
+      "topic_id": "targeted-attacks",
+      "name": {
+        "en": "Targeted attacks",
+        "es": "Ataques dirigidos"
+      }
+    },
+    {
+      "topic_id": "respond-report",
+      "name": {
+        "en": "Respond and report",
+        "es": "Responder y reportar"
+      }
+    }
+  ],
+  "questions": [
+    {
+      "question_id": "phishing-basics-q01",
+      "type": "multiple_choice",
+      "topic": "what-is-phishing",
+      "term": {
+        "en": "Phishing",
+        "es": "Phishing"
+      },
+      "prompt": {
+        "en": "Attackers trick you into revealing passwords with fake messages. This is…",
+        "es": "Los atacantes te engañan con mensajes falsos para que reveles tus contraseñas. Esto es…"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "A firewall",
+            "es": "Un firewall"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Phishing",
+            "es": "Phishing"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "A backup",
+            "es": "Una copia de seguridad"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Encryption",
+            "es": "Cifrado"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "Phishing uses fake messages that look real to steal passwords, money or personal information.",
+        "es": "El phishing usa mensajes falsos que parecen reales para robar contraseñas, dinero o información personal."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q02",
+      "type": "multiple_choice",
+      "topic": "what-is-phishing",
+      "term": {
+        "en": "Social engineering",
+        "es": "Ingeniería social"
+      },
+      "prompt": {
+        "en": "Phishing is a type of social engineering. What does social engineering attack?",
+        "es": "El phishing es un tipo de ingeniería social. ¿Qué ataca la ingeniería social?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "People's trust and emotions",
+            "es": "La confianza y las emociones de las personas"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Computer fans",
+            "es": "Los ventiladores de la computadora"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Network cables",
+            "es": "Los cables de red"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Screen brightness",
+            "es": "El brillo de la pantalla"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "Social engineering tricks people instead of breaking technology, using fear, curiosity, urgency or trust.",
+        "es": "La ingeniería social engaña a las personas en lugar de romper la tecnología, usando miedo, curiosidad, urgencia o confianza."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q03",
+      "type": "multiple_choice",
+      "topic": "red-flags",
+      "term": {
+        "en": "Urgency",
+        "es": "Urgencia"
+      },
+      "prompt": {
+        "en": "An email says: \"Your account will be deleted in 1 hour!\" Which red flag is this?",
+        "es": "Un correo dice: \"¡Tu cuenta será eliminada en 1 hora!\" ¿Qué señal de alerta es esta?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "A friendly greeting",
+            "es": "Un saludo amistoso"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Correct spelling",
+            "es": "Buena ortografía"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Urgency and pressure",
+            "es": "Urgencia y presión"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "A long signature",
+            "es": "Una firma larga"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "explanation": {
+        "en": "Attackers rush you so you act before you think; real services rarely give one-hour deadlines.",
+        "es": "Los atacantes te apuran para que actúes sin pensar; los servicios reales casi nunca dan plazos de una hora."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q04",
+      "type": "multiple_choice",
+      "topic": "red-flags",
+      "term": {
+        "en": "Sender address",
+        "es": "Dirección del remitente"
+      },
+      "prompt": {
+        "en": "An email claims to be from your bank but comes from bank-help@secure-login-alerts.co. What's wrong?",
+        "es": "Un correo dice ser de tu banco pero viene de bank-help@secure-login-alerts.co. ¿Qué está mal?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "It mentions your bank",
+            "es": "Menciona a tu banco"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "The address isn't your bank's real domain",
+            "es": "La dirección no es el dominio real de tu banco"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "It arrived in the morning",
+            "es": "Llegó en la mañana"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "It has a subject line",
+            "es": "Tiene un asunto"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "Anyone can type a bank's name; the part after the @ shows who really sent the message.",
+        "es": "Cualquiera puede escribir el nombre de un banco; la parte después de la @ muestra quién envió realmente el mensaje."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q05",
+      "type": "multiple_choice",
+      "topic": "red-flags",
+      "term": {
+        "en": "Too good to be true",
+        "es": "Demasiado bueno para ser verdad"
+      },
+      "prompt": {
+        "en": "A message says you won a free phone and only need to pay shipping. This is most likely…",
+        "es": "Un mensaje dice que ganaste un teléfono gratis y solo tienes que pagar el envío. Lo más probable es que sea…"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "A real prize",
+            "es": "Un premio real"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "A security update",
+            "es": "Una actualización de seguridad"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "A backup notice",
+            "es": "Un aviso de copia de seguridad"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "A scam",
+            "es": "Una estafa"
+          }
+        }
+      ],
+      "correct_choice_id": "d",
+      "explanation": {
+        "en": "Prizes you never entered for are a classic hook; the \"shipping fee\" is how they steal your card details.",
+        "es": "Los premios por concursos en los que nunca participaste son un anzuelo clásico; el \"costo de envío\" es la forma de robar los datos de tu tarjeta."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q06",
+      "type": "multiple_choice",
+      "topic": "links-attachments",
+      "term": {
+        "en": "Check the link",
+        "es": "Revisa el enlace"
+      },
+      "prompt": {
+        "en": "Before you tap a link in a message, what should you do?",
+        "es": "Antes de tocar un enlace en un mensaje, ¿qué debes hacer?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Check where it really goes by holding or hovering over it",
+            "es": "Revisar adónde lleva realmente, manteniéndolo presionado o pasando el cursor"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Tap it quickly before it expires",
+            "es": "Tocarlo rápido antes de que expire"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Forward it to friends",
+            "es": "Reenviarlo a tus amigos"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Reply and ask if it's real",
+            "es": "Responder y preguntar si es real"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "The text of a link can say anything; the real address shows where it actually takes you.",
+        "es": "El texto de un enlace puede decir cualquier cosa; la dirección real muestra adónde te lleva de verdad."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q07",
+      "type": "multiple_choice",
+      "topic": "links-attachments",
+      "term": {
+        "en": "Lookalike address",
+        "es": "Dirección imitada"
+      },
+      "prompt": {
+        "en": "Your school's site is portal.myschool.edu. Which address is a fake lookalike?",
+        "es": "El sitio de tu escuela es portal.myschool.edu. ¿Cuál dirección es una imitación falsa?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "portal.myschool.edu/login",
+            "es": "portal.myschool.edu/login"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "portal.myschool.edu/grades",
+            "es": "portal.myschool.edu/grades"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "portal.myschoo1.edu",
+            "es": "portal.myschoo1.edu"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "myschool.edu",
+            "es": "myschool.edu"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "explanation": {
+        "en": "Attackers swap letters for lookalikes, like the number 1 for the letter l, so read addresses carefully.",
+        "es": "Los atacantes cambian letras por otras parecidas, como el número 1 por la letra l, así que lee las direcciones con cuidado."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q08",
+      "type": "multiple_choice",
+      "topic": "links-attachments",
+      "term": {
+        "en": "Risky attachments",
+        "es": "Adjuntos riesgosos"
+      },
+      "prompt": {
+        "en": "You get an unexpected attachment named Invoice.pdf.exe. What should you do?",
+        "es": "Recibes un adjunto inesperado llamado Invoice.pdf.exe. ¿Qué debes hacer?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Open it to see the invoice",
+            "es": "Abrirlo para ver la factura"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Don't open it, and report it",
+            "es": "No abrirlo y reportarlo"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Rename it to .pdf",
+            "es": "Cambiarle el nombre a .pdf"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Send it to classmates",
+            "es": "Enviarlo a tus compañeros"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "The real ending is .exe, a program that could install malware; the .pdf part is a disguise.",
+        "es": "La terminación real es .exe, un programa que podría instalar malware; la parte .pdf es un disfraz."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q09",
+      "type": "multiple_choice",
+      "topic": "texts-calls",
+      "term": {
+        "en": "Smishing",
+        "es": "Smishing"
+      },
+      "prompt": {
+        "en": "Phishing by text message is called…",
+        "es": "El phishing por mensaje de texto se llama…"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Hashing",
+            "es": "Hashing"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Streaming",
+            "es": "Streaming"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Spamming",
+            "es": "Spamming"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Smishing",
+            "es": "Smishing"
+          }
+        }
+      ],
+      "correct_choice_id": "d",
+      "explanation": {
+        "en": "Smishing is SMS phishing: fake texts about packages, banks or prizes with a link to tap.",
+        "es": "El smishing es phishing por SMS: textos falsos sobre paquetes, bancos o premios con un enlace para tocar."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q10",
+      "type": "multiple_choice",
+      "topic": "texts-calls",
+      "term": {
+        "en": "Vishing",
+        "es": "Vishing"
+      },
+      "prompt": {
+        "en": "A caller says they're from tech support and need your password to fix your account. This is…",
+        "es": "Alguien llama diciendo que es de soporte técnico y necesita tu contraseña para arreglar tu cuenta. Esto es…"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Vishing (voice phishing)",
+            "es": "Vishing (phishing por voz)"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Normal tech support",
+            "es": "Soporte técnico normal"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "A backup check",
+            "es": "Una revisión de copias de seguridad"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "A firewall test",
+            "es": "Una prueba del firewall"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "Real support teams never need your password; asking for it by phone is voice phishing.",
+        "es": "Los equipos de soporte reales nunca necesitan tu contraseña; pedirla por teléfono es phishing por voz."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q11",
+      "type": "multiple_choice",
+      "topic": "texts-calls",
+      "term": {
+        "en": "Verification codes",
+        "es": "Códigos de verificación"
+      },
+      "prompt": {
+        "en": "Someone texts asking for the 6-digit code you just received. What do you do?",
+        "es": "Alguien te escribe pidiendo el código de 6 dígitos que acabas de recibir. ¿Qué haces?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Send it quickly",
+            "es": "Enviarlo rápido"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Send only half of it",
+            "es": "Enviar solo la mitad"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Never share it",
+            "es": "Nunca compartirlo"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Post it so you don't forget it",
+            "es": "Publicarlo para no olvidarlo"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "explanation": {
+        "en": "That code is your second factor; sharing it lets the attacker log in as you.",
+        "es": "Ese código es tu segundo factor; compartirlo permite que el atacante entre como si fueras tú."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q12",
+      "type": "multiple_choice",
+      "topic": "targeted-attacks",
+      "term": {
+        "en": "Spear phishing",
+        "es": "Spear phishing"
+      },
+      "prompt": {
+        "en": "A phishing email that uses your name, your school and your teacher's name is called…",
+        "es": "Un correo de phishing que usa tu nombre, tu escuela y el nombre de tu maestra se llama…"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "A newsletter",
+            "es": "Un boletín"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Spear phishing",
+            "es": "Spear phishing"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Antivirus",
+            "es": "Antivirus"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Mass spam",
+            "es": "Spam masivo"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "Spear phishing is aimed at one person or group, using real details to seem trustworthy.",
+        "es": "El spear phishing va dirigido a una persona o grupo, usando datos reales para parecer confiable."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q13",
+      "type": "multiple_choice",
+      "topic": "targeted-attacks",
+      "term": {
+        "en": "Impersonation",
+        "es": "Suplantación"
+      },
+      "prompt": {
+        "en": "Your \"principal\" emails asking you to buy gift cards right away and keep it secret. What do you do?",
+        "es": "Tu \"director\" te escribe pidiendo que compres tarjetas de regalo de inmediato y que lo mantengas en secreto. ¿Qué haces?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Check with the principal in person or by a known phone number",
+            "es": "Confirmar con el director en persona o por un número conocido"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Buy the gift cards",
+            "es": "Comprar las tarjetas de regalo"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Reply with your card number",
+            "es": "Responder con el número de tu tarjeta"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Forward it to everyone",
+            "es": "Reenviarlo a todos"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "Urgency, secrecy and gift cards together are a common impersonation scam; verify through a channel you already trust.",
+        "es": "La urgencia, el secreto y las tarjetas de regalo juntos son una estafa de suplantación común; verifica por un medio en el que ya confíes."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q14",
+      "type": "multiple_choice",
+      "topic": "respond-report",
+      "term": {
+        "en": "Report it",
+        "es": "Repórtalo"
+      },
+      "prompt": {
+        "en": "You spot a phishing email at school. What's the best next step?",
+        "es": "Descubres un correo de phishing en la escuela. ¿Cuál es el mejor siguiente paso?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Reply to the sender",
+            "es": "Responderle al remitente"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Click the link to see what happens",
+            "es": "Tocar el enlace para ver qué pasa"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Ignore it and tell no one",
+            "es": "Ignorarlo y no decirle a nadie"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Report it to IT or your teacher, then delete it",
+            "es": "Reportarlo a IT o a tu maestra y luego borrarlo"
+          }
+        }
+      ],
+      "correct_choice_id": "d",
+      "explanation": {
+        "en": "Reporting helps IT block the attack for everyone else who got the same message.",
+        "es": "Reportarlo ayuda a IT a bloquear el ataque para todas las demás personas que recibieron el mismo mensaje."
+      },
+      "time_limit_sec": 30
+    },
+    {
+      "question_id": "phishing-basics-q15",
+      "type": "multiple_choice",
+      "topic": "respond-report",
+      "term": {
+        "en": "If you clicked",
+        "es": "Si hiciste clic"
+      },
+      "prompt": {
+        "en": "You clicked a phishing link and typed your password. What should you do first?",
+        "es": "Tocaste un enlace de phishing y escribiste tu contraseña. ¿Qué debes hacer primero?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Wait and see what happens",
+            "es": "Esperar a ver qué pasa"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Change that password right away and tell IT",
+            "es": "Cambiar esa contraseña de inmediato y avisar a IT"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Delete your browser",
+            "es": "Borrar tu navegador"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Turn off your phone for a week",
+            "es": "Apagar tu teléfono por una semana"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "Changing the password quickly locks the attacker out, and IT can check for any damage.",
+        "es": "Cambiar la contraseña rápido deja al atacante afuera, y IT puede revisar si hubo algún daño."
+      },
+      "time_limit_sec": 30
+    }
+  ],
+  "boss_missions": [
+    {
+      "mission_id": "phishing-basics-boss-giveaway",
+      "topic": "what-is-phishing",
+      "title": {
+        "en": "The giveaway",
+        "es": "El sorteo"
+      },
+      "scenario": {
+        "en": "A message on social media says you were picked for a gaming giveaway. To claim it, you have to log in through their link.",
+        "es": "Un mensaje en redes sociales dice que te escogieron en un sorteo de videojuegos. Para reclamarlo, tienes que iniciar sesión con su enlace."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-giveaway-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What is this most likely?",
+            "es": "¿Qué es esto, lo más probable?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "A lucky win",
+                "es": "Un golpe de suerte"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "A phishing attempt",
+                "es": "Un intento de phishing"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A game update",
+                "es": "Una actualización del juego"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A school announcement",
+                "es": "Un anuncio de la escuela"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "A surprise prize plus a login link is a common phishing setup.",
+            "es": "Un premio sorpresa más un enlace para iniciar sesión es una trampa de phishing común."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-giveaway-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What are they really after?",
+            "es": "¿Qué buscan realmente?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Your login details",
+                "es": "Tus datos de inicio de sesión"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Your favorite game",
+                "es": "Tu juego favorito"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Your screen time",
+                "es": "Tu tiempo de pantalla"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Your phone's color",
+                "es": "El color de tu teléfono"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Once they have your login, they can take over the account or use it to scam your friends.",
+            "es": "Cuando tienen tus datos, pueden robarte la cuenta o usarla para estafar a tus amistades."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "phishing-basics-boss-power-bill",
+      "topic": "red-flags",
+      "title": {
+        "en": "The power bill",
+        "es": "La factura de luz"
+      },
+      "scenario": {
+        "en": "An email from \"your power company\" says your service will be cut off today unless you pay now through a link.",
+        "es": "Un correo de \"tu compañía de luz\" dice que te cortarán el servicio hoy si no pagas ahora mediante un enlace."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-power-bill-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Which red flags do you see?",
+            "es": "¿Qué señales de alerta ves?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "A threat with a deadline, plus a payment link",
+                "es": "Una amenaza con fecha límite y un enlace de pago"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "It mentions electricity",
+                "es": "Menciona la electricidad"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "It has a logo",
+                "es": "Tiene un logo"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "None; this is normal",
+                "es": "Ninguna; esto es normal"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Threats, deadlines and pay-now links are pressure tactics, not how real bills work.",
+            "es": "Las amenazas, las fechas límite y los enlaces para pagar ya son tácticas de presión, no así funcionan las facturas reales."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-power-bill-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "How do you check if the bill is real?",
+            "es": "¿Cómo verificas si la factura es real?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Click the link and look carefully",
+                "es": "Tocar el enlace y mirar con cuidado"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Reply to the email and ask",
+                "es": "Responder el correo y preguntar"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Go to the company's official app or site yourself, or call the number on a past bill",
+                "es": "Entrar tú mismo a la app o el sitio oficial de la compañía, o llamar al número de una factura anterior"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Pay a small amount first",
+                "es": "Pagar una cantidad pequeña primero"
+              }
+            }
+          ],
+          "correct_choice_id": "c",
+          "explanation": {
+            "en": "Contact the company through a route you found yourself, never through the suspicious message.",
+            "es": "Comunícate con la compañía por un medio que encontraste tú, nunca por el mensaje sospechoso."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "phishing-basics-boss-shared-file",
+      "topic": "links-attachments",
+      "title": {
+        "en": "The shared file",
+        "es": "El archivo compartido"
+      },
+      "scenario": {
+        "en": "An email says a classmate shared Final_Grades.docm with you and tells you to enable macros to see it.",
+        "es": "Un correo dice que un compañero compartió Final_Grades.docm contigo y te pide activar las macros para verlo."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-shared-file-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What should make you stop?",
+            "es": "¿Qué debería hacerte detener?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "The file has a name",
+                "es": "El archivo tiene nombre"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "It came on a weekday",
+                "es": "Llegó un día de semana"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Grades are interesting",
+                "es": "Las notas son interesantes"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "An unexpected file is asking you to enable macros",
+                "es": "Un archivo inesperado te pide activar macros"
+              }
+            }
+          ],
+          "correct_choice_id": "d",
+          "explanation": {
+            "en": "Macros can run hidden code; an unexpected file that needs them is a common way to spread malware.",
+            "es": "Las macros pueden ejecutar código oculto; un archivo inesperado que las necesita es una forma común de propagar malware."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-shared-file-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "The link to open it goes to docs-share-login.net. What now?",
+            "es": "El enlace para abrirlo lleva a docs-share-login.net. ¿Y ahora qué?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Sign in to see the grades",
+                "es": "Iniciar sesión para ver las notas"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Don't sign in; ask the classmate through another channel",
+                "es": "No iniciar sesión; preguntarle al compañero por otro medio"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Try your password twice",
+                "es": "Probar tu contraseña dos veces"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Download it anyway",
+                "es": "Descargarlo de todos modos"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "That address isn't your school's or a real sharing service's; check with the sender another way.",
+            "es": "Esa dirección no es de tu escuela ni de un servicio real para compartir; confirma con quien lo envió por otro medio."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "phishing-basics-boss-package",
+      "topic": "texts-calls",
+      "title": {
+        "en": "The held package",
+        "es": "El paquete retenido"
+      },
+      "scenario": {
+        "en": "A text says your package is being held and you must pay $1.99 at a link to get it delivered.",
+        "es": "Un texto dice que tu paquete está retenido y que debes pagar $1.99 en un enlace para que te lo entreguen."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-package-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What kind of attack is this?",
+            "es": "¿Qué tipo de ataque es este?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Smishing",
+                "es": "Smishing"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "A firewall alert",
+                "es": "Una alerta del firewall"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A backup",
+                "es": "Una copia de seguridad"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A software update",
+                "es": "Una actualización de software"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "A fake delivery text with a payment link is one of the most common smishing scams.",
+            "es": "Un texto falso de entrega con un enlace de pago es una de las estafas de smishing más comunes."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-package-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Later, someone calls saying they're your bank and asks you to confirm your card number. What do you do?",
+            "es": "Más tarde, alguien llama diciendo que es tu banco y te pide confirmar el número de tu tarjeta. ¿Qué haces?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Read them the number",
+                "es": "Leerles el número"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Give only the last digits and the code on the back",
+                "es": "Dar solo los últimos dígitos y el código de atrás"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Hang up and call the bank using the number on your card",
+                "es": "Colgar y llamar al banco al número que aparece en tu tarjeta"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Ask them to call back later",
+                "es": "Pedirles que llamen más tarde"
+              }
+            }
+          ],
+          "correct_choice_id": "c",
+          "explanation": {
+            "en": "Calling back on a number you trust confirms who you're talking to.",
+            "es": "Devolver la llamada a un número de confianza confirma con quién estás hablando."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "phishing-basics-boss-coach",
+      "topic": "targeted-attacks",
+      "title": {
+        "en": "Message from the coach",
+        "es": "Mensaje del entrenador"
+      },
+      "scenario": {
+        "en": "You get an email with your team coach's name, sent from a personal address you don't recognize, asking for everyone's home address for \"a surprise.\"",
+        "es": "Recibes un correo con el nombre de tu entrenador, enviado desde una dirección personal que no reconoces, pidiendo la dirección de la casa de todo el equipo para \"una sorpresa\"."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-coach-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Why is this suspicious?",
+            "es": "¿Por qué es sospechoso?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Coaches never send email",
+                "es": "Los entrenadores nunca envían correos"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "It uses a name you know, an address you don't, and asks for private information",
+                "es": "Usa un nombre que conoces, una dirección que no conoces y pide información privada"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Surprises are always fake",
+                "es": "Las sorpresas siempre son falsas"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "It's too short",
+                "es": "Es muy corto"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "Targeted attacks borrow trusted names; the unknown address and the request for private details give it away.",
+            "es": "Los ataques dirigidos usan nombres de confianza; la dirección desconocida y la petición de datos privados lo delatan."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-coach-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What's the best response?",
+            "es": "¿Cuál es la mejor respuesta?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Ask the coach in person or through the official team channel",
+                "es": "Preguntarle al entrenador en persona o por el canal oficial del equipo"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Reply with your address",
+                "es": "Responder con tu dirección"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Send your teammates' addresses",
+                "es": "Enviar las direcciones de tus compañeros"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Post the email online",
+                "es": "Publicar el correo en internet"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Verifying through a channel you already trust protects you and your teammates.",
+            "es": "Verificar por un medio en el que ya confías te protege a ti y a tus compañeros."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "phishing-basics-boss-fake-login",
+      "topic": "respond-report",
+      "title": {
+        "en": "The fake login page",
+        "es": "La página de inicio falsa"
+      },
+      "scenario": {
+        "en": "A few minutes ago you typed your school password into a login page, and now you realize the address was fake.",
+        "es": "Hace unos minutos escribiste tu contraseña de la escuela en una página de inicio de sesión, y ahora te das cuenta de que la dirección era falsa."
+      },
+      "questions": [
+        {
+          "question_id": "phishing-basics-boss-fake-login-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What do you do first?",
+            "es": "¿Qué haces primero?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Change your password on the real site right away",
+                "es": "Cambiar tu contraseña en el sitio real de inmediato"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Wait until tomorrow",
+                "es": "Esperar hasta mañana"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Log in again on the fake page",
+                "es": "Iniciar sesión otra vez en la página falsa"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Delete the email and forget it",
+                "es": "Borrar el correo y olvidarlo"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Speed matters: a new password stops the attacker from using the one they just stole.",
+            "es": "La rapidez importa: una contraseña nueva impide que el atacante use la que acaba de robar."
+          }
+        },
+        {
+          "question_id": "phishing-basics-boss-fake-login-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What else protects your account now?",
+            "es": "¿Qué más protege tu cuenta ahora?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Using the same new password everywhere",
+                "es": "Usar la misma contraseña nueva en todos lados"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Turning on MFA and telling IT so they can watch for misuse",
+                "es": "Activar la MFA y avisar a IT para que vigilen cualquier mal uso"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Changing your profile picture",
+                "es": "Cambiar tu foto de perfil"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Clearing your notifications",
+                "es": "Borrar tus notificaciones"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "MFA blocks logins with just the password, and IT can check whether the account was used.",
+            "es": "La MFA bloquea los accesos que solo tienen la contraseña, e IT puede revisar si alguien usó la cuenta."
+          }
+        }
+      ]
+    }
+  ],
+  "retired_question_ids": [],
+  "source": {
+    "format": "json",
+    "file_name": "phishing-basics.v1.json"
+  }
+}

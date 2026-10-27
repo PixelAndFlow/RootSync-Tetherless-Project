@@ -1,0 +1,63 @@
+# TRIAL RUN (2026-10-15), not adopted.
+# Tetherless API + PostgreSQL.
+#
+#   cp .env.example .env        # then fill in the values
+#   docker compose up -d --build
+#   docker compose --profile https up -d --build   # adds Caddy for HTTPS on a public domain
+#
+# Create the first staff account (Superadmin):
+#   docker compose exec -T api node packages/server/src/admin.ts create-staff --role superadmin --username marc --name "Marc" <<< 'a-long-password'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tetherless
+      POSTGRES_USER: tetherless
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tetherless -d tetherless"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://tetherless:${POSTGRES_PASSWORD}@db:5432/tetherless
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PASS_PCT: ${PASS_PCT:-70}
+      STRUGGLING_PCT: ${STRUGGLING_PCT:-60}
+      IDLE_LIMIT_MINUTES: ${IDLE_LIMIT_MINUTES:-30}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+  # HTTPS in front of the API. The PWA is served over HTTPS, so browsers will only
+  # sync to an HTTPS API. Needs a public domain pointing at this machine and ports 80/443 open.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      API_DOMAIN: ${API_DOMAIN:-}  # required for this profile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  db-data:
+  caddy-data:

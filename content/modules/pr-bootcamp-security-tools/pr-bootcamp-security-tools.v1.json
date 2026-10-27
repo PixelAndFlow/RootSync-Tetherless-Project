@@ -1,0 +1,616 @@
+{
+  "schema_version": 1,
+  "module_id": "pr-bootcamp-security-tools",
+  "content_version": 1,
+  "title": {
+    "en": "Security Tools Basics",
+    "es": "Conceptos básicos de herramientas de seguridad"
+  },
+  "questions": [
+    {
+      "question_id": "pr-bootcamp-security-tools-q01",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What does a firewall do?",
+        "es": "¿Qué hace un firewall (cortafuegos)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Filters network traffic with rules",
+            "es": "Filtra el tráfico de red con reglas"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Generates complex passwords",
+            "es": "Genera contraseñas complejas"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Creates data backups",
+            "es": "Crea copias de seguridad"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Encrypts local storage",
+            "es": "Cifra el almacenamiento local"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q02",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What does an NGFW include?",
+        "es": "¿Qué incluye un Firewall de Nueva Generación (NGFW)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Basic antivirus only",
+            "es": "Antivirus básico solamente"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Deep packet inspection & detection",
+            "es": "Inspección profunda de paquetes"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Biometric authentication",
+            "es": "Autenticación biométrica"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Tech support calls",
+            "es": "Llamadas de soporte técnico"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q03",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What is the main function of a VPN?",
+        "es": "¿Cuál es la función principal de una VPN?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Block browser ads",
+            "es": "Bloquear anuncios en navegadores"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Remove system viruses",
+            "es": "Eliminar virus del sistema"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Encrypt the internet connection",
+            "es": "Cifrar la conexión a internet"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Restore deleted files",
+            "es": "Restaurar archivos borrados"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q04",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "When is a VPN especially useful?",
+        "es": "¿Cuándo es especialmente útil una VPN?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "When working with remote access",
+            "es": "Al trabajar con acceso remoto"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "To speed up game downloads",
+            "es": "Para acelerar la descarga de juegos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "To clean the hard drive",
+            "es": "Para limpiar el disco duro"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "To format computers",
+            "es": "Para formatear computadoras"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q05",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What does MFA add?",
+        "es": "¿Qué añade la autenticación multifactor (MFA)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "An extra verification step",
+            "es": "Un paso extra de verificación"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "More disk space",
+            "es": "Más espacio en el disco"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Higher internet speed",
+            "es": "Mayor velocidad de internet"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Automatic updates",
+            "es": "Actualizaciones automáticas"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q06",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What is an example of MFA?",
+        "es": "¿Cuál es un ejemplo de MFA?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Using only a short password",
+            "es": "Usar solo una contraseña corta"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Authenticator app or YubiKey",
+            "es": "App autenticadora o llave YubiKey"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Typing your username",
+            "es": "Escribir tu nombre de usuario"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Clicking an email link",
+            "es": "Hacer clic en un enlace de email"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q07",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What does an IAM like Okta centralize?",
+        "es": "¿Qué centraliza una plataforma IAM como Okta?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Processor speed",
+            "es": "La velocidad del procesador"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Permissions and access control",
+            "es": "Permisos y control de acceso"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Cloud backups",
+            "es": "Copias de respaldo en la nube"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Physical network cables",
+            "es": "Cables de red física"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q08",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What principle guides IAM management?",
+        "es": "¿En qué principio se basa la gestión IAM?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Least Privilege (Zero Trust)",
+            "es": "Menor privilegio (Zero Trust)"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Total access for everyone",
+            "es": "Acceso total para todos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Public passwords",
+            "es": "Contraseñas públicas"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Absolute trust without check",
+            "es": "Confianza absoluta sin revisión"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q09",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "How does EDR/XDR evolve antivirus?",
+        "es": "¿Cómo evoluciona el EDR/XDR del antivirus?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Continuously monitors devices",
+            "es": "Monitorea dispositivos continuamente"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Scans only once a month",
+            "es": "Solo escanea una vez al mes"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Turns off servers at night",
+            "es": "Apaga los servidores de noche"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Disables network rules",
+            "es": "Desactiva las reglas de red"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q10",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What technology does EDR/XDR use?",
+        "es": "¿Qué tecnología usa EDR/XDR para responder?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "AI in real-time response",
+            "es": "Inteligencia Artificial en tiempo real"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Manual phone calls",
+            "es": "Llamadas telefónicas manuales"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "SMS text messages",
+            "es": "Mensajes de texto SMS"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Printing paper reports",
+            "es": "Impresión de reportes en papel"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q11",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What are examples of EDR/XDR?",
+        "es": "¿Cuáles son ejemplos de EDR/XDR?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "1Password y Bitwarden",
+            "es": "1Password y Bitwarden"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Okta y YubiKey",
+            "es": "Okta y YubiKey"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "CrowdStrike y Microsoft Defender",
+            "es": "CrowdStrike y Microsoft Defender"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Cisco VPN y Firewalls",
+            "es": "Cisco VPN y Firewalls"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q12",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What do password managers prevent?",
+        "es": "¿Qué evitan los gestores de contraseñas?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Password reuse",
+            "es": "La reutilización de contraseñas"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "File encryption",
+            "es": "El cifrado de archivos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Use of MFA authentication",
+            "es": "El uso de autenticación MFA"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Connection to VPN networks",
+            "es": "La conexión a redes VPN"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q13",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What tools are password managers?",
+        "es": "¿Qué herramientas son gestores de contraseñas?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Okta y CrowdStrike",
+            "es": "Okta y CrowdStrike"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "1Password y Bitwarden",
+            "es": "1Password y Bitwarden"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "YubiKey y Firewalls",
+            "es": "YubiKey y Firewalls"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Microsoft Defender y VPN",
+            "es": "Microsoft Defender y VPN"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q14",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "What is a data backup?",
+        "es": "¿Qué es una copia de seguridad (backup)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Copy of data in a secure place",
+            "es": "Duplicación de datos en lugar seguro"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "A type of computer virus",
+            "es": "Un tipo de virus informático"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "A rule to filter traffic",
+            "es": "Una regla para filtrar tráfico"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "A system to make passwords",
+            "es": "Un sistema para crear contraseñas"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q15",
+      "type": "multiple_choice",
+      "prompt": {
+        "en": "Why are backups vital?",
+        "es": "¿Por qué son vitales los backups?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Allow restoring data after attack",
+            "es": "Permiten restaurar datos tras un ataque"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Increase network speed",
+            "es": "Aumentan la velocidad de la red"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Replace the need for MFA",
+            "es": "Reemplazan la necesidad de MFA"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Block phishing attacks",
+            "es": "Bloquean ataques de phishing"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "time_limit_sec": 60
+    }
+  ],
+  "retired_question_ids": [],
+  "source": {
+    "format": "kahoot",
+    "file_name": "Kahoot_quizes.xlsx"
+  }
+}
