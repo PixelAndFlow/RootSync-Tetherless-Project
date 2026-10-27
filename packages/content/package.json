@@ -1,0 +1,22 @@
+{
+  "name": "@tetherless/content",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tetherless canonical content schema, validator and importer (JSON, CSV template, Kahoot .xlsx)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "import": "node src/cli.ts",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.0"
+  }
+}

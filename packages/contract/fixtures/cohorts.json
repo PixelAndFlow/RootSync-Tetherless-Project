@@ -1,0 +1,12 @@
+{
+  "cohorts": [
+    {
+      "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
+      "name": "Fixture Cohort",
+      "learner_count": 3,
+      "created_at": "2026-10-25T09:00:00.000Z",
+      "created_by": "075f1a6d-33ef-47aa-935b-b20ef1305f8c",
+      "archived": false
+    }
+  ]
+}

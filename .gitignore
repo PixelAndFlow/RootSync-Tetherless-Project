@@ -53,3 +53,10 @@ data/
 
 # ---- AI session tooling (evaluate before committing) ----
 .claude/
+
+# ---- Test tooling (frontend) ----
+playwright-report/
+test-results/
+
+# ---- Client-source material remains on Chris's local machine only ----
+docs/rco-source-private/

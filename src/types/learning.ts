@@ -1,0 +1,158 @@
+export type SyncStatus =
+  | "offline"
+  | "pending"
+  | "syncing"
+  | "synced"
+  | "blocked_auth"
+  | "retryable_error"
+  | "rejected";
+
+export type LearningEventType =
+  | "session_started"
+  | "session_ended"
+  | "app_backgrounded"
+  | "app_returned"
+  | "module_opened"
+  | "question_answered"
+  | "question_checked"
+  | "module_completed"
+  | "remediation_started"
+  | "remediation_answered"
+  | "remediation_completed"
+  | "full_retry_started"
+  | "full_retry_completed";
+
+/** Legacy local/demo record only. NOT a wire payload. See integration/wireContract.ts. */
+export interface TetherlessEvent<TPayload = unknown> {
+  event_id: string;
+  schema_version: number;
+  learner_id: string;
+  device_id: string;
+  module_id: string;
+  content_version: string;
+  attempt_id?: string;
+  question_id?: string;
+  event_type: LearningEventType;
+  payload: TPayload;
+  client_timestamp: string;
+  status: Exclude<SyncStatus, "offline">;
+}
+
+export type AttemptKind = "full" | "remediation";
+export type AttemptStatus = "in_progress" | "completed";
+
+export interface AnswerRecord {
+  questionId: string;
+  selectedChoiceId: string;
+  isCorrect: boolean;
+  answeredAt: string;
+}
+
+export interface AttemptRecord {
+  id: string;
+  learnerId: string;
+  moduleId: string;
+  kind: AttemptKind;
+  status: AttemptStatus;
+  startedAt: string;
+  completedAt?: string;
+  answers: AnswerRecord[];
+  initialCorrectCount?: number;
+  initialScorePercent?: number;
+  questionIds?: string[];
+}
+
+export interface SessionRecord {
+  id: string;
+  learnerId: string;
+  deviceId: string;
+  startedAt: string;
+}
+
+export interface ModuleProgress {
+  learnerId: string;
+  moduleId: string;
+  questionsTotal: number;
+  questionsAnswered: number;
+  initialScorePercent?: number;
+  currentMasteryPercent: number;
+  stillUnmasteredCount: number;
+  completionStatus: "not_started" | "in_progress" | "completed";
+}
+
+export interface LearnerModuleRecord extends ModuleProgress {
+  attempts: AttemptRecord[];
+  firstStartedAt?: string;
+  firstCompletedAt?: string;
+  initialMissedQuestionIds: string[];
+  masteredQuestionIds: string[];
+  engagement: EngagementSummary;
+}
+
+export interface EngagementSummary {
+  xp: number;
+  currentStreak: number;
+  bestStreak: number;
+  xpAwardedQuestionIds: string[];
+  completedSectorIds: string[];
+  earnedBadgeIds: string[];
+}
+
+export interface SectorMasteryAward {
+  sectorId: string;
+  questionIds: string[];
+  bonusXp: number;
+}
+
+export interface MissionMasteryAward {
+  badgeId?: string;
+  bonusXp: number;
+}
+
+export interface SyncSummary {
+  status: SyncStatus;
+  pendingEventCount: number;
+  lastSyncedAt?: string;
+  failureReason?: string;
+  /** Presentation only; DDIL/server code mapping still requires agreement. */
+  authorizationReason?: "invalid_credential" | "revoked_device" | "unknown";
+}
+
+export interface StartSessionInput {
+  learnerId: string;
+  deviceId: string;
+}
+
+export interface StartAttemptInput {
+  learnerId: string;
+  moduleId: string;
+  /** The module's published content version (module.content_version). Every attempt event carries it. */
+  contentVersion: number;
+  kind: AttemptKind;
+}
+
+export interface SaveAnswerInput {
+  learnerId: string;
+  moduleId: string;
+  attemptId: string;
+  answer: AnswerRecord;
+  xpAward: number;
+}
+
+export interface CompleteAttemptInput {
+  learnerId: string;
+  moduleId: string;
+  attemptId: string;
+  questionsTotal: number;
+  correctQuestionIds: string[];
+  sectorMasteryAwards?: SectorMasteryAward[];
+  missionMasteryAward?: MissionMasteryAward;
+}
+
+export interface StartRemediationInput {
+  learnerId: string;
+  moduleId: string;
+  /** The module's published content version. Remediation is a practice attempt and carries it like any other. */
+  contentVersion: number;
+  questionIds: string[];
+}

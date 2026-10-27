@@ -1,0 +1,817 @@
+{
+  "schema_version": "tetherless.module.v1",
+  "module_id": "rcyc-recruit-cyber-squad-gamified-001",
+  "content_version": 1,
+  "program": "RCYC SOC Analyst Program",
+  "level": "beginner",
+  "level_label": {
+    "en": "Recruit",
+    "es": "Recluta"
+  },
+  "title": {
+    "en": "Operation Cyber Squad",
+    "es": "Operación Equipo Cyber"
+  },
+  "subtitle": {
+    "en": "A gamified beginner mission: roles, ethics, authorization, and version-control basics",
+    "es": "Una misión gamificada para principiantes: roles, ética, autorización y fundamentos de control de versiones"
+  },
+  "mission_brief": {
+    "en": "RCYC Command has assigned your first field mission. Clear three training sectors and a final challenge. Your first score is preserved, missed concepts can be practiced, and every mastered concept strengthens your Cyber Shield.",
+    "es": "RCYC Command te ha asignado tu primera misión. Supera tres sectores de entrenamiento y un desafío final. Tu puntuación inicial se conserva, puedes practicar los conceptos fallados y cada concepto dominado fortalece tu Cyber Shield."
+  },
+  "settings": {
+    "question_count": 15,
+    "timer_seconds": null,
+    "show_immediate_feedback": true,
+    "allow_retry": true,
+    "spanish_assist_default": true,
+    "passing_score_percent": 80,
+    "allow_full_retry": true,
+    "allow_missed_practice": true,
+    "allow_correct_review": true,
+    "allow_all_review": true,
+    "allow_missed_question_practice": true,
+    "allow_correct_answer_review": true,
+    "allow_incorrect_answer_review": true,
+    "allow_full_review": true
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "topic": "team_roles",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "Which cybersecurity team simulates attacks to find weaknesses before malicious attackers do?",
+        "es": "Qué equipo de ciberseguridad simula ataques para encontrar debilidades antes que los atacantes maliciosos?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Blue Team",
+          "es": "Blue Team / Equipo Azul",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Red Team",
+          "es": "Red Team / Equipo Rojo",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC",
+          "es": "GRC",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Help Desk",
+          "es": "Mesa de ayuda",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "Red Teams perform authorized offensive security testing.",
+        "es": "Los Red Teams realizan pruebas ofensivas autorizadas."
+      }
+    },
+    {
+      "id": "q02",
+      "topic": "team_roles",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "Which team monitors systems, detects suspicious activity, and responds to attacks?",
+        "es": "Qué equipo monitorea sistemas, detecta actividad sospechosa y responde a ataques?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Blue Team",
+          "es": "Blue Team / Equipo Azul",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Red Team",
+          "es": "Red Team / Equipo Rojo",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC",
+          "es": "GRC",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Sales",
+          "es": "Ventas",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "Blue Teams are the defenders.",
+        "es": "Los Blue Teams son los defensores."
+      }
+    },
+    {
+      "id": "q03",
+      "topic": "team_roles",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "Which group focuses on governance, risk, compliance, policies, and security rules?",
+        "es": "Qué grupo se enfoca en gobernanza, riesgo, cumplimiento, políticas y reglas de seguridad?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Red Team",
+          "es": "Red Team / Equipo Rojo",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Blue Team",
+          "es": "Blue Team / Equipo Azul",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC",
+          "es": "GRC — Gobernanza, Riesgo y Cumplimiento",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Threat Actors",
+          "es": "Actores de amenaza",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "C",
+      "feedback": {
+        "en": "GRC connects cybersecurity with governance, risk, compliance, and policy.",
+        "es": "GRC conecta la ciberseguridad con gobernanza, riesgo, cumplimiento y políticas."
+      }
+    },
+    {
+      "id": "q04",
+      "topic": "ethics",
+      "type": "scenario_mc",
+      "presentation": "mission_alert",
+      "prompt": {
+        "en": "What makes security testing authorized White Hat work?",
+        "es": "Qué hace que una prueba de seguridad sea un trabajo autorizado de White Hat?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Good intentions",
+          "es": "Buenas intenciones",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Written authorization and approved scope",
+          "es": "Autorización escrita y alcance aprobado",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "Using free tools only",
+          "es": "Usar solamente herramientas gratuitas",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Finding a real bug",
+          "es": "Encontrar un error real",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "Written authorization and staying inside scope are essential.",
+        "es": "La autorización escrita y mantenerse dentro del alcance son esenciales."
+      }
+    },
+    {
+      "id": "q05",
+      "topic": "ethics",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "What is the main purpose of Rules of Engagement (RoE)?",
+        "es": "Cuál es el propósito principal de las Reglas de Enfrentamiento (RoE)?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Choose the fastest tools",
+          "es": "Elegir las herramientas más rápidas",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Define approved targets, times, and actions",
+          "es": "Definir objetivos, horarios y acciones aprobadas",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "Hide the test",
+          "es": "Ocultar la prueba",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Guarantee no vulnerabilities exist",
+          "es": "Garantizar que no existan vulnerabilidades",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "RoE defines the boundaries of a security assessment.",
+        "es": "Las RoE definen los límites de una evaluación de seguridad."
+      }
+    },
+    {
+      "id": "q06",
+      "topic": "defense",
+      "type": "scenario_mc",
+      "presentation": "security_alert",
+      "prompt": {
+        "en": "A school defender blocks an IP after thousands of failed password attempts. Which classification fits best?",
+        "es": "Un defensor escolar bloquea una IP después de miles de intentos fallidos de contraseña. Qué clasificación encaja mejor?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Red Team / Grey Hat",
+          "es": "Red Team / Grey Hat",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Blue Team / White Hat",
+          "es": "Blue Team / White Hat",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC / Black Hat",
+          "es": "GRC / Black Hat",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Red Team / Black Hat",
+          "es": "Red Team / Black Hat",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "This is authorized defensive action.",
+        "es": "Esta es una acción defensiva autorizada."
+      }
+    },
+    {
+      "id": "q07",
+      "topic": "ethics",
+      "type": "scenario_mc",
+      "presentation": "mission_alert",
+      "prompt": {
+        "en": "A game studio hires a security firm to test its app under a signed agreement. Which classification fits best?",
+        "es": "Un estudio de videojuegos contrata a una firma de seguridad para probar su app bajo un acuerdo firmado. Qué clasificación encaja mejor?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Red Team / White Hat",
+          "es": "Red Team / White Hat",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Blue Team / Grey Hat",
+          "es": "Blue Team / Grey Hat",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC / Black Hat",
+          "es": "GRC / Black Hat",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Unauthorized / Black Hat",
+          "es": "No autorizado / Black Hat",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "Authorized offensive testing is Red Team / White Hat activity.",
+        "es": "Las pruebas ofensivas autorizadas son actividad Red Team / White Hat."
+      }
+    },
+    {
+      "id": "q08",
+      "topic": "ethics",
+      "type": "scenario_mc",
+      "presentation": "mission_alert",
+      "prompt": {
+        "en": "A student enters a library router without permission using the default password, changes the Wi-Fi name, then reports it. How should this be classified?",
+        "es": "Un estudiante entra a un router de biblioteca sin permiso usando la contraseña predeterminada, cambia el nombre del Wi-Fi y luego lo reporta. Cómo debe clasificarse?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "White Hat",
+          "es": "White Hat",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Authorized Red Team",
+          "es": "Red Team autorizado",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "Unauthorized / Grey Hat",
+          "es": "No autorizado / Grey Hat",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Blue Team",
+          "es": "Blue Team",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "C",
+      "feedback": {
+        "en": "Good intentions do not create authorization.",
+        "es": "Las buenas intenciones no crean autorización."
+      }
+    },
+    {
+      "id": "q09",
+      "topic": "threat_actors",
+      "type": "scenario_mc",
+      "presentation": "security_alert",
+      "prompt": {
+        "en": "An attacker encrypts clinic files and demands cryptocurrency. Which classification fits?",
+        "es": "Un atacante cifra archivos de una clínica y exige criptomonedas. Qué clasificación encaja?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "White Hat",
+          "es": "White Hat",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Grey Hat",
+          "es": "Grey Hat",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "GRC",
+          "es": "GRC",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Black Hat",
+          "es": "Black Hat",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "D",
+      "feedback": {
+        "en": "Ransomware and extortion are Black Hat activity.",
+        "es": "El ransomware y la extorsión son actividad Black Hat."
+      }
+    },
+    {
+      "id": "q10",
+      "topic": "governance",
+      "type": "scenario_mc",
+      "presentation": "policy_card",
+      "prompt": {
+        "en": "A risk officer creates a policy blocking unauthorized USB drives and requiring screen locks. Which team function is this closest to?",
+        "es": "Un oficial de riesgo crea una política que bloquea USB no autorizadas y exige bloqueo de pantalla. A qué función se parece más?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "GRC",
+          "es": "GRC",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Red Team",
+          "es": "Red Team",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "Threat Hunting",
+          "es": "Caza de amenazas",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Black Hat",
+          "es": "Black Hat",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "Creating policy and managing risk are GRC responsibilities.",
+        "es": "Crear políticas y gestionar riesgo son responsabilidades de GRC."
+      }
+    },
+    {
+      "id": "q11",
+      "topic": "version_control",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "In the RCO training, what is a repository (repo)?",
+        "es": "En el entrenamiento de RCO, qué es un repositorio (repo)?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "A password manager",
+          "es": "Un administrador de contraseñas",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "A place that stores project files and their change history",
+          "es": "Un lugar que guarda archivos del proyecto y su historial de cambios",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "A firewall rule list",
+          "es": "Una lista de reglas de firewall",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "A malware scanner",
+          "es": "Un escáner de malware",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "A repository stores project files and tracks their history.",
+        "es": "Un repositorio almacena archivos del proyecto y registra su historial."
+      }
+    },
+    {
+      "id": "q12",
+      "topic": "version_control",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "What is a Git commit best described as?",
+        "es": "Cuál es la mejor descripción de un commit de Git?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "A recorded snapshot of changes",
+          "es": "Una captura registrada de cambios",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "A deleted file",
+          "es": "Un archivo eliminado",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "A live chat message",
+          "es": "Un mensaje de chat en vivo",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "A firewall alert",
+          "es": "Una alerta de firewall",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "A commit records a snapshot of changes.",
+        "es": "Un commit registra una captura de cambios."
+      }
+    },
+    {
+      "id": "q13",
+      "topic": "markdown",
+      "type": "multiple_choice",
+      "presentation": "code_card",
+      "prompt": {
+        "en": "Which line creates a top-level heading in Markdown?",
+        "es": "Qué línea crea un encabezado principal en Markdown?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "# Incident Report",
+          "es": "# Reporte de Incidente",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "/ Incident Report",
+          "es": "/ Reporte de Incidente",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "(Incident Report)",
+          "es": "(Reporte de Incidente)",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "= Incident Report",
+          "es": "= Reporte de Incidente",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "One # followed by a space creates a top-level heading.",
+        "es": "Un # seguido por un espacio crea un encabezado principal."
+      }
+    },
+    {
+      "id": "q14",
+      "topic": "version_control",
+      "type": "multiple_choice",
+      "presentation": "evidence_diff",
+      "prompt": {
+        "en": "Why is a visual Git diff useful during a security investigation?",
+        "es": "Por qué es útil un diff visual de Git durante una investigación de seguridad?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "It hides old versions",
+          "es": "Oculta versiones anteriores",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "It shows exactly what lines were added or removed",
+          "es": "Muestra exactamente qué líneas fueron añadidas o eliminadas",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "It encrypts every file automatically",
+          "es": "Cifra cada archivo automáticamente",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "It blocks suspicious IP addresses",
+          "es": "Bloquea direcciones IP sospechosas",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "A diff exposes exact line-level changes.",
+        "es": "Un diff muestra cambios exactos por línea."
+      }
+    },
+    {
+      "id": "q15",
+      "topic": "scope_control",
+      "type": "scenario_mc",
+      "presentation": "boss_question",
+      "prompt": {
+        "en": "You are authorized to test servers 01–10, but discover server 17 outside scope. What is the safest correct action?",
+        "es": "Estás autorizado a probar los servidores 01–10, pero descubres el servidor 17 fuera del alcance. Cuál es la acción correcta más segura?"
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Test it quickly",
+          "es": "Probarlo rápidamente",
+          "icon": "▲"
+        },
+        {
+          "id": "B",
+          "en": "Stop and report/escalate it",
+          "es": "Detenerse y reportarlo/escalarlo",
+          "icon": "◆"
+        },
+        {
+          "id": "C",
+          "en": "Use another tool so it does not count",
+          "es": "Usar otra herramienta para que no cuente",
+          "icon": "●"
+        },
+        {
+          "id": "D",
+          "en": "Ask another student to test it",
+          "es": "Pedir a otro estudiante que lo pruebe",
+          "icon": "■"
+        }
+      ],
+      "correct_choice": "B",
+      "feedback": {
+        "en": "The written scope is the legal boundary.",
+        "es": "El alcance escrito es el límite legal."
+      }
+    }
+  ],
+  "brand": {
+    "logo_variant": "rc_color (compact tree/network mark)",
+    "spanish_punctuation_style": "no_inverted_opening_marks_for_shadow_ui"
+  },
+  "tracking_policy": {
+    "record_first_attempt_score": true,
+    "preserve_attempt_history": true,
+    "record_question_level_history": true,
+    "record_active_engagement_time": true,
+    "pause_active_time_when_backgrounded": true,
+    "inactivity_pause_seconds": 90,
+    "record_elapsed_time": true,
+    "record_session_count": true,
+    "record_leave_return_events": true,
+    "record_remediation_rounds": true,
+    "record_current_mastery": true,
+    "completion_rule": "all_questions_answered",
+    "sync_record_status": true,
+    "record_xp": true,
+    "record_best_streak": true,
+    "record_sector_mastery": true,
+    "record_badges": true,
+    "xp_is_not_grade": true,
+    "preserve_initial_score_during_remediation": true
+  },
+  "gamification": {
+    "mode": "cyber_mission",
+    "mission_name": {
+      "en": "Operation Cyber Squad",
+      "es": "Operación Equipo Cyber"
+    },
+    "mission_badge": {
+      "id": "cyber_recruit",
+      "en": "RCYC Cyber Recruit",
+      "es": "Recluta Cyber de RCYC",
+      "icon": "🛡️"
+    },
+    "sectors": [
+      {
+        "id": "sector_1",
+        "order": 1,
+        "name": {
+          "en": "Know Your Team",
+          "es": "Conoce Tu Equipo"
+        },
+        "icon": "🧭",
+        "question_ids": [
+          "q01",
+          "q02",
+          "q03",
+          "q04",
+          "q05"
+        ],
+        "mastery_bonus_xp": 100
+      },
+      {
+        "id": "sector_2",
+        "order": 2,
+        "name": {
+          "en": "Stay Inside the Rules",
+          "es": "Mantente Dentro de las Reglas"
+        },
+        "icon": "📜",
+        "question_ids": [
+          "q06",
+          "q07",
+          "q08",
+          "q09",
+          "q10"
+        ],
+        "mastery_bonus_xp": 100
+      },
+      {
+        "id": "sector_3",
+        "order": 3,
+        "name": {
+          "en": "Protect the Evidence",
+          "es": "Protege la Evidencia"
+        },
+        "icon": "🔎",
+        "question_ids": [
+          "q11",
+          "q12",
+          "q13",
+          "q14"
+        ],
+        "mastery_bonus_xp": 100
+      },
+      {
+        "id": "final",
+        "order": 4,
+        "name": {
+          "en": "Final Challenge",
+          "es": "Desafío Final"
+        },
+        "icon": "⚡",
+        "question_ids": [
+          "q15"
+        ],
+        "mastery_bonus_xp": 150
+      }
+    ],
+    "xp": {
+      "enabled": true,
+      "first_time_question_mastery_xp": 100,
+      "repeat_mastery_xp": 0,
+      "sector_mastery_bonus_enabled": true,
+      "mission_mastery_bonus_xp": 250,
+      "note": "XP is an engagement/reward signal only. It does not change the learner's score."
+    },
+    "streak": {
+      "enabled": true,
+      "affects_grade": false,
+      "resets_on_incorrect_answer": true
+    },
+    "cyber_shield": {
+      "enabled": true,
+      "source": "current_mastery_percent",
+      "affects_grade": false
+    },
+    "excluded_mechanics": {
+      "lives": "Not used because mistakes should trigger learning/remediation, not punishment.",
+      "real_time_leaderboard": "Not used because continuous connectivity conflicts with DDIL/offline-first requirements.",
+      "live_multiplayer_kahoot": "Not used because simultaneous online participation is not reliable in RCO's target environment.",
+      "question_countdown_timer": "Not used because RCO said at-home training should not be timed.",
+      "video_heavy_rewards": "Not used to protect storage size and older-phone performance."
+    }
+  },
+  "trainer_reporting": {
+    "minimum_summary_fields": [
+      "learner_id",
+      "module_id",
+      "content_version",
+      "first_started_at",
+      "first_completed_at",
+      "questions_total",
+      "questions_answered",
+      "initial_correct",
+      "initial_score_percent",
+      "current_mastery_percent",
+      "incorrect_on_first_attempt",
+      "still_unmastered",
+      "remediation_questions_attempted",
+      "remediation_questions_corrected",
+      "active_engagement_seconds",
+      "elapsed_seconds",
+      "session_count",
+      "leave_return_count",
+      "full_attempt_count",
+      "remediation_round_count",
+      "xp",
+      "best_streak",
+      "completion_status",
+      "sync_status"
+    ],
+    "question_level_history": true,
+    "topic_performance": true,
+    "sector_performance": true,
+    "json_export": true,
+    "csv_export": true
+  }
+}

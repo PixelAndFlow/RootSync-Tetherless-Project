@@ -1,0 +1,220 @@
+{
+  "cohort": {
+    "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
+    "name": "Fixture Cohort",
+    "created_at": "2026-10-25T09:00:00.000Z",
+    "created_by": "075f1a6d-33ef-47aa-935b-b20ef1305f8c",
+    "archived": false
+  },
+  "generated_at": "2026-10-25T09:00:00.000Z",
+  "thresholds": {
+    "pass_pct": 70,
+    "struggling_pct": 50,
+    "weak_topic_pct": 60,
+    "weak_topic_min_answers": 2
+  },
+  "active_time": {
+    "idleLimitMs": 1800000,
+    "maxSilenceMs": 90000
+  },
+  "module_ids": [
+    "security-tools"
+  ],
+  "learners": [
+    {
+      "learner": {
+        "learner_id": "86494fe5-cc74-431e-ace5-c08aa2da0d27",
+        "learner_code": "Fixture-Cohort-HT95",
+        "first_name": "Active",
+        "last_name": "Fixture",
+        "username": "Active Learner",
+        "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
+        "archived": false
+      },
+      "modules": [
+        {
+          "module_id": "security-tools",
+          "content_version_latest": 1,
+          "questions_total": 2,
+          "questions_answered": 0,
+          "completion": "not_started",
+          "completed_at": null,
+          "initial": null,
+          "best": null,
+          "latest": null,
+          "first_try": null,
+          "mastery": {
+            "correct": 0,
+            "total": 2,
+            "pct": 0
+          },
+          "abandoned_before_first_completion": 0,
+          "abandoned_total": 0,
+          "passed": null,
+          "struggling": false,
+          "struggling_reasons": [],
+          "topics": [
+            {
+              "topic": "network",
+              "answers": 0,
+              "correct": 0,
+              "pct": 0,
+              "weak": false
+            }
+          ],
+          "bosses_completed": [],
+          "attempts": [],
+          "module_name": "Security Tools",
+          "status_label": "not_started"
+        }
+      ],
+      "time": {
+        "active_ms": 0,
+        "elapsed_ms": 0,
+        "sessions": [],
+        "flags": [],
+        "options": {
+          "idleLimitMs": 1800000,
+          "maxSilenceMs": 90000
+        }
+      },
+      "sync": {
+        "accepted_events": 0,
+        "last_received_at": null,
+        "rejected_events": 0,
+        "seq_gaps": [],
+        "may_have_unsynced_work": true
+      }
+    },
+    {
+      "learner": {
+        "learner_id": "2821d5d3-ef84-4670-92f0-0db05022646e",
+        "learner_code": "Fixture-Cohort-X4JD",
+        "first_name": "Awaiting",
+        "last_name": "Fixture",
+        "username": null,
+        "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
+        "archived": false
+      },
+      "modules": [
+        {
+          "module_id": "security-tools",
+          "content_version_latest": 1,
+          "questions_total": 2,
+          "questions_answered": 0,
+          "completion": "not_started",
+          "completed_at": null,
+          "initial": null,
+          "best": null,
+          "latest": null,
+          "first_try": null,
+          "mastery": {
+            "correct": 0,
+            "total": 2,
+            "pct": 0
+          },
+          "abandoned_before_first_completion": 0,
+          "abandoned_total": 0,
+          "passed": null,
+          "struggling": false,
+          "struggling_reasons": [],
+          "topics": [
+            {
+              "topic": "network",
+              "answers": 0,
+              "correct": 0,
+              "pct": 0,
+              "weak": false
+            }
+          ],
+          "bosses_completed": [],
+          "attempts": [],
+          "module_name": "Security Tools",
+          "status_label": "not_started"
+        }
+      ],
+      "time": {
+        "active_ms": 0,
+        "elapsed_ms": 0,
+        "sessions": [],
+        "flags": [],
+        "options": {
+          "idleLimitMs": 1800000,
+          "maxSilenceMs": 90000
+        }
+      },
+      "sync": {
+        "accepted_events": 0,
+        "last_received_at": null,
+        "rejected_events": 0,
+        "seq_gaps": [],
+        "may_have_unsynced_work": true
+      }
+    },
+    {
+      "learner": {
+        "learner_id": "8ad6362e-8274-49d6-802e-faf0ccd88624",
+        "learner_code": "Fixture-Cohort-PD6G",
+        "first_name": "SwitchedOff",
+        "last_name": "Fixture",
+        "username": "Switched Off Learner",
+        "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
+        "archived": false
+      },
+      "modules": [
+        {
+          "module_id": "security-tools",
+          "content_version_latest": 1,
+          "questions_total": 2,
+          "questions_answered": 0,
+          "completion": "not_started",
+          "completed_at": null,
+          "initial": null,
+          "best": null,
+          "latest": null,
+          "first_try": null,
+          "mastery": {
+            "correct": 0,
+            "total": 2,
+            "pct": 0
+          },
+          "abandoned_before_first_completion": 0,
+          "abandoned_total": 0,
+          "passed": null,
+          "struggling": false,
+          "struggling_reasons": [],
+          "topics": [
+            {
+              "topic": "network",
+              "answers": 0,
+              "correct": 0,
+              "pct": 0,
+              "weak": false
+            }
+          ],
+          "bosses_completed": [],
+          "attempts": [],
+          "module_name": "Security Tools",
+          "status_label": "not_started"
+        }
+      ],
+      "time": {
+        "active_ms": 0,
+        "elapsed_ms": 0,
+        "sessions": [],
+        "flags": [],
+        "options": {
+          "idleLimitMs": 1800000,
+          "maxSilenceMs": 90000
+        }
+      },
+      "sync": {
+        "accepted_events": 0,
+        "last_received_at": null,
+        "rejected_events": 0,
+        "seq_gaps": [],
+        "may_have_unsynced_work": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+import { defaultExclude, defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { pwaShellPlugin } from "./pwa-shell-plugin";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss(), pwaShellPlugin()],
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/tests/setup.ts"],
+    globals: true,
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/integration/**/*.test.ts"],
+    // live-sync.test.ts is a manual node:test file (needs a running server, see its header
+    // comment) — it isn't vitest-shaped and vitest can't collect it as a suite.
+    exclude: [...defaultExclude, "tests/integration/live-sync.test.ts"],
+    // Tests must never switch to the live staff adapter because a developer
+    // has a local .env.local configured for manual integration testing.
+    env: { VITE_TETHERLESS_API_BASE_URL: "" },
+  },
+});
