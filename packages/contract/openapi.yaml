@@ -124,6 +124,8 @@ components:
         note_1: { type: [string, "null"] }
         note_2: { type: [string, "null"] }
         status: { enum: [awaiting_setup, active, phone_switched_off, archived] }
+        created_at: { type: string, format: date-time }
+        archived_at: { type: [string, "null"], format: date-time }
         last_synced_at: { type: [string, "null"], format: date-time }
     LearnerInput:
       type: object
@@ -145,6 +147,8 @@ components:
         role: { enum: [superadmin, admin, trainer] }
         must_change_password: { type: boolean }
         disabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        created_by: { type: [string, "null"], format: uuid, description: The staff member who created the account. }
         permissions: { type: array, items: { type: string }, description: Only on login and /me. }
   responses:
     Error:

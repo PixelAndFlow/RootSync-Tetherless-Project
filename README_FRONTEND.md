@@ -186,7 +186,6 @@ tests.
 
 ## Deferred until team integration
 
-- service worker and offline app-shell caching;
 - IndexedDB/Dexie schema and persistent event outbox;
 - API routes, authentication, authorization, server-side reporting, and assignment rules;
 - sync acknowledgement/rejection contracts and duplicate-event handling against the real backend;

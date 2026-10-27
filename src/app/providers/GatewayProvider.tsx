@@ -35,10 +35,6 @@ export function useTrainerDataGateway(): TrainerDataGateway {
   return useAppGateways().trainerData;
 }
 
-export function useTrainerReportsGateway() {
-  return useAppGateways().trainerReports;
-}
-
 export function useStaffAdminGateway(): StaffAdminGateway | undefined {
   return useAppGateways().staffAdmin;
 }

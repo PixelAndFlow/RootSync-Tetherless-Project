@@ -3,9 +3,9 @@ import type { LearnerRecord } from "../../../packages/contract/src/staff-api.ts"
 
 /**
  * Step 4 of the integration plan: prove the app can import
- * packages/contract directly — nothing more. Chris's staff types
- * (./StaffAdminGateway.ts, ../../types/staff.ts) are untouched; that
- * rename is a separate, later step with his go-ahead.
+ * packages/contract directly. Since 2026-10-27 the app's own staff types are
+ * camelCase (../../types/staff.ts) and ApiStaffAdminGateway translates from these
+ * wire types (./staffMappers.ts); the contract types stay the wire shapes.
  */
 describe("packages/contract import boundary", () => {
   it("the app can import and use a contract type from packages/contract/src", () => {

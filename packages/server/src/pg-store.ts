@@ -46,6 +46,7 @@ type Row = Record<string, unknown>;
 const MIGRATIONS = [
   { version: 1, file: new URL("../db/schema.sql", import.meta.url) },
   { version: 2, file: new URL("../db/002-spec-v1.10.sql", import.meta.url) },
+  { version: 3, file: new URL("../db/003-event-type-check.sql", import.meta.url) },
 ];
 
 const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString());

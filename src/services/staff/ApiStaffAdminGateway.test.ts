@@ -38,14 +38,14 @@ describe("ApiStaffAdminGateway", () => {
     await expect(gateway.signIn({ username: "test-admin", password: "temporary-password" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
-  it("clears the shared staff and reports token on sign-out", async () => {
+  it("clears the shared staff and trainer data token on sign-out", async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })));
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
-    const reports = gateway.reports();
+    const trainerData = gateway.trainerData();
     await gateway.signIn({ username: "test-admin", password: "temporary-password" });
     gateway.signOut();
     await expect(gateway.listCohorts()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-    await expect(reports.listLearners({ cohortId: "11111111-1111-4111-8111-111111111111" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(trainerData.listLearners({ cohortId: "11111111-1111-4111-8111-111111111111" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 

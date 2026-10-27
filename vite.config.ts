@@ -1,9 +1,10 @@
 import { defaultExclude, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { pwaShellPlugin } from "./pwa-shell-plugin";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), pwaShellPlugin()],
   test: {
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],

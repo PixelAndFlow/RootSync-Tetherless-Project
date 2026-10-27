@@ -1,8 +1,68 @@
-// Cohorts, learners and modules use the contract's own types directly —
-// no second, frontend-only set of names for the same data (Tetherless_
-// Contract_Drift_and_Naming_Proposal_v1.00_2026-10-25.md §2.2). Screens
-// still say "Student"; that's display text, not a code name.
-export type { Cohort, LearnerRecord, LearnerStatus, ModuleListing } from "../../packages/contract/src/staff-api";
+// Cohorts, learners and modules: camelCase app types, mapped from the contract's
+// snake_case wire types (packages/contract/src/staff-api.ts) by the API adapter
+// (src/services/staff/staffMappers.ts). Screens never see wire names. The words are
+// the same in both forms (learner_count is learnerCount), so one search finds either.
+// Screens still say "Student"; that's display text, not a code name.
+//
+// NOTE: this rule (translate at the boundary; each part uses its language's standard)
+// was decided by Marc on 2026-10-27, before the team meeting, and is being relayed to
+// Chris there. It reverses the "use the contract types directly in the app" step that
+// PR #4 took for these three types (Contract Drift and Naming Proposal, question 3).
+// The decision is recorded in the docs repo (decisions log, 2026-10-27) and in API
+// Spec v1.30 section 2. Chris and Naquan can revisit it at the meeting.
+import type { LearnerStatus } from "../../packages/contract/src/staff-api";
+
+export type { LearnerStatus };
+
+export interface Cohort {
+  cohortId: string;
+  name: string;
+  /** Sent on list, create and report responses; always 0 right after create. */
+  learnerCount?: number;
+  createdAt: string;
+  createdBy: string | null;
+  archived: boolean;
+}
+
+export interface LearnerRecord {
+  learnerId: string;
+  learnerCode: string;
+  cohortId: string;
+  /** Sent on GET .../learners/:id and the export; not on the list. */
+  cohortName?: string;
+  firstName: string;
+  lastName: string;
+  /** Chosen by the learner at setup; null until then. Not unique. */
+  username: string | null;
+  phone: string | null;
+  email: string | null;
+  trainingLevel: string | null;
+  note1: string | null;
+  note2: string | null;
+  status: LearnerStatus;
+  createdAt: string;
+  archivedAt: string | null;
+  /** Sent on the list. */
+  lastSyncedAt?: string | null;
+}
+
+/** No draft/published distinction: "published" means a version exists; archived is separate. */
+export interface ModuleListing {
+  moduleId: string;
+  moduleName: string;
+  /** Localized, not a plain string. Null only if no version has ever been published. */
+  title: { en: string; es?: string } | null;
+  level: string | null;
+  note: string | null;
+  activityType: string;
+  latestVersion: number | null;
+  versions: number[];
+  questionCount: number;
+  used: boolean;
+  archived: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
 
 export const STAFF_ROLES = ["superadmin", "admin", "trainer"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];

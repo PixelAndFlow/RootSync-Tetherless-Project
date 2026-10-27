@@ -59,7 +59,7 @@ export function MissionPlayScreen() {
     setStartError(false);
     void (async () => {
       await offlineLearningGateway.startSession({ learnerId: profile.learnerId, deviceId: profile.deviceId });
-      const createdAttempt = await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, kind: "full" });
+      const createdAttempt = await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, contentVersion: module.content_version, kind: "full" });
       setAttempt(createdAttempt);
     })().catch(() => { startedFor.current = null; setStartError(true); });
   }, [module.module_id, profile, offlineLearningGateway, startRetry]);

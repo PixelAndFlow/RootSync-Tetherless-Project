@@ -2,7 +2,6 @@ import { MockOfflineLearningGateway } from "./offline/MockOfflineLearningGateway
 import type { OfflineLearningGateway } from "./offline/OfflineLearningGateway";
 import { MockTrainerDataGateway } from "./trainer/MockTrainerDataGateway";
 import type { TrainerDataGateway } from "./trainer/TrainerDataGateway";
-import type { TrainerReportsGateway } from "./trainer/ApiTrainerReportsGateway";
 import { MockStaffAdminGateway } from "./staff/MockStaffAdminGateway";
 import { ApiStaffAdminGateway } from "./staff/ApiStaffAdminGateway";
 import type { StaffAdminGateway } from "./staff/StaffAdminGateway";
@@ -16,12 +15,12 @@ export interface AppGateways {
   offlineLearning: OfflineLearningGateway;
   /**
    * Resolves once offlineLearning has finished opening its IndexedDB store.
-   * Only set in live mode (the mock adapter is ready synchronously). The one
-   * call site that can race this (LearnerSetupScreen) awaits it first.
+   * Only set in live mode (the mock adapter is ready synchronously). Calls on
+   * `offlineLearning` already wait for it (see deferUntilReady), so screens
+   * only need it to show an init failure up front, as LearnerSetupScreen does.
    */
   offlineLearningReady?: Promise<void>;
   trainerData: TrainerDataGateway;
-  trainerReports?: TrainerReportsGateway;
   /** Optional until Marc's staff API adapter is installed at the app boundary. */
   staffAdmin?: StaffAdminGateway;
 }
@@ -81,9 +80,30 @@ export function createAppGateways(environment: Record<string, string | boolean |
 
     void navigator.storage?.persist?.();
 
-    return { ...createMockGateways(), offlineLearning, offlineLearningReady, staffAdmin, trainerReports: staffAdmin.reports() };
+    return { ...createMockGateways(), offlineLearning: deferUntilReady(offlineLearning, offlineLearningReady), offlineLearningReady, staffAdmin, trainerData: staffAdmin.trainerData() };
   }
   return mockGateways;
+}
+
+/**
+ * A persisted learner profile is read synchronously on app start, so on a reload
+ * mid-session the mission screens call the gateway while init() is still opening
+ * IndexedDB, and the gateway throws "not initialized". Wrapping every async method
+ * to wait for `ready` closes that race for all current and future call sites.
+ * subscribeToSyncStatus stays synchronous (it returns an unsubscribe function and
+ * has its own not-yet-ready handling). If init() fails, the wrapped calls reject
+ * with that error instead of a misleading "not initialized".
+ */
+export function deferUntilReady<T extends object>(gateway: T, ready: Promise<void>): T {
+  const passthrough = new Set<PropertyKey>(["init", "subscribeToSyncStatus"]);
+  return new Proxy(gateway, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (typeof value !== "function") return value;
+      if (passthrough.has(property)) return value.bind(target);
+      return (...args: unknown[]) => ready.then(() => value.apply(target, args));
+    },
+  });
 }
 
 /**
