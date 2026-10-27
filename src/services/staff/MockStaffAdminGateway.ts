@@ -4,16 +4,16 @@ import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
 const cohorts: Cohort[] = [
-  { cohort_id: "cohort-demo-001", name: "RCYC-PR-Bootcamp2026", learner_count: 3, created_at: "2026-01-01T00:00:00.000Z", created_by: "superadmin-demo-001", archived: false },
-  { cohort_id: "cohort-demo-002", name: "Cyber Foundations", learner_count: 2, created_at: "2026-01-01T00:00:00.000Z", created_by: "superadmin-demo-001", archived: false },
+  { cohortId: "cohort-demo-001", name: "RCYC-PR-Bootcamp2026", learnerCount: 3, createdAt: "2026-01-01T00:00:00.000Z", createdBy: "superadmin-demo-001", archived: false },
+  { cohortId: "cohort-demo-002", name: "Cyber Foundations", learnerCount: 2, createdAt: "2026-01-01T00:00:00.000Z", createdBy: "superadmin-demo-001", archived: false },
 ];
 const students: LearnerRecord[] = [
-  { learner_id: "student-demo-001", learner_code: "RCYC-PR-Bootcamp2026-0001", cohort_id: "cohort-demo-001", first_name: "Alex", last_name: "Rivera", username: "alex.r", phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "active", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
-  { learner_id: "student-demo-002", learner_code: "RCYC-PR-Bootcamp2026-0002", cohort_id: "cohort-demo-001", first_name: "Jordan", last_name: "Lee", username: "jordan.l", phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "active", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
-  { learner_id: "student-demo-003", learner_code: "RCYC-PR-Bootcamp2026-0003", cohort_id: "cohort-demo-001", first_name: "Sam", last_name: "Ortiz", username: null, phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "awaiting_setup", created_at: "2026-01-01T00:00:00.000Z", archived_at: null },
+  { learnerId: "student-demo-001", learnerCode: "RCYC-PR-Bootcamp2026-0001", cohortId: "cohort-demo-001", firstName: "Alex", lastName: "Rivera", username: "alex.r", phone: null, email: null, trainingLevel: null, note1: null, note2: null, status: "active", createdAt: "2026-01-01T00:00:00.000Z", archivedAt: null },
+  { learnerId: "student-demo-002", learnerCode: "RCYC-PR-Bootcamp2026-0002", cohortId: "cohort-demo-001", firstName: "Jordan", lastName: "Lee", username: "jordan.l", phone: null, email: null, trainingLevel: null, note1: null, note2: null, status: "active", createdAt: "2026-01-01T00:00:00.000Z", archivedAt: null },
+  { learnerId: "student-demo-003", learnerCode: "RCYC-PR-Bootcamp2026-0003", cohortId: "cohort-demo-001", firstName: "Sam", lastName: "Ortiz", username: null, phone: null, email: null, trainingLevel: null, note1: null, note2: null, status: "awaiting_setup", createdAt: "2026-01-01T00:00:00.000Z", archivedAt: null },
 ];
 const modules: ModuleListing[] = [
-  { module_id: "rcyc-recruit-cyber-squad-gamified-001", module_name: "Operation Cyber Squad", title: { en: "Operation Cyber Squad" }, level: "beginner", note: null, activity_type: "multiple_choice", latest_version: 1, versions: [1], question_count: 10, used: false, archived: false, created_by: "superadmin-demo-001", created_at: "2026-01-01T00:00:00.000Z" },
+  { moduleId: "rcyc-recruit-cyber-squad-gamified-001", moduleName: "Operation Cyber Squad", title: { en: "Operation Cyber Squad" }, level: "beginner", note: null, activityType: "multiple_choice", latestVersion: 1, versions: [1], questionCount: 10, used: false, archived: false, createdBy: "superadmin-demo-001", createdAt: "2026-01-01T00:00:00.000Z" },
 ];
 const accounts: StaffAccountSummary[] = [
   { staffId: "superadmin-demo-001", username: "demo", displayName: "Demo SuperAdmin", role: "superadmin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
@@ -45,10 +45,10 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
   }
   async listCohorts(): Promise<Cohort[]> { return structuredClone(cohorts); }
   async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {
-    return structuredClone(input.cohortId ? students.filter((student) => student.cohort_id === input.cohortId) : students);
+    return structuredClone(input.cohortId ? students.filter((student) => student.cohortId === input.cohortId) : students);
   }
   async createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
-    if (!cohorts.some((cohort) => cohort.cohort_id === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
+    if (!cohorts.some((cohort) => cohort.cohortId === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
     return { learnerId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
   }
   async listModules(): Promise<ModuleListing[]> { return structuredClone(modules); }

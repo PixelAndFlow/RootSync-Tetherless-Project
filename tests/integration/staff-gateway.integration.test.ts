@@ -42,7 +42,7 @@ it("uses the real in-memory server for cohort, module, student and one-time setu
   expect(rows).toHaveLength(1);
   expect(rows[0]).toMatchObject({ learnerId: reveal.learnerId, mayHaveUnsyncedWork: true });
   expect(await reports.getLearnerReport({ learnerId: reveal.learnerId })).toMatchObject({ learnerId: reveal.learnerId });
-  expect((await gateway.listLearnerRecords({ cohortId }))[0]).toMatchObject({ learner_id: reveal.learnerId, status: "awaiting_setup" });
+  expect((await gateway.listLearnerRecords({ cohortId }))[0]).toMatchObject({ learnerId: reveal.learnerId, status: "awaiting_setup" });
   const setup = async () => fetch(`${base}/v1/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ setup_code: reveal.setupCode, username: "Test Student", device_id: randomUUID() }) });
   expect((await setup()).status).toBe(201);
   const reused = await setup();
