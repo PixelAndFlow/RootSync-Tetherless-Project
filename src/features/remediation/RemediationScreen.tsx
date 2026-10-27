@@ -33,7 +33,7 @@ export function RemediationScreen() {
   useEffect(() => {
     if (!profile || !record || !questions.length || started.current) return;
     started.current = true;
-    void offlineLearningGateway.startRemediation({ learnerId: profile.learnerId, moduleId: module.module_id, questionIds }).then(setAttempt);
+    void offlineLearningGateway.startRemediation({ learnerId: profile.learnerId, moduleId: module.module_id, contentVersion: module.content_version, questionIds }).then(setAttempt);
   }, [module.module_id, profile, questionIds, questions.length, record]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;

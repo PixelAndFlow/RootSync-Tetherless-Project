@@ -70,6 +70,16 @@ describe("MissionPlayScreen local-save feedback", () => {
     expect(startAttempt).toHaveBeenCalledOnce();
   });
 
+  it("starts the attempt with the module's own content version", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const startAttempt = vi.spyOn(gateway, "startAttempt");
+    renderMission(gateway);
+    await screen.findByRole("button", { name: /Red Team/i });
+    const input = startAttempt.mock.calls[0]![0];
+    expect(input.moduleId).toBe("rcyc-recruit-cyber-squad-gamified-001");
+    expect(Number.isInteger(input.contentVersion) && input.contentVersion >= 1).toBe(true);
+  });
+
   it("offers a retry when preparing the local session fails", async () => {
     const gateway = new MockOfflineLearningGateway();
     const startSession = gateway.startSession.bind(gateway);

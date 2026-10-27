@@ -99,6 +99,8 @@ export interface StartSessionInput {
 export interface StartAttemptInput {
   learnerId: string;
   moduleId: string;
+  /** The module's published content version (API Spec v1.30 §8.2). Every attempt event carries it. */
+  contentVersion: number;
   kind: AttemptKind;
 }
 
@@ -134,6 +136,8 @@ export interface CompleteAttemptInput {
 export interface StartRemediationInput {
   learnerId: string;
   moduleId: string;
+  /** The module's published content version. Remediation is a practice attempt and carries it like any other. */
+  contentVersion: number;
   questionIds: string[];
 }
 

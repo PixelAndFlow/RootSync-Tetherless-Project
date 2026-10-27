@@ -93,6 +93,8 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * content package carries its own version (RCO's schema, still open).
    */
   private contentVersion = 1;
+  /** content_version each attempt was started with; every later event of that attempt reuses it. */
+  private readonly attemptVersions = new Map<string, number>();
   /** Set from setup; used to start an implicit session if one is missing. */
   private currentLearnerId: string | null = null;
   /** The device token from /v1/setup, protected store only — never localStorage (API Spec v1.30 §6.1). */
@@ -190,10 +192,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       answers: [],
     };
 
+    const contentVersion = await this.pinAttemptVersion(attempt.id, input.contentVersion);
     await this.record({
       event_type: "attempt_started",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: contentVersion,
       attempt_id: attempt.id,
       payload: { attempt_kind: input.kind },
     });
@@ -214,7 +217,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await this.record({
       event_type: "answer_submitted",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: await this.versionOfAttempt(input.attemptId),
       attempt_id: input.attemptId,
       question_id: input.answer.questionId,
       // Only fields the strict schema allows. xp_award and answered_at are
@@ -253,7 +256,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await this.record({
       event_type: "attempt_completed",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: await this.versionOfAttempt(input.attemptId),
       attempt_id: input.attemptId,
       payload: {
         local_correct: input.correctQuestionIds.length,
@@ -299,10 +302,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       questionIds: input.questionIds,
     };
 
+    const contentVersion = await this.pinAttemptVersion(attempt.id, input.contentVersion);
     await this.record({
       event_type: "attempt_started",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: contentVersion,
       attempt_id: attempt.id,
       payload: { attempt_kind: "practice", question_ids: input.questionIds },
     });
@@ -484,7 +488,40 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     return 0;
   }
 
-  /** Pin the content version stamped onto attempt events. */
+  /**
+   * Record which content version an attempt was started with, durably, and return it.
+   * Every later event of the attempt (answers, completion, abandonment) carries this
+   * same version, so a module upgraded mid-attempt, or two attempts on different
+   * versions, are each scored against the answer key they were played with.
+   * Callers outside TypeScript that omit it get the gateway default (see setContentVersion).
+   */
+  private async pinAttemptVersion(attemptId: string, requested: number | undefined): Promise<number> {
+    const version = requested ?? this.contentVersion;
+    if (!Number.isInteger(version) || version < 1) {
+      throw new Error("contentVersion must be a whole number of 1 or more");
+    }
+    await setMeta(this.require(), `attempt_version:${attemptId}`, version);
+    this.attemptVersions.set(attemptId, version);
+    return version;
+  }
+
+  /**
+   * The version an attempt was started with: from memory, else from the store (the app
+   * was restarted mid-attempt), else the gateway default for attempts that began before
+   * versions were recorded.
+   */
+  private async versionOfAttempt(attemptId: string): Promise<number> {
+    const known = this.attemptVersions.get(attemptId);
+    if (known !== undefined) return known;
+    const stored = await getMeta<number>(this.require(), `attempt_version:${attemptId}`);
+    if (stored !== undefined && stored !== null) {
+      this.attemptVersions.set(attemptId, stored);
+      return stored;
+    }
+    return this.contentVersion;
+  }
+
+  /** Default content version, used only for an attempt with no recorded version. */
   setContentVersion(version: number): void {
     if (!Number.isInteger(version) || version < 1) {
       throw new Error("content_version must be a whole number of 1 or more");
@@ -532,7 +569,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await this.record({
       event_type: "attempt_abandoned",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: await this.versionOfAttempt(input.attemptId),
       attempt_id: input.attemptId,
       payload: { reason: input.reason },
     });
