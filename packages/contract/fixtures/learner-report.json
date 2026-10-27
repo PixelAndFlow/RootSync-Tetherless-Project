@@ -2,7 +2,7 @@
   "generated_at": "2026-10-25T09:00:00.000Z",
   "thresholds": {
     "pass_pct": 70,
-    "struggling_pct": 60,
+    "struggling_pct": 50,
     "weak_topic_pct": 60,
     "weak_topic_min_answers": 2
   },
@@ -11,12 +11,12 @@
     "maxSilenceMs": 90000
   },
   "learner": {
-    "learner_id": "8ed8fad1-62e9-4e8a-8e1a-68b5b7bb22ca",
-    "learner_code": "Fixture-Cohort-4FRS",
+    "learner_id": "86494fe5-cc74-431e-ace5-c08aa2da0d27",
+    "learner_code": "Fixture-Cohort-HT95",
     "first_name": "Active",
     "last_name": "Fixture",
     "username": "Active Learner",
-    "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
+    "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
     "archived": false
   },
   "modules": [

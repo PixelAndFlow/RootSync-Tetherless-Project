@@ -4,11 +4,11 @@ import { MockOfflineLearningGateway } from "./MockOfflineLearningGateway";
 describe("MockOfflineLearningGateway", () => {
   it("keeps the first attempt score after remediation and a full retry", async () => {
     const gateway = new MockOfflineLearningGateway();
-    const attempt = await gateway.startAttempt({ learnerId: "learner-1", moduleId: "module-1", kind: "full" });
+    const attempt = await gateway.startAttempt({ learnerId: "learner-1", moduleId: "module-1", contentVersion: 1, kind: "full" });
     await gateway.completeAttempt({ learnerId: "learner-1", moduleId: "module-1", attemptId: attempt.id, questionsTotal: 3, correctQuestionIds: ["question-1", "question-2"] });
-    const remediation = await gateway.startRemediation({ learnerId: "learner-1", moduleId: "module-1", questionIds: ["question-3"] });
+    const remediation = await gateway.startRemediation({ learnerId: "learner-1", moduleId: "module-1", contentVersion: 1, questionIds: ["question-3"] });
     await gateway.completeAttempt({ learnerId: "learner-1", moduleId: "module-1", attemptId: remediation.id, questionsTotal: 3, correctQuestionIds: ["question-3"] });
-    const retry = await gateway.startAttempt({ learnerId: "learner-1", moduleId: "module-1", kind: "full" });
+    const retry = await gateway.startAttempt({ learnerId: "learner-1", moduleId: "module-1", contentVersion: 1, kind: "full" });
     await gateway.completeAttempt({ learnerId: "learner-1", moduleId: "module-1", attemptId: retry.id, questionsTotal: 3, correctQuestionIds: ["question-1", "question-2", "question-3"] });
     const record = await gateway.getLearnerModuleRecord("learner-1", "module-1");
     expect(record?.initialScorePercent).toBe(66.7);
@@ -18,7 +18,7 @@ describe("MockOfflineLearningGateway", () => {
 
   it("awards one-time engagement XP and sector/mission rewards without changing score", async () => {
     const gateway = new MockOfflineLearningGateway();
-    const attempt = await gateway.startAttempt({ learnerId: "learner-2", moduleId: "module-2", kind: "full" });
+    const attempt = await gateway.startAttempt({ learnerId: "learner-2", moduleId: "module-2", contentVersion: 1, kind: "full" });
     await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" } });
     await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:01.000Z" } });
     await gateway.saveAnswer({ learnerId: "learner-2", moduleId: "module-2", attemptId: attempt.id, xpAward: 100, answer: { questionId: "question-2", selectedChoiceId: "B", isCorrect: true, answeredAt: "2026-10-09T00:00:02.000Z" } });
@@ -52,7 +52,7 @@ describe("MockOfflineLearningGateway", () => {
 
   it("fails one requested answer save without changing the learning record", async () => {
     const gateway = new MockOfflineLearningGateway();
-    const attempt = await gateway.startAttempt({ learnerId: "learner-save-failure", moduleId: "module-save-failure", kind: "full" });
+    const attempt = await gateway.startAttempt({ learnerId: "learner-save-failure", moduleId: "module-save-failure", contentVersion: 1, kind: "full" });
     gateway.simulateNextSaveFailure("Storage is temporarily unavailable");
 
     await expect(gateway.saveAnswer({ learnerId: "learner-save-failure", moduleId: "module-save-failure", attemptId: attempt.id, xpAward: 10, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-11T00:00:00.000Z" } })).rejects.toThrow("Storage is temporarily unavailable");
@@ -71,7 +71,7 @@ describe("MockOfflineLearningGateway", () => {
 
   it("keeps learner/module records isolated and rejects unknown attempts", async () => {
     const gateway = new MockOfflineLearningGateway();
-    const attempt = await gateway.startAttempt({ learnerId: "learner-a", moduleId: "module-a", kind: "full" });
+    const attempt = await gateway.startAttempt({ learnerId: "learner-a", moduleId: "module-a", contentVersion: 1, kind: "full" });
     await gateway.saveAnswer({ learnerId: "learner-a", moduleId: "module-a", attemptId: attempt.id, xpAward: 10, answer: { questionId: "question-1", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" } });
 
     expect(await gateway.getLearnerModuleRecord("learner-b", "module-a")).toBeNull();
@@ -82,7 +82,7 @@ describe("MockOfflineLearningGateway", () => {
   it("returns defensive snapshots so callers cannot change stored learning data", async () => {
     const gateway = new MockOfflineLearningGateway();
     const questionIds = ["question-1"];
-    const remediation = await gateway.startRemediation({ learnerId: "learner-4", moduleId: "module-4", questionIds });
+    const remediation = await gateway.startRemediation({ learnerId: "learner-4", moduleId: "module-4", contentVersion: 1, questionIds });
     questionIds.push("question-2");
     remediation.questionIds?.push("question-3");
     remediation.answers.push({ questionId: "question-4", selectedChoiceId: "A", isCorrect: true, answeredAt: "2026-10-09T00:00:00.000Z" });

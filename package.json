@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:ddil": "node --test \"tests/sync/*.test.ts\"",
     "validate:content": "vitest run src/content",
     "check:shared-content": "node scripts/check-shared-content.mjs",
     "report:spanish-coverage": "node scripts/report-spanish-coverage.mjs",
