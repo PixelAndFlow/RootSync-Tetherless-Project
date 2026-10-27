@@ -315,6 +315,14 @@ test("bad events are rejected one by one, kept, and never retried into the score
   assert.equal((await store.listRejected(s.learnerIds.ana!)).length, 6);
 });
 
+test("the database itself refuses an event type the contract does not define (Postgres only)", async () => {
+  // MemoryStore has no constraints; the API's validator is covered by the test above.
+  if (storeKind === "memory") return;
+  const answer = scenarioEvents().ana!.find((e) => e.event_type === "answer_submitted")!;
+  const bogus = { ...answer, event_id: "beef0000-0000-4000-8000-0000000000aa", device_seq: 2000, event_type: "not_a_real_event", learner_id: s.learnerIds.ana!, received_at: now.toISOString() };
+  await assert.rejects(() => store.insertEvent(bogus as never, "hash"), /events_event_type_known/);
+});
+
 test("Naquan's event shape: device-calculated fields and uppercase choice IDs are accepted (E-5 to E-8)", async () => {
   const cara = scenarioEvents().cara!;
   const start = cara.find((e) => e.event_type === "attempt_started")!;
