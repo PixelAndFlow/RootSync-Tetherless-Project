@@ -33,15 +33,15 @@ it("uses the real in-memory server for cohort, module, student and one-time setu
   const cohortResponse = await fetch(`${base}/v1/staff/cohorts`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${login.token}` }, body: JSON.stringify({ name: "Synthetic test cohort" }) });
   expect(cohortResponse.status).toBe(201);
   const cohortId = (await cohortResponse.json()).cohort.cohort_id as string;
-  const reports = gateway.reports();
-  expect(await reports.listLearners({ cohortId })).toEqual([]);
+  const trainerData = gateway.trainerData();
+  expect(await trainerData.listLearners({ cohortId })).toEqual([]);
   expect(await gateway.listLearnerRecords({ cohortId })).toEqual([]);
   await expect(gateway.createLearner({ cohortId, firstName: "<invalid>", lastName: "Student" })).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 422 });
   const reveal = await gateway.createLearner({ cohortId, firstName: "Test", lastName: "Student" });
-  const rows = await reports.listLearners({ cohortId });
+  const rows = await trainerData.listLearners({ cohortId });
   expect(rows).toHaveLength(1);
-  expect(rows[0]).toMatchObject({ learnerId: reveal.learnerId, mayHaveUnsyncedWork: true });
-  expect(await reports.getLearnerReport({ learnerId: reveal.learnerId })).toMatchObject({ learnerId: reveal.learnerId });
+  // A learner with no module results still appears, as one placeholder row, with the server's event counts.
+  expect(rows[0]).toMatchObject({ learnerId: reveal.learnerId, noModuleResults: true, mayHaveUnsyncedWork: true, acceptedEventCount: 0, rejectedEventCount: 0 });
   expect((await gateway.listLearnerRecords({ cohortId }))[0]).toMatchObject({ learnerId: reveal.learnerId, status: "awaiting_setup" });
   const setup = async () => fetch(`${base}/v1/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ setup_code: reveal.setupCode, username: "Test Student", device_id: randomUUID() }) });
   expect((await setup()).status).toBe(201);

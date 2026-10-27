@@ -5,7 +5,7 @@ import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccoun
 import { STAFF_USERNAME_PATTERN } from "./username";
 import { toCohort, toLearnerRecord, toModuleListing } from "./staffMappers";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
-import { ApiTrainerReportsGateway } from "../trainer/ApiTrainerReportsGateway";
+import { ApiTrainerDataGateway } from "../trainer/ApiTrainerDataGateway";
 
 function invalid(): never { throw new ApiError("INVALID_RESPONSE"); }
 function record(value: unknown): Record<string, unknown> { return isRecord(value) ? value : invalid(); }
@@ -60,7 +60,8 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     this.api = new ApiClient(baseUrl, () => this.token, transport);
   }
 
-  reports(): ApiTrainerReportsGateway { return new ApiTrainerReportsGateway(this.api); }
+  /** The trainer dashboard reads, sharing this gateway's staff session token. */
+  trainerData(): ApiTrainerDataGateway { return new ApiTrainerDataGateway(this.api); }
 
   signOut(): void { this.token = null; }
 
