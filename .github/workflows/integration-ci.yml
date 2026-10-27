@@ -37,6 +37,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # DDIL's node:test suite lives outside vitest's include paths, so it needs its own step.
+      - run: npm run test:ddil
 
   backend:
     runs-on: ubuntu-latest
