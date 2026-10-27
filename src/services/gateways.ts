@@ -2,7 +2,6 @@ import { MockOfflineLearningGateway } from "./offline/MockOfflineLearningGateway
 import type { OfflineLearningGateway } from "./offline/OfflineLearningGateway";
 import { MockTrainerDataGateway } from "./trainer/MockTrainerDataGateway";
 import type { TrainerDataGateway } from "./trainer/TrainerDataGateway";
-import type { TrainerReportsGateway } from "./trainer/ApiTrainerReportsGateway";
 import { MockStaffAdminGateway } from "./staff/MockStaffAdminGateway";
 import { ApiStaffAdminGateway } from "./staff/ApiStaffAdminGateway";
 import type { StaffAdminGateway } from "./staff/StaffAdminGateway";
@@ -22,7 +21,6 @@ export interface AppGateways {
    */
   offlineLearningReady?: Promise<void>;
   trainerData: TrainerDataGateway;
-  trainerReports?: TrainerReportsGateway;
   /** Optional until Marc's staff API adapter is installed at the app boundary. */
   staffAdmin?: StaffAdminGateway;
 }
@@ -82,7 +80,7 @@ export function createAppGateways(environment: Record<string, string | boolean |
 
     void navigator.storage?.persist?.();
 
-    return { ...createMockGateways(), offlineLearning: deferUntilReady(offlineLearning, offlineLearningReady), offlineLearningReady, staffAdmin, trainerReports: staffAdmin.reports() };
+    return { ...createMockGateways(), offlineLearning: deferUntilReady(offlineLearning, offlineLearningReady), offlineLearningReady, staffAdmin, trainerData: staffAdmin.trainerData() };
   }
   return mockGateways;
 }
