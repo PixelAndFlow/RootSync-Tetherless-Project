@@ -1,9 +1,9 @@
 {
   "learners": [
     {
-      "learner_id": "8ed8fad1-62e9-4e8a-8e1a-68b5b7bb22ca",
-      "learner_code": "Fixture-Cohort-4FRS",
-      "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
+      "learner_id": "86494fe5-cc74-431e-ace5-c08aa2da0d27",
+      "learner_code": "Fixture-Cohort-HT95",
+      "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
       "first_name": "Active",
       "last_name": "Fixture",
       "username": "Active Learner",
@@ -18,9 +18,9 @@
       "last_synced_at": null
     },
     {
-      "learner_id": "f9ada7d7-699f-4d91-9141-836c4e5065b4",
-      "learner_code": "Fixture-Cohort-A3S8",
-      "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
+      "learner_id": "1eac6fa5-4067-4f29-9b8a-02789d50c606",
+      "learner_code": "Fixture-Cohort-U652",
+      "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
       "first_name": "Archived",
       "last_name": "Fixture",
       "username": null,
@@ -35,9 +35,9 @@
       "last_synced_at": null
     },
     {
-      "learner_id": "08b1fcbb-06ed-4df6-8c4d-d874e28a6ad4",
-      "learner_code": "Fixture-Cohort-USJQ",
-      "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
+      "learner_id": "2821d5d3-ef84-4670-92f0-0db05022646e",
+      "learner_code": "Fixture-Cohort-X4JD",
+      "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
       "first_name": "Awaiting",
       "last_name": "Fixture",
       "username": null,
@@ -52,9 +52,9 @@
       "last_synced_at": null
     },
     {
-      "learner_id": "4755e827-01ba-4c8c-ab09-742561450b6a",
-      "learner_code": "Fixture-Cohort-BQEG",
-      "cohort_id": "f336540a-99a6-4d24-b282-780d3b3e9a41",
+      "learner_id": "8ad6362e-8274-49d6-802e-faf0ccd88624",
+      "learner_code": "Fixture-Cohort-PD6G",
+      "cohort_id": "1b53b2c5-c79c-4f49-9d4d-120f57d84060",
       "first_name": "SwitchedOff",
       "last_name": "Fixture",
       "username": "Switched Off Learner",

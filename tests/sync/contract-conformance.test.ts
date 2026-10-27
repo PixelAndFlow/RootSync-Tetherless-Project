@@ -106,7 +106,9 @@ test("the gateway covers the contract's event types, or names the ones it does n
 
   const emitted = new Set((await recordedEvents(gw)).map((e) => (e as { event_type: string }).event_type));
   const notEmitted = EVENT_TYPES.filter((type) => !emitted.has(type));
-  // session_ended is in the contract, but the gateway has no call that produces it.
-  // If DDIL starts emitting it, remove it here so the next new type is noticed.
+  // session_ended is in the contract but deliberately not emitted: the device cannot
+  // promise to deliver a final event, so the server closes a session at its last signal
+  // (see packages/analytics/test/session-without-end.test.ts). If DDIL starts emitting it
+  // as a best-effort event, remove it here so the next new type is noticed.
   assert.deepEqual(notEmitted, ["session_ended"]);
 });
