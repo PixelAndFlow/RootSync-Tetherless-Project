@@ -82,13 +82,13 @@ test("Learner.status lists the LearnerStatus values in staff-api.ts", () => {
 
 test("Learner declares every field the server really returns (recorded responses)", () => {
   const declared = new Set(propertyNames(schema("Learner")));
-  const returned = new Set(fixture("learners").learners.flatMap((row: object) => Object.keys(row)));
+  const returned = new Set<string>(fixture("learners").learners.flatMap((row: object) => Object.keys(row)));
   assert.deepEqual([...returned].filter((key) => !declared.has(key)), [], "fields the server sends that openapi.yaml does not declare");
 });
 
 test("Staff declares every field the server really returns (recorded responses)", () => {
   const declared = new Set(propertyNames(schema("Staff")));
-  const returned = new Set(fixture("staff-accounts").accounts.flatMap((row: object) => Object.keys(row)));
+  const returned = new Set<string>(fixture("staff-accounts").accounts.flatMap((row: object) => Object.keys(row)));
   assert.deepEqual([...returned].filter((key) => !declared.has(key)), [], "fields the server sends that openapi.yaml does not declare");
 });
 
