@@ -3,60 +3,90 @@
 **Branch:** `ddil-test`  
 **Target:** Raices Cyber Organization (RCO) Tetherless Cyberathlete Training PWA  
 **Engine:** DDIL Offline-First Outbox, Lease Mutex, and Idempotent Sync Engine  
-**Status:** ✅ All 71 Tests Passing (0 Failures, 0 Skips, Hermetic & Cross-Component Verified)  
+**Integration Status:** ✅ Connected with **Chris's Frontend Spec v1.1** & **Marc's Backend API v1.3**  
+**Test Suite Status:** ✅ All 71 Tests Passing (0 Failures, 0 Skips, ~2.2s Execution, Hermetic & Live Cross-Component Verified)  
+**Applet Build Status:** ✅ Vite Production Build & Compilation Succeeded (0 Errors)
 
 ---
 
-## 1. Executive Summary & Team Roles
+## 1. System Integration Overview & Component Matrix
 
-This audit closes the gap between paper architecture and real-world deployment across the three independent components:
-1. **Chris's Frontend Integration:** `OfflineLearningGateway` interface consumer, outbox telemetry inspector, UI HUD.
-2. **Marc's Backend Integration:** Spec v1.10 strict schema API (`/v1/sync/events`), UUID constraints, server-side grading, and idempotency store.
-3. **Naquan's DDIL Engine (`ddil-test`):** Four-store IndexedDB persistence, atomic outbox commit, lease-based single-flight sync, and error recovery.
+The Tetherless application achieves reliable offline-first operation across three independently developed components:
 
-### Chain of Command & Review Persona
-- **Big Patch (Senior Dev):** Enforced architectural invariants, lease ownership rules, and transactional atomicity.
-- **Lil Ne'va (Junior Dev):** Implemented the initial DDIL gateway and core sync loops.
-- **Baby Patch (Adversarial QA):** Executed adversarial stress runs, exposed 5 harness divergences (D1–D5) and 4 critical protocol bugs (N1–N6).
-- **Ne'va (Architecture Authority):** Guaranteed contract alignment with the RCO DDIL PRD without scope creep.
+| Component | Owner & Spec | Responsibilities & Protocol Alignment | Status |
+|---|---|---|---|
+| **Frontend Integration** | **Chris (Spec v1.1)** | - Implements `OfflineLearningGateway` interface.<br>- Real-time outbox telemetry badge & inspection HUD.<br>- Monotonic session clock tracking.<br>- Client diagnostic payload stamping (`local_correct`, `local_total`, `local_is_correct`, `question_ids`).<br>- Wired to native W3C `window.indexedDB` (`tetherless-ddil`) with fake storage completely removed from browser runtime. | **Connected & Verified (v1.1)** |
+| **Backend & API** | **Marc (Spec v1.3 / API v1.10)** | - Ingestion endpoint `/v1/sync/events`.<br>- RFC 4122 standard UUID formatting & validation.<br>- Authoritative server-side grading & idempotency store (`duplicate` acknowledged as success).<br>- HTTP status mapping: `200` (success/replayed), `401` (auth expiry), `422` (terminal rejection), `429` (rate-limit backoff header), `5xx` (jittered exponential backoff). | **Connected & Verified (v1.3)** |
+| **DDIL Persistence & Sync** | **Naquan (`ddil-test`)** | - Four-store IndexedDB layout (`events`, `delivery`, `delivery_log`, `meta`).<br>- Pre-commit transaction guarantee (Save-Then-Blackout safe).<br>- Lease mutex for single-flight concurrency.<br>- Atomic monotonic `device_seq` allocator.<br>- Auth recovery pipeline (`unblockAuth()` / `unblockAuthOnStart: true`). | **Connected & Verified (`ddil-test`)** |
 
 ---
 
-## 2. Removing the Fake: Native Storage & Real HTTP Integration
+## 2. Priority 0 Protocol Defects & Mitigations
 
-1. **Browser Runtime (Production & Workbench):**
-   - Removed `FakeIDBFactory` dependency from browser runtime in `src/App.tsx`.
-   - Wired to browser-native W3C `window.indexedDB` under database name `tetherless-ddil`.
-   - Learner answers, session metadata, delivery state, and attempt logs now persist across page reloads and browser restarts.
-2. **Backend Integration (Hermetic & Cross-Component):**
-   - Replaced mock/fake transport testing with real HTTP transport (`HttpTransport`) in `tests/sync/cross-component.test.ts`.
-   - Tested directly against Marc's live HTTP server (Spec v1.10) over TCP sockets.
-3. **Fake IDB Harness Hardening:**
-   - In Node test environments where global W3C `indexedDB` is absent, patched `FakeIDBFactory` to strictly replicate Chromium behavior (D1–D5), preventing false-green test runs.
+### A. Protocol Fixes
 
----
-
-## 3. Forensic Analysis & Applied Fixes
-
-### A. Protocol Defects Fixed
-
-| Finding | Severity | Description | Applied Fix | Verifying Test |
+| Finding | Severity | Description | Applied Fix | Verifying Tests |
 |---|---|---|---|---|
-| **N3: Auth Stranding Trap** | **P0 (Critical)** | `blocked_auth` records had `next_attempt_at: null` and were excluded from `pass()`. A token refresh never drained them, permanently stranding learner work. | Added `unblockAuth()` in `src/sync/stores/db.ts` and `unblockAuthOnStart: true` in `src/sync/engine/sync.ts`. Flips `blocked_auth` → `pending` when valid credentials are signal-backed. | `protocol-attacks.test.ts` (Attacks 1 & 2), `field-scenarios.test.ts` (Test 2) |
-| **N4: Lease Mid-Flight Expiry Stale Overwrites** | **P0 (Critical)** | If Tab A's 60s lease expired mid-flight and Tab B successfully pushed an event (`acknowledged`), Tab A's late-arriving network failure would overwrite Tab B's success with `failed`/`rejected`. | Updated `applyOne()` in `src/sync/engine/sync.ts` with strict lease guards. Stale responses from non-owners or already-settled records are ignored. | `protocol-attacks.test.ts` (Attack 3) |
-| **N6: `device_seq` Race & Idempotency Gaps** | **P0 (High)** | Concurrent calls to `saveAnswer` read and wrote `device_seq` without transactional locking, leading to duplicate sequence numbers. `recordEvent` lacked constraint handlers on duplicate insert. | Added `withDeviceSeqLock` serialized mutex in `src/sync/engine/lease.ts`. Pulled sequence allocation into atomic transaction and handled duplicate ID collisions cleanly. | `protocol-attacks.test.ts` (Attacks 4 & 5), `field-scenarios.test.ts` (Test 4) |
-| **N1: `retainLocal` Void Drop** | **P1 (Medium)** | `retainLocal` called `void setMeta(...)` fire-and-forget. If the transaction failed, local XP/award data was dropped silently. | Updated `saveAnswer()` in `src/sync/gateway/ddil-gateway.ts` to `await this.retainLocal(...)` before resolving to caller. | `protocol-attacks.test.ts` (Attack 6) |
-| **Trace #4: Session Continuity Loss** | **P1 (Medium)** | Heartbeat after restart provisioned a new session ID, resetting monotonic clock origin and truncating active learner metrics. | Persisted active `session_id` and `session_started_at_monotonic` in the `meta` store. Gateway restart recovers the existing session without truncation. | `protocol-attacks.test.ts` (Attack 7) |
+| **N3: 401 Auth Stranding Trap** | **P0 (Critical)** | `blocked_auth` events had `next_attempt_at: null` and were excluded from future sync sweeps. When a user refreshed their token or re-authenticated, blocked events were never re-evaluated, permanently stranding learner progress. | 1. Added `unblockAuth()` in `src/sync/stores/db.ts` to flip `blocked_auth` events back to `pending`.<br>2. Added `unblockAuthOnStart: true` in `src/sync/engine/sync.ts` to drain previously blocked events upon starting a sync pass after credentials are restored.<br>3. Guaranteed no attempt budgets are consumed while in `blocked_auth`. | `protocol-attacks.test.ts` (Attacks 1 & 2)<br>`field-scenarios.test.ts` (Test 2)<br>`cross-component.test.ts` (Test 4 & 5) |
+| **N4: Lease Mid-Flight Expiry Stale Overwrite** | **P0 (Critical)** | If Tab A's 60s lease expired during a slow network call, and Tab B claimed the lease and successfully synchronized an event (`acknowledged`), Tab A's eventual network timeout/failure would overwrite Tab B's success with `failed` or `rejected`. | Enforced strict lease ownership checks in `applyOne()` in `src/sync/engine/sync.ts`. Any late-arriving response from an expired lease or for an already settled record is discarded. | `protocol-attacks.test.ts` (Attack 3)<br>`field-scenarios.test.ts` (Test 4) |
+| **N6: `device_seq` Concurrency Race & Idempotency** | **P0 (High)** | Concurrent calls to `saveAnswer` read and incremented `device_seq` without transactional locking, generating duplicate sequence numbers. Furthermore, `recordEvent` lacked idempotency handling on duplicate ID insertion. | 1. Implemented `withDeviceSeqLock` serialized mutex in `src/sync/engine/lease.ts`.<br>2. Wrapped sequence allocation in atomic read-modify-write transactions.<br>3. Handled duplicate event ID inserts idempotently without aborting transactions. | `protocol-attacks.test.ts` (Attacks 4 & 5)<br>`field-scenarios.test.ts` (Test 4) |
+| **N1: `retainLocal` Void Drop** | **P1 (Medium)** | `retainLocal` invoked `void setMeta(...)` fire-and-forget. If the transaction failed, local XP and award data were lost silently while reporting success to the UI. | Updated `saveAnswer()` in `src/sync/gateway/ddil-gateway.ts` to `await this.retainLocal(...)` before resolving to caller, guaranteeing persistence. | `protocol-attacks.test.ts` (Attack 6)<br>`field-scenarios.test.ts` (Test 1) |
+| **Trace #4: Monotonic Session Continuity Loss** | **P1 (Medium)** | On browser restart or gateway reload, heartbeat provisioned a new session ID and reset the monotonic clock origin, truncating session duration metrics. | Persisted `session_id` and `session_started_at_monotonic` in the `meta` store. Gateway restart recovers the existing session without truncation. | `protocol-attacks.test.ts` (Attack 7)<br>`gateway.test.ts` |
 
 ---
 
-### B. Fake IDB Divergences Fixed (`tests/sync/fakes/fake-idb.ts`)
+## 3. Dedicated Field Scenario Attack Suite
 
-- **D1 (ReadOnlyError):** Read-only transactions now throw `DOMException("The transaction is read-only.", "ReadOnlyError")` on `put()`, `add()`, or `delete()`.
-- **D2 (Deletion Initialization):** Initialized `tx.deletions.set(name, new Set())` on transaction creation; no more `TypeError` on first delete.
-- **D3 (Audit Trail Preservation):** Auto-increment sequences in `delivery_log` use store-level sequence counters (`base.seq`), preventing log row collapsing.
-- **D4 (KeyPath Constraint):** Passing an explicit key to a store with a `keyPath` throws `DOMException(..., "DataError")`.
-- **D5 (Concurrent Duplicate Rejection):** `add()` checks committed store rows and buffered writes, rejecting duplicate keys with `ConstraintError`.
+The test suite in `tests/sync/field-scenarios.test.ts` executes the 5 critical adversarial field scenarios:
+
+### 1. The Save-Then-Blackout Test
+- **Scenario:** A learner submits an answer and the network drops immediately.
+- **Verification:**
+  - `saveAnswer()` does not resolve successfully before its IndexedDB transaction commits.
+  - The answer survives simulated page reloads and browser restarts.
+  - The event remains in `pending` delivery state with retry budget untouched.
+  - A failed synchronization does not erase the answer.
+  - Restoring connectivity delivers the event cleanly.
+  - Replaying the same event does not create a duplicate server record (`duplicate` status returned as 200 success).
+- **Pass Status:** ✅ Verified (`field-scenarios.test.ts: Field Test 1`).
+
+### 2. The 401 Authentication Trap Test
+- **Scenario:** Learner credentials expire mid-sync session.
+- **Verification:**
+  - Full lifecycle tested: `pending` → `blocked_auth` → authentication recovery → `pending` → `accepted`.
+  - 401 does not cause an infinite retry loop or burn retry attempt budgets.
+  - Blocked events remain visible in the outbox inspector.
+  - Restoring authentication provides an explicit recovery path (`unblockAuth()` / `unblockAuthOnStart: true`).
+  - Already acknowledged events are not resubmitted.
+- **Pass Status:** ✅ Verified (`field-scenarios.test.ts: Field Test 2`).
+
+### 3. The Four-Store Consistency Test
+- **Scenario:** Outbox inspector reflection vs. underlying database integrity.
+- **Verification:**
+  - `events`: Committed records remain immutable and intact across state changes.
+  - `delivery`: Delivery state strictly reflects the defined state machine (`pending`, `in_flight`, `acknowledged`, `blocked_auth`, `failed`, `rejected`).
+  - `delivery_log`: Historical attempt records are preserved as an append-only audit trail rather than overwritten.
+  - `meta`: Persisted device identity, session timestamps, and server acknowledgement cursors survive restarts.
+  - UI inspector displays actual database store records, not a detached memory state.
+- **Pass Status:** ✅ Verified (`field-scenarios.test.ts: Field Test 3`).
+
+### 4. The Single-Flight Concurrency Test
+- **Scenario:** Rapid multi-trigger of SYNC button during slow network responses.
+- **Verification:**
+  - Active request holds the lease mutex; concurrent triggers are serialized or skipped without race conditions.
+  - Releasing response completes cleanly without duplicated transport calls.
+  - Recovers cleanly when the active request encounters a network throw or server error.
+  - Events created while a sync pass is active are not stranded; they remain queued for the subsequent pass.
+- **Pass Status:** ✅ Verified (`field-scenarios.test.ts: Field Test 4`).
+
+### 5. The 422 Terminal-Rejection Test
+- **Scenario:** Non-recoverable server rejection (e.g. `DEADLINE_PASSED` or invalid schema payload).
+- **Verification:**
+  - Rejection is recorded with specific server error code and details.
+  - Transitions to terminal `rejected` state; client does not retry indefinitely or burn battery/data.
+  - Event remains visible in inspector for staff audit.
+  - Cannot be mistaken for an accepted event.
+- **Pass Status:** ✅ Verified (`field-scenarios.test.ts: Field Test 5`).
 
 ---
 
@@ -95,7 +125,7 @@ This audit closes the gap between paper architecture and real-world deployment a
 ✔ tests/sync/gateway.test.ts (24 tests)
   - Gateway contract alignment with Chris's interface
   - Bare RFC 4122 UUID generation
-  - Schema v1.10 compliance (no forbidden keys, content_version stamped)
+  - Schema v1.10 / v1.3 compliance (no forbidden keys, content_version stamped)
   - Local XP and award retention
   - Monotonic session clock tracking
 
@@ -126,19 +156,39 @@ This audit closes the gap between paper architecture and real-world deployment a
   - Attempt abandoned with reason accepted
   - Strict schema rejection of unknown fields verified
 
-Total: 71 tests, 0 failures, duration ~2.1s
+Total: 71 tests, 0 failures, 0 skipped, duration ~2.2s
 ```
 
 ---
 
-## 5. Verification Checklist
+## 5. Harness Hardening & Cleanups
 
-- [x] Protocol defect N3 (blocked_auth un-stranding) implemented and tested.
-- [x] Protocol defect N4 (lease ownership guard) implemented and tested.
-- [x] Protocol defect N6 (device_seq atomic lock) implemented and tested.
-- [x] Protocol defect N1 (retainLocal durability) implemented and tested.
-- [x] Protocol defect Trace #4 (session continuity) implemented and tested.
-- [x] Fake IDB harness defects D1–D5 patched and verified.
-- [x] Browser workbench wired to native W3C `window.indexedDB`.
-- [x] Real cross-component testing against live HTTP server on Node.
-- [x] Hermetic suite passing cleanly on plain Node 22 with zero dependencies.
+1. **Native IndexedDB in Browser (`src/App.tsx`):**
+   - Fake IDB completely eliminated from production and developer workbench runtime.
+   - W3C `window.indexedDB` persists events, delivery states, delivery logs, and metadata across browser sessions.
+2. **Fake IDB Harness Fixes (`tests/sync/fakes/fake-idb.ts`):**
+   - **D1 (ReadOnlyError):** Throws `DOMException("The transaction is read-only.", "ReadOnlyError")` on illegal writes.
+   - **D2 (Deletion Initialization):** Deletions map initialized per transaction to eliminate `TypeError`.
+   - **D3 (Audit Trail Preservation):** Auto-increment sequences use store-level sequence counter (`base.seq`), preventing log row collapsing.
+   - **D4 (KeyPath Constraint):** DataError thrown when explicit keys are passed to stores with existing key paths.
+   - **D5 (Concurrent Duplicate Rejection):** Duplicate keys correctly rejected with `ConstraintError`.
+3. **Data Asset Cleanup:**
+   - Removed legacy static data mock files (`src/data/cyberVocabData.ts` and `src/data/intelMatrixData.ts`).
+   - Applet compiles cleanly with Vite production build.
+
+---
+
+## 6. Verification Checklist
+
+- [x] Connected with **Chris's Frontend Spec v1.1** (`OfflineLearningGateway`, diagnostic fields, UI badge).
+- [x] Connected with **Marc's Backend API v1.3 / v1.10** (`/v1/sync/events`, UUID, idempotency, status mapping).
+- [x] Protocol defect **N3** (blocked_auth un-stranding & recovery) implemented and verified.
+- [x] Protocol defect **N4** (lease ownership guard against stale overwrites) implemented and verified.
+- [x] Protocol defect **N6** (device_seq atomic lock and concurrency safety) implemented and verified.
+- [x] Protocol defect **N1** (retainLocal persistence before resolution) implemented and verified.
+- [x] Protocol defect **Trace #4** (monotonic session continuity across restarts) implemented and verified.
+- [x] 5 Field scenario attack tests implemented and passing.
+- [x] Live HTTP cross-component tests against real Node HTTP server passing.
+- [x] All 71 tests passing with 0 failures on native Node test runner.
+- [x] Browser workbench wired directly to native `window.indexedDB`.
+- [x] Codebase builds cleanly with Vite (`compile_applet` passed).
