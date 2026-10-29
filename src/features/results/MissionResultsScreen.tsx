@@ -5,7 +5,7 @@ import { StatusChip } from "../../components/common/StatusChip";
 import { CyberShield } from "../../components/gamification/CyberShield";
 import { EngagementStrip } from "../../components/gamification/EngagementStrip";
 import { SectorMap } from "../../components/gamification/SectorMap";
-import { moduleLibrary } from "../../content/modules";
+import { useModule } from "../missions/useModules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { LearnerModuleRecord } from "../../types/learning";
@@ -16,14 +16,19 @@ export function MissionResultsScreen() {
   const { moduleId } = useParams();
   const { profile } = useLearnerProfile();
   const offlineLearningGateway = useOfflineLearningGateway();
-  const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
+  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { summary: syncSummary } = useSyncStatus();
 
-  useEffect(() => { if (!profile) return; void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false)); }, [module.module_id, profile]);
+  useEffect(() => {
+    if (!profile || !module) return;
+    void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false));
+  }, [module, profile]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><h1 className="text-2xl font-bold">Set up your Student profile first.</h1><Link className="mt-5 inline-flex text-cyan-300" to="/learner">Return to setup →</Link></section>;
+  if (moduleLoading) return <LoadingState label="Loading mission content…" />;
+  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (isLoading) return <LoadingState label="Loading your saved mission debrief…" />;
   if (!record?.firstCompletedAt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Finish every question to create an initial score and unlock your debrief." title="Your mission debrief is not ready yet." />;
 

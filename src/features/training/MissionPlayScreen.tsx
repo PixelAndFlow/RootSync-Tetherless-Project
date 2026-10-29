@@ -7,13 +7,13 @@ import { allocateAnswerCardColours } from "../../components/learner/answerCardPa
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { EngagementStrip } from "../../components/gamification/EngagementStrip";
 import { SectorMap } from "../../components/gamification/SectorMap";
-import { moduleLibrary } from "../../content/modules";
+import { useModule } from "../missions/useModules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, EngagementSummary } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
-import { LoadingState } from "../../components/common/PageState";
+import { EmptyState, LoadingState } from "../../components/common/PageState";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 
 const presentationCopy: Record<string, string> = {
@@ -32,7 +32,7 @@ export function MissionPlayScreen() {
   const navigate = useNavigate();
   const { profile, setSpanishAssist } = useLearnerProfile();
   const offlineLearningGateway = useOfflineLearningGateway();
-  const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
+  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
@@ -50,11 +50,11 @@ export function MissionPlayScreen() {
   const focusedFeedbackQuestionId = useRef<string | null>(null);
   const previousIndex = useRef(index);
   const { summary: syncSummary } = useSyncStatus();
-  const question = module.questions[index];
 
   useEffect(() => {
-    const attemptKey = profile ? `${profile.learnerId}:${module.module_id}` : null;
-    if (!profile || startedFor.current === attemptKey) return;
+    if (!module || !profile) return;
+    const attemptKey = `${profile.learnerId}:${module.module_id}`;
+    if (startedFor.current === attemptKey) return;
     startedFor.current = attemptKey;
     setStartError(false);
     void (async () => {
@@ -62,15 +62,16 @@ export function MissionPlayScreen() {
       const createdAttempt = await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, contentVersion: module.content_version, kind: "full" });
       setAttempt(createdAttempt);
     })().catch(() => { startedFor.current = null; setStartError(true); });
-  }, [module.module_id, profile, offlineLearningGateway, startRetry]);
+  }, [module, profile, offlineLearningGateway, startRetry]);
 
   useEffect(() => {
-    if (!revealed[question.id] || focusedFeedbackQuestionId.current === question.id) return;
-    focusedFeedbackQuestionId.current = question.id;
+    const currentQuestion = module?.questions[index];
+    if (!currentQuestion || !revealed[currentQuestion.id] || focusedFeedbackQuestionId.current === currentQuestion.id) return;
+    focusedFeedbackQuestionId.current = currentQuestion.id;
     const feedback = missionRef.current?.querySelector<HTMLElement>("article div[aria-live='polite']");
     feedback?.setAttribute("tabindex", "-1");
     feedback?.focus();
-  }, [question.id, revealed]);
+  }, [module, index, revealed]);
 
   useEffect(() => {
     if (previousIndex.current !== index) {
@@ -82,9 +83,12 @@ export function MissionPlayScreen() {
   }, [index]);
 
   if (!profile) return <Navigate replace to="/learner" />;
+  if (moduleLoading) return <LoadingState label="Loading mission content…" />;
+  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (startError) return <section role="alert"><p>Unable to prepare a local mission record. Check device storage and try again.</p><button className="ui-action mt-4" onClick={() => setStartRetry((value) => value + 1)} type="button">Try again</button></section>;
   if (!attempt) return <LoadingState label="Preparing your local mission record…" />;
 
+  const question = module.questions[index];
   const awards = gamificationAwards(module);
   const selectedChoice = answers[question.id];
   const answerIsCorrect = selectedChoice === question.correct_choice;

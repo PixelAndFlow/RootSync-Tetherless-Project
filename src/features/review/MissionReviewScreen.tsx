@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { AnswerCard } from "../../components/learner/AnswerCard";
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { ReturnLink } from "../../components/common/ReturnLink";
-import { moduleLibrary } from "../../content/modules";
+import { useModule } from "../missions/useModules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { LearnerModuleRecord } from "../../types/learning";
@@ -14,20 +14,25 @@ export function MissionReviewScreen() {
   const [searchParams] = useSearchParams();
   const { profile, setSpanishAssist } = useLearnerProfile();
   const offlineLearningGateway = useOfflineLearningGateway();
-  const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
+  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const scope = searchParams.get("scope") === "correct" || searchParams.get("scope") === "missed" ? searchParams.get("scope") : "all";
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [index, setIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => { if (!profile) return; void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false)); }, [module.module_id, profile]);
+  useEffect(() => {
+    if (!profile || !module) return;
+    void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false));
+  }, [module, profile]);
   const firstAttempt = record?.attempts.find((attempt) => attempt.kind === "full" && attempt.status === "completed");
-  const questions = useMemo(() => module.questions.filter((question) => {
+  const questions = useMemo(() => (module ? module.questions.filter((question) => {
     const answer = firstAttempt?.answers.find((candidate) => candidate.questionId === question.id);
     return scope === "correct" ? answer?.isCorrect : scope === "missed" ? !answer?.isCorrect : true;
-  }), [firstAttempt, module.questions, scope]);
+  }) : []), [firstAttempt, module, scope]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;
+  if (moduleLoading) return <LoadingState label="Loading mission content…" />;
+  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (isLoading) return <LoadingState label="Loading saved mission record…" />;
   if (!firstAttempt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Complete a full mission attempt before opening a read-only review." title="No saved attempt is available." />;
   if (!questions.length) return <EmptyState actionLabel="Return to debrief" actionTo={`/learner/missions/${module.module_id}/results`} detail="No questions match this review filter." title="Nothing matches this review." />;

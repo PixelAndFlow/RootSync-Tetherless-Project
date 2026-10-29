@@ -1,14 +1,19 @@
 import { Link, useParams } from "react-router-dom";
 import { ReturnLink } from "../../components/common/ReturnLink";
-import { moduleLibrary } from "../../content/modules";
+import { useModule } from "./useModules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { learnerCopy } from "../../copy/ui";
 import { SectorIcon } from "../../components/gamification/SectorIcon";
+import { EmptyState, LoadingState } from "../../components/common/PageState";
 
 export function MissionDetailScreen() {
   const { moduleId } = useParams();
-  const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
+  const { data: module, loading, error } = useModule(moduleId);
   const { profile } = useLearnerProfile();
+
+  if (loading) return <LoadingState label="Loading mission details…" />;
+  if (error || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
+
   const sectors = module.gamification?.sectors ?? [];
   const questionNumbers = new Map(module.questions.map((question, index) => [question.id, index + 1]));
 

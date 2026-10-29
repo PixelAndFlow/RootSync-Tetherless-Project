@@ -2,19 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnswerCard } from "../../components/learner/AnswerCard";
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
-import { moduleLibrary } from "../../content/modules";
+import { useModule } from "../missions/useModules";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, LearnerModuleRecord } from "../../types/learning";
 import { gamificationAwards } from "../../utils/gamification";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
+import { EmptyState, LoadingState } from "../../components/common/PageState";
 
 export function RemediationScreen() {
   const { moduleId } = useParams();
   const navigate = useNavigate();
   const { profile, setSpanishAssist } = useLearnerProfile();
   const offlineLearningGateway = useOfflineLearningGateway();
-  const module = moduleLibrary.find((candidate) => candidate.module_id === moduleId) ?? moduleLibrary[0];
+  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
   const [index, setIndex] = useState(0);
@@ -26,20 +27,24 @@ export function RemediationScreen() {
   const exitRef = useRef<HTMLButtonElement | null>(null);
   const started = useRef(false);
 
-  useEffect(() => { if (profile) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord); }, [module.module_id, profile]);
-  const questionIds = record?.initialMissedQuestionIds.filter((id) => !record.masteredQuestionIds.includes(id)) ?? [];
-  const questions = module.questions.filter((question) => questionIds.includes(question.id));
-  const awards = gamificationAwards(module);
   useEffect(() => {
-    if (!profile || !record || !questions.length || started.current) return;
+    if (profile && module) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord);
+  }, [module, profile]);
+  const questionIds = record?.initialMissedQuestionIds.filter((id) => !record.masteredQuestionIds.includes(id)) ?? [];
+  const questions = module ? module.questions.filter((question) => questionIds.includes(question.id)) : [];
+  useEffect(() => {
+    if (!profile || !module || !record || !questions.length || started.current) return;
     started.current = true;
     void offlineLearningGateway.startRemediation({ learnerId: profile.learnerId, moduleId: module.module_id, contentVersion: module.content_version, questionIds }).then(setAttempt);
-  }, [module.module_id, profile, questionIds, questions.length, record]);
+  }, [module, profile, questionIds, questions.length, record]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;
+  if (moduleLoading) return <LoadingState label="Loading mission content…" />;
+  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (!record) return <section className="rounded-3xl border border-white/10 bg-panel p-8">Loading your local learning record…</section>;
   if (!questions.length) return <section className="rounded-3xl border border-emerald-300/20 bg-panel p-8"><p className="text-xs font-bold tracking-[0.18em] text-emerald-200">MASTERY COMPLETE</p><h1 className="mt-3 text-3xl font-bold">No missed questions need practice.</h1><Link className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-3 font-bold" to={`/learner/missions/${module.module_id}/results`}>Return to debrief</Link></section>;
 
+  const awards = gamificationAwards(module);
   const question = questions[index];
   const selected = answers[question.id];
   const answerIsCorrect = selected === question.correct_choice;
