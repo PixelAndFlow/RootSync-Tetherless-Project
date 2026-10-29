@@ -44,10 +44,18 @@ export function SyncStatusProvider({ children }: { children: React.ReactNode }) 
     window.addEventListener("offline", offline);
     window.addEventListener("online", online);
     document.addEventListener("visibilitychange", visible);
+    // Without this, a learner who stays on one tab — online and visible the
+    // whole time, never backgrounding it or tapping "Sync now" — can sit on
+    // unsynced work indefinitely: the other three triggers all need a state
+    // *change* to fire. This one needs only time to pass.
+    const retry = setInterval(() => {
+      if (document.visibilityState === "visible") void requestSync();
+    }, 30_000);
     return () => {
       window.removeEventListener("offline", offline);
       window.removeEventListener("online", online);
       document.removeEventListener("visibilitychange", visible);
+      clearInterval(retry);
     };
   }, [requestSync]);
   // Authorization/rejections remain visible even when connectivity is also absent.

@@ -34,3 +34,43 @@ describe("authorization-paused sync", () => {
     expect(screen.queryByText(/resume on its own/)).not.toBeInTheDocument();
   });
 });
+
+describe("automatic retry while the tab stays open", () => {
+  it("asks the gateway to sync again on a timer, with no state change needed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const gateways = createMockGateways();
+      const offline = gateways.offlineLearning as MockOfflineLearningGateway;
+      const request = vi.spyOn(offline, "requestSync");
+      render(<MemoryRouter><GatewayProvider gateways={gateways}><SyncStatusProvider><SyncStatusScreen /></SyncStatusProvider></GatewayProvider></MemoryRouter>);
+      await waitFor(() => expect(screen.getByRole("button", { name: /Sync now/ })).toBeInTheDocument());
+      request.mockClear();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      expect(request).toHaveBeenCalledTimes(1);
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      expect(request).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry on the timer while the tab is hidden", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const gateways = createMockGateways();
+      const offline = gateways.offlineLearning as MockOfflineLearningGateway;
+      const request = vi.spyOn(offline, "requestSync");
+      render(<MemoryRouter><GatewayProvider gateways={gateways}><SyncStatusProvider><SyncStatusScreen /></SyncStatusProvider></GatewayProvider></MemoryRouter>);
+      await waitFor(() => expect(screen.getByRole("button", { name: /Sync now/ })).toBeInTheDocument());
+      request.mockClear();
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
