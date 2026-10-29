@@ -1,2 +1,8 @@
 # Placeholder GitHub handles — replace with real usernames once confirmed.
 * @marcdelsoin @chriswozniak @naquanmckune
+
+# The shared contract needs all three reviewing any change to it — a
+# rename or new field here affects the server, the app and the DDIL layer
+# at once (Tetherless_Contract_Drift_and_Naming_Proposal_v1.00_2026-10-25.md
+# §2.3, point 2). Same placeholder-handle caveat as above.
+/packages/contract/ @marcdelsoin @chriswozniak @naquanmckune

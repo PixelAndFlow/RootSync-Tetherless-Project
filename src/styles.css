@@ -1,0 +1,142 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #1e1e1e;
+  --color-panel: #252526;
+}
+
+html { background: #1e1e1e; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #1e1e1e; color: #cccccc; }
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, [tabindex="-1"]:focus { outline: 2px solid var(--ui-focus); outline-offset: 3px; }
+
+:root { --ui-radius: 1rem; --ui-panel-border: #3e3e42; --ui-panel-shadow: 0 16px 40px rgb(0 0 0 / 30%); --ui-focus: #ae08f2; --ui-action: #5a1ee4; --ui-action-hover: #6d35ef; --rco-purple: #5a1ee4; --rco-magenta: #c143c0; --rco-magenta-accessible: #d96ad4; --rco-purple-accessible: #aa86ff; }
+.ui-panel { border: 1px solid var(--ui-panel-border); border-radius: var(--ui-radius); background: var(--color-panel); box-shadow: var(--ui-panel-shadow); }
+.ui-eyebrow { color: var(--rco-magenta-accessible); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.18em; }
+.ui-action { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border-radius: 0.75rem; background: var(--ui-action); padding: 0.75rem 1.25rem; font-weight: 700; color: white; }
+.ui-action:hover { background: var(--ui-action-hover); }
+.ui-action:disabled { cursor: not-allowed; background: #46318d; color: white; }
+.integration-input { min-width: 0; width: 100%; min-height: 44px; border: 1px solid #858585; border-radius: 0.75rem; background: var(--color-ink); color: inherit; padding: 0.75rem 1rem; }
+.integration-input::placeholder { color: #9d9d9d; }
+.app-light-theme .integration-input::placeholder { color: #5c5c5c; }
+.ui-action-secondary { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; border: 1px solid #707078; border-radius: 0.75rem; padding: 0.75rem 1.25rem; font-weight: 700; }
+.ui-action-secondary:hover { background: rgb(255 255 255 / 5%); }
+.ui-action-secondary:disabled { cursor: not-allowed; border-color: #707078; background: #2d2d30; color: #9d9d9d; opacity: 1; }
+.app-header { z-index: 40; border-color: #3e3e42; background: #181818; }
+.app-demo-notice, .app-sync-next-step { border-color: #3e3e42; background: #2d2d30; color: #cccccc; }
+.app-demo-notice strong, .app-sync-next-step strong { color: var(--rco-purple-accessible); }
+.app-wordmark { color: var(--rco-purple-accessible); }
+.app-section-eyebrow { color: var(--rco-magenta-accessible); }
+.app-skip-link, .app-preference-active { border-color: var(--rco-purple); background: var(--rco-purple); color: #fff; }
+.app-preference-inactive { border-color: #707078; background: rgb(255 255 255 / 3%); color: #cccccc; }
+.app-preference-inactive:hover { background: rgb(255 255 255 / 8%); }
+.app-storage-status { border-color: #3e3e42; background: #2d2d30; }
+.app-storage-status > :first-child { color: var(--rco-purple-accessible); }
+.app-status-chip, .app-offline-badge, .app-nav-link-active { border-color: var(--rco-purple); background: var(--rco-purple); color: #ffffff; }
+.app-nav-link-inactive { color: #cccccc; }
+.app-nav-link-inactive:hover { background: #2d2d30; }
+.mission-metric, .mission-assist, .mission-presentation-token { border-color: var(--rco-purple); background: var(--color-ink); }
+.mission-metric, .mission-presentation-token { color: #cccccc; }
+.mission-assist { color: var(--rco-magenta-accessible); font-size: 0.875rem; font-weight: 800; }
+.mission-assist:hover { background: #2d2d30; }
+.mission-presentation-label { color: var(--rco-purple-accessible); }
+.mission-flag-action { border-color: var(--rco-purple); background: var(--color-ink); color: var(--rco-purple-accessible); }
+.mission-flag-action:hover { background: #2d2d30; }
+.mission-flag-action[data-flagged="true"] { background: var(--rco-purple); color: #ffffff; }
+
+.onboarding-readiness { border-color: #3e3e42; background: linear-gradient(145deg, #2d2d30, #252526 68%, #30294a); color: #cccccc; }
+.mission-ready-icon { display: grid; height: 4rem; width: 4rem; place-items: center; border: 1px solid var(--rco-purple); border-radius: 1rem; background: rgb(90 30 228 / 14%); color: var(--rco-purple-accessible); }
+.onboarding-readiness > p:nth-of-type(1) { color: var(--rco-magenta-accessible); }
+.onboarding-readiness > p:nth-of-type(2) { color: #9d9d9d; }
+.mission-ready-path li { display: flex; gap: 0.875rem; }
+.mission-ready-path li > span { display: grid; position: relative; height: 2rem; width: 2rem; flex: none; place-items: center; border: 1px solid var(--rco-purple); border-radius: 9999px; background: var(--color-ink); color: var(--rco-purple-accessible); font-size: 0.75rem; font-weight: 800; }
+.mission-ready-path li:not(:last-child) > span::after { position: absolute; top: 2rem; height: 1rem; border-left: 1px solid var(--rco-purple); content: ""; }
+.mission-ready-path h3 { color: #cccccc; font-size: 0.875rem; font-weight: 700; }
+.mission-ready-path p { margin-top: 0.125rem; color: #9d9d9d; font-size: 0.8125rem; line-height: 1.25rem; }
+
+/* Disabled mission navigation remains legible while still signalling that an answer is required. */
+article + div button:disabled { cursor: not-allowed; opacity: 1; }
+article + div button:not([class~="bg-violet-600"]):disabled { border-color: #707078; background: #2d2d30; color: #9d9d9d; }
+article + div button[class~="bg-violet-600"]:disabled { background: #46318d !important; color: #ffffff; }
+
+/* Every four-choice learner question uses this one, unique-colour card palette. */
+.kahoot-answer { color: #ffffff !important; }
+.kahoot-answer-blue { border-color: #93c5fd !important; background: linear-gradient(135deg, #2563eb, #1e3a8a) !important; }
+.kahoot-answer-red { border-color: #fda4af !important; background: linear-gradient(135deg, #dc2626, #991b1b) !important; }
+.kahoot-answer-orange { border-color: #fde68a !important; background: linear-gradient(135deg, #d97706, #92400e) !important; }
+.kahoot-answer-teal { border-color: #99f6e4 !important; background: linear-gradient(135deg, #0f766e, #134e4a) !important; }
+.kahoot-answer-correct { border-color: #ffffff !important; box-shadow: 0 0 0 2px #ffffff; }
+.kahoot-answer-selected-incorrect { border-style: dashed; }
+
+/* Neutral VS Code-style surfaces keep the RCO palette reserved for meaning. */
+[class~="border-white/10"] { border-color: #3e3e42; }
+button[class~="border-white/15"], a[class~="border-white/15"], input[class~="border-white/15"], select[class~="border-white/15"] { border-color: #707078; }
+[class~="text-slate-50"], [class~="text-slate-100"], [class~="text-slate-200"] { color: #cccccc; }
+[class~="text-slate-300"], [class~="text-slate-400"] { color: #9d9d9d; }
+[class*="text-cyan"], [class*="text-violet"], [class*="text-emerald"], [class*="text-amber"], [class*="text-rose"] { color: var(--rco-purple-accessible) !important; }
+[class*="border-cyan"], [class*="border-violet"], [class*="border-emerald"], [class*="border-amber"], [class*="border-rose"] { border-color: var(--rco-purple) !important; }
+[class*="bg-cyan"], [class*="bg-violet"], [class*="bg-emerald"], [class*="bg-amber"], [class*="bg-rose"] { background-color: rgb(90 30 228 / 12%) !important; }
+[class*="from-cyan"], [class*="from-violet"], [class*="from-emerald"], [class*="from-amber"], [class*="from-rose"] { --tw-gradient-from: rgb(90 30 228 / 45%) var(--tw-gradient-from-position) !important; }
+[class*="to-cyan"], [class*="to-violet"], [class*="to-emerald"], [class*="to-amber"], [class*="to-rose"] { --tw-gradient-to: rgb(193 67 192 / 28%) var(--tw-gradient-to-position) !important; }
+[class~="bg-violet-600"] { background-color: var(--rco-purple) !important; }
+[class~="hover:bg-violet-500"]:hover { background-color: #6d35ef !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+
+.app-reduced-motion *, .app-reduced-motion *::before, .app-reduced-motion *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+.app-high-contrast { --color-panel: #101010; }
+.app-high-contrast .text-slate-400, .app-high-contrast .text-slate-300 { color: #ffffff; }
+.app-high-contrast [class~="border-white/10"], .app-high-contrast [class~="border-white/15"] { border-color: rgb(255 255 255 / 38%); }
+
+.app-light-theme { --color-ink: #ffffff; --color-panel: #f3f3f3; --ui-panel-border: #c8c8c8; --ui-panel-shadow: 0 8px 24px rgb(0 0 0 / 12%); --ui-focus: #5a1ee4; color: #1e1e1e; }
+.app-light-theme .app-header { border-color: #c8c8c8; background: #f3f3f3; }
+.app-light-theme .app-wordmark { color: #5a1ee4; }
+.app-light-theme .app-section-eyebrow, .app-light-theme .ui-eyebrow { color: #9b2796; }
+.app-light-theme [class~="text-slate-50"], .app-light-theme [class~="text-slate-100"], .app-light-theme [class~="text-slate-200"] { color: #1e1e1e; }
+.app-light-theme [class~="text-slate-300"], .app-light-theme [class~="text-slate-400"] { color: #3b3b3b; }
+.app-light-theme [class~="text-slate-500"] { color: #5c5c5c; }
+.app-light-theme [class*="text-cyan"], .app-light-theme [class*="text-violet"], .app-light-theme [class*="text-emerald"], .app-light-theme [class*="text-amber"], .app-light-theme [class*="text-rose"] { color: #5a1ee4 !important; }
+.app-light-theme [class~="border-white/10"] { border-color: #c8c8c8; }
+.app-light-theme [class~="border-white/15"] { border-color: #858585; }
+.app-light-theme [class*="bg-ink"] { background-color: #e8e8e8; }
+.app-light-theme [class~="bg-white/[0.03]"] { background-color: #e8e8e8; }
+.app-light-theme .app-preference-inactive { border-color: #858585; background: #e8e8e8; color: #1e1e1e; }
+.app-light-theme .app-preference-active, .app-light-theme .app-skip-link { color: #ffffff; }
+.app-light-theme .ui-action-secondary:disabled { border-color: #858585; background: #e8e8e8; color: #5c5c5c; }
+.app-light-theme .app-storage-status { border-color: #c8c8c8; background: #e8e8e8; }
+.app-light-theme .app-demo-notice, .app-light-theme .app-sync-next-step { border-color: #c8c8c8; background: #e8e8e8; color: #1e1e1e; }
+.app-light-theme .app-demo-notice strong, .app-light-theme .app-sync-next-step strong { color: #5a1ee4; }
+.app-light-theme .app-storage-status > :first-child { color: #5a1ee4; }
+.app-light-theme .app-status-chip, .app-light-theme .app-offline-badge, .app-light-theme .app-nav-link-active { color: #ffffff; }
+.app-light-theme .app-nav-link-inactive { color: #1e1e1e; }
+.app-light-theme .app-nav-link-inactive:hover { background: #e8e8e8; }
+.app-light-theme .mission-metric, .app-light-theme .mission-presentation-token { color: #1e1e1e; }
+.app-light-theme .mission-assist { color: #9b2796; }
+.app-light-theme .mission-assist:hover { background: #e8e8e8; }
+.app-light-theme .mission-presentation-label { color: #5a1ee4; }
+.app-light-theme .mission-flag-action { background: #ffffff; color: #5a1ee4; }
+.app-light-theme .mission-flag-action:hover { background: #e8e8e8; }
+.app-light-theme article + div button:not([class~="bg-violet-600"]):disabled { border-color: #858585; background: #e8e8e8; color: #5c5c5c; }
+.app-light-theme article + div button[class~="bg-violet-600"]:disabled { background: #5a1ee4 !important; color: #ffffff; }
+.app-light-theme .onboarding-readiness { border-color: #c8c8c8; background: linear-gradient(145deg, #f3f3f3, #ffffff 68%, #f3edff); color: #1e1e1e; }
+.app-light-theme .mission-ready-icon { background: #ffffff; color: #5a1ee4; }
+.app-light-theme .onboarding-readiness > p:nth-of-type(1) { color: #9b2796; }
+.app-light-theme .onboarding-readiness > p:nth-of-type(2), .app-light-theme .mission-ready-path p { color: #3b3b3b; }
+.app-light-theme .mission-ready-path li > span { background: #ffffff; color: #5a1ee4; }
+.app-light-theme .mission-ready-path h3 { color: #1e1e1e; }
+
+@media (min-width: 1024px) {
+  /* Keep the sticky mission panel clear of the persistent site header. */
+  aside[class*="lg:sticky"] { top: 5.5rem !important; z-index: 10; }
+}
+.app-light-theme.app-high-contrast { --color-panel: #ffffff; --ui-panel-border: #1e1e1e; color: #000000; }
+
+@media print {
+  .app-header, [aria-label="Development controls"], button, .app-skip-link { display: none !important; }
+  body, html { background: #ffffff; color: #000000; }
+  .ui-panel { box-shadow: none; }
+}

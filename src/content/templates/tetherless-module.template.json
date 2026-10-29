@@ -1,0 +1,73 @@
+{
+  "schema_version": "tetherless.module.v1",
+  "module_id": "replace-with-stable-module-id",
+  "content_version": 1,
+  "program": "RCO Training Program",
+  "level": "beginner",
+  "level_label": {
+    "en": "Beginner"
+  },
+  "title": {
+    "en": "Replace with mission title"
+  },
+  "subtitle": {
+    "en": "Replace with a short learner-facing mission description"
+  },
+  "mission_brief": {
+    "en": "Replace with the context a learner needs before starting."
+  },
+  "settings": {
+    "question_count": 1,
+    "timer_seconds": null,
+    "show_immediate_feedback": true,
+    "allow_retry": true,
+    "spanish_assist_default": false,
+    "passing_score_percent": 80,
+    "allow_full_retry": true,
+    "allow_missed_practice": true,
+    "allow_correct_review": true,
+    "allow_all_review": true
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "topic": "replace_with_topic",
+      "type": "multiple_choice",
+      "presentation": "kahoot_cards",
+      "prompt": {
+        "en": "Replace with a clear, single-answer question."
+      },
+      "choices": [
+        {
+          "id": "A",
+          "en": "Replace with the correct answer"
+        },
+        {
+          "id": "B",
+          "en": "Replace with a plausible distractor"
+        }
+      ],
+      "correct_choice": "A",
+      "feedback": {
+        "en": "Explain why the correct answer is right and what action the learner should remember."
+      }
+    }
+  ],
+  "gamification": {
+    "mission_name": {
+      "en": "Replace mission name"
+    },
+    "sectors": [
+      {
+        "id": "sector-01",
+        "order": 1,
+        "name": {
+          "en": "Replace sector name"
+        },
+        "question_ids": [
+          "q01"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,403 @@
+openapi: 3.1.0
+info:
+  title: Tetherless API
+  version: 1.10.0
+  description: |
+    Implements the API and Integration Spec v1.10 (2026-10-21), DRAFT for team review.
+    Learner routes use the device token (Naquan's gateway); staff routes use a staff
+    session token (Chris's TrainerDataGateway and StaffAdminGateway) and check a
+    permission on every request. Event shapes and validation rules live in
+    packages/contract/src/index.ts; module JSON rules in packages/content/src/tetherless-module.ts.
+servers:
+  - url: http://localhost:8080
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: Opaque device token returned once by POST /v1/setup. Never expires on a timer; staff can switch the phone off.
+    staffSession:
+      type: http
+      scheme: bearer
+      description: Staff session token from POST /v1/staff/login (12 hours by default, STAFF_SESSION_HOURS).
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, retryable, details]
+          properties:
+            code: { type: string, examples: [SETUP_CODE_INVALID, FORBIDDEN, VALIDATION_FAILED, PASSWORD_CHANGE_REQUIRED] }
+            message: { type: string }
+            request_id: { type: string, examples: [req-1a2b3c4d] }
+            retryable: { type: boolean, description: True for 429 and 5xx. }
+            details:
+              type: array
+              items: { type: object, properties: { row: { type: integer }, field: { type: string }, code: { type: string }, message: { type: string } } }
+    LocalizedText:
+      type: object
+      required: [en]
+      properties: { en: { type: string }, es: { type: string, description: Spanish Assist text, shown only when supplied. } }
+    Event:
+      type: object
+      description: One of the eight event types in packages/contract. Unknown fields are rejected.
+      required: [event_id, schema_version, event_type, device_id, device_seq, occurred_at, session_id, monotonic_ms, payload]
+      properties:
+        event_id: { type: string, format: uuid, description: Plain UUID, no prefix. }
+        schema_version: { const: 1 }
+        event_type:
+          enum: [session_started, visibility_changed, heartbeat, session_ended, attempt_started, answer_submitted, attempt_completed, attempt_abandoned]
+        device_id: { type: string, format: uuid }
+        device_seq: { type: integer, minimum: 1 }
+        occurred_at: { type: string, format: date-time, description: Phone clock; advisory only. }
+        session_id: { type: string, format: uuid }
+        monotonic_ms: { type: number, minimum: 0, description: Milliseconds since session_started (performance.now()). }
+        module_id: { type: string, description: Attempt events only. }
+        content_version: { type: integer, minimum: 1, description: Attempt events only. }
+        attempt_id: { type: string, format: uuid, description: Attempt events only. }
+        question_id: { type: string, description: answer_submitted only. }
+        payload:
+          type: object
+          description: |
+            attempt_started { attempt_kind: full|practice|boss|review, mission_id?, question_ids? (practice only) }
+            answer_submitted { choice_id (any case; stored lower-case) | null, response_ms?, local_is_correct? }
+            attempt_completed { local_correct?, local_total? }
+            local_* fields are what the phone showed; stored and exported, never used for scoring.
+    EventResult:
+      type: object
+      required: [event_id, status]
+      properties:
+        event_id: { type: [string, "null"] }
+        status: { enum: [accepted, duplicate, retryable_error, rejected] }
+        code:
+          enum: [INVALID_EVENT, UNSUPPORTED_SCHEMA_VERSION, DEVICE_MISMATCH, UNKNOWN_MODULE, UNKNOWN_QUESTION, UNKNOWN_CHOICE, EVENT_ID_CONFLICT, SERVER_BUSY]
+        message: { type: string }
+    Score:
+      type: object
+      properties: { correct: { type: integer }, total: { type: integer }, pct: { type: number } }
+    TetherlessModule:
+      type: object
+      description: |
+        The app's module format (Chris's TetherlessModule) with content_version as a whole number,
+        optional note and activity_type. Validated by validateTetherlessModule(). Team fields:
+        Module Name = title.en, Module version = content_version, Difficulty Level = level, Note = note.
+      required: [schema_version, module_id, content_version, level, title, settings, questions]
+      properties:
+        schema_version: { const: tetherless.module.v1 }
+        module_id: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,63}$" }
+        content_version: { type: integer, minimum: 1 }
+        activity_type: { type: string, pattern: "^(multiple_choice|game:[a-z0-9-]{1,40})$" }
+        note: { type: string }
+        level: { type: string }
+        title: { $ref: "#/components/schemas/LocalizedText" }
+        settings: { type: object, required: [question_count] }
+        questions:
+          type: array
+          items:
+            type: object
+            required: [id, topic, type, prompt, choices, correct_choice, feedback]
+            properties:
+              id: { type: string }
+              topic: { type: string }
+              type: { enum: [multiple_choice, scenario_mc] }
+              presentation: { type: string }
+              prompt: { $ref: "#/components/schemas/LocalizedText" }
+              choices: { type: array, minItems: 2, maxItems: 6, items: { type: object, required: [id, en], properties: { id: { type: string }, en: { type: string }, es: { type: string } } } }
+              correct_choice: { type: string }
+              feedback: { $ref: "#/components/schemas/LocalizedText" }
+        retired_question_ids: { type: array, items: { type: string } }
+    Learner:
+      type: object
+      description: Staff view. Contact fields are never sent to a phone.
+      properties:
+        learner_id: { type: string, format: uuid }
+        learner_code: { type: string, examples: [RCYC-PR-Bootcamp2026-7K3Q], description: Cohort name at creation + 4 characters; never changes. }
+        cohort_id: { type: string, format: uuid }
+        first_name: { type: string }
+        last_name: { type: string }
+        username: { type: [string, "null"], description: Chosen by the learner at setup. Not unique. }
+        phone: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        training_level: { type: [string, "null"] }
+        note_1: { type: [string, "null"] }
+        note_2: { type: [string, "null"] }
+        status: { enum: [awaiting_setup, active, phone_switched_off, archived] }
+        created_at: { type: string, format: date-time }
+        archived_at: { type: [string, "null"], format: date-time }
+        last_synced_at: { type: [string, "null"], format: date-time }
+    LearnerInput:
+      type: object
+      required: [first_name, last_name]
+      properties:
+        first_name: { type: string, maxLength: 80 }
+        last_name: { type: string, maxLength: 80 }
+        phone: { type: string, maxLength: 32 }
+        email: { type: string, maxLength: 254 }
+        training_level: { type: string, maxLength: 40 }
+        note_1: { type: string, maxLength: 1000 }
+        note_2: { type: string, maxLength: 1000 }
+    Staff:
+      type: object
+      properties:
+        staff_id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+        role: { enum: [superadmin, admin, trainer] }
+        must_change_password: { type: boolean }
+        disabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+        created_by: { type: [string, "null"], format: uuid, description: The staff member who created the account. }
+        permissions: { type: array, items: { type: string }, description: Only on login and /me. }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+paths:
+  /healthz:
+    get: { summary: Liveness and number of published module versions, responses: { "200": { description: OK } } }
+
+  # ---------------------------------------------------------------- learner (device)
+  /v1/setup:
+    post:
+      summary: Set up a phone with a one-time setup code and a username the learner chooses
+      description: Rate limited. The device token is returned once and stored only as a SHA-256 hash. Usernames are 2–24 characters and not unique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [setup_code, username, device_id]
+              properties:
+                setup_code: { type: string, description: "Any case; dashes and spaces ignored, e.g. MKT4-9WQX-2HPD" }
+                username: { type: string }
+                device_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Set up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_token: { type: string }
+                  learner: { type: object, properties: { learner_id: { type: string }, learner_code: { type: string }, username: { type: string }, cohort_name: { type: string } } }
+        "409": { description: SETUP_CODE_USED or DEVICE_EXISTS }
+        "422": { description: SETUP_CODE_INVALID or USERNAME_INVALID }
+        "429": { description: Rate limited; see Retry-After }
+  /v1/sync/events:
+    post:
+      summary: Send a batch of events; get a result for each one
+      description: |
+        Authentication happens before anything is read or stored. Safe to repeat:
+        an event already stored returns "duplicate". The phone marks accepted and
+        duplicate events Synced, retries retryable_error with the same event_id,
+        and keeps rejected events (never retried; they appear in exports).
+      security: [{ deviceToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schema_version, events]
+              properties:
+                schema_version: { const: 1 }
+                events: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/Event" } }
+      responses:
+        "200":
+          description: Per-event results, in the same order as the request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema_version: { const: 1 }
+                  received_at: { type: string, format: date-time }
+                  results: { type: array, items: { $ref: "#/components/schemas/EventResult" } }
+        "400": { description: Not JSON, no events array, or unsupported schema_version; nothing stored }
+        "401": { description: Missing, unknown or switched-off device token; nothing stored. Keep events (blocked_auth). }
+        "413": { description: Over 512 KB or over 200 events; split the batch }
+        "429": { description: Retry after Retry-After }
+        "5XX": { description: Retry everything later with the same event_ids }
+  /v1/me/modules:
+    get:
+      summary: Modules assigned to this learner (cohort or individual), with the version to download
+      security: [{ deviceToken: [] }]
+      responses: { "200": { description: "{ modules: [{ module_id, content_version, title, level, activity_type, question_count, assigned_at }] }" }, "401": { $ref: "#/components/responses/Error" } }
+  /v1/content/modules/{module_id}/versions/{content_version}:
+    get:
+      summary: One published module version in the app's format (answer keys included; the phone scores offline)
+      security: [{ deviceToken: [] }, { staffSession: [] }]
+      parameters:
+        - { name: module_id, in: path, required: true, schema: { type: string } }
+        - { name: content_version, in: path, required: true, schema: { type: integer } }
+      responses: { "200": { description: Module, content: { application/json: { schema: { $ref: "#/components/schemas/TetherlessModule" } } } }, "401": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/Error" } }
+
+  # ---------------------------------------------------------------- staff session
+  /v1/staff/login:
+    post:
+      summary: Staff sign-in (accounts are created by staff with permission; no self-signup)
+      requestBody: { content: { application/json: { schema: { type: object, required: [username, password], properties: { username: { type: string }, password: { type: string } } } } } }
+      responses:
+        "200": { description: "{ token, expires_at, staff (with permissions) }" }
+        "401": { description: INVALID_CREDENTIALS }
+        "403": { description: ACCOUNT_DISABLED }
+        "429": { description: Rate limited }
+  /v1/staff/logout:
+    post: { security: [{ staffSession: [] }], responses: { "200": { description: Signed out } } }
+  /v1/staff/me:
+    get: { summary: The signed-in staff member and their permissions, security: [{ staffSession: [] }], responses: { "200": { description: Staff, content: { application/json: { schema: { $ref: "#/components/schemas/Staff" } } } } } }
+  /v1/staff/me/password:
+    post:
+      summary: Change password. Required before anything else when must_change_password is true (PASSWORD_CHANGE_REQUIRED).
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [current_password, new_password], properties: { current_password: { type: string }, new_password: { type: string, minLength: 12 } } } } } }
+      responses: { "200": { description: Changed }, "401": { description: Current password wrong }, "422": { description: Too short or unchanged } }
+
+  # ---------------------------------------------------------------- cohorts
+  /v1/staff/cohorts:
+    get:
+      summary: "Cohorts (permission: results.view). include_archived=true shows archived ones."
+      security: [{ staffSession: [] }]
+      parameters: [{ name: include_archived, in: query, schema: { type: boolean } }]
+      responses: { "200": { description: "{ cohorts: [{ cohort_id, name, learner_count, created_at, archived }] }" } }
+    post:
+      summary: "Create a cohort with any name (cohort.create). Names are unique ignoring letter case."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 120 } } } } } }
+      responses: { "201": { description: "{ cohort }" }, "409": { description: COHORT_NAME_TAKEN } }
+  /v1/staff/cohorts/{cohort_id}:
+    patch:
+      summary: "Rename (cohort.edit). Existing learner codes keep the old name."
+      security: [{ staffSession: [] }]
+      responses: { "200": { description: "{ cohort }" }, "409": { description: COHORT_NAME_TAKEN } }
+  /v1/staff/cohorts/{cohort_id}/archive:
+    post: { summary: "Archive (cohort.archive). Learners and results stay.", security: [{ staffSession: [] }], responses: { "200": { description: Archived } } }
+
+  # ---------------------------------------------------------------- learners
+  /v1/staff/learners:
+    get:
+      summary: "Learners in a cohort (results.view); q searches name, username and learner code"
+      security: [{ staffSession: [] }]
+      parameters:
+        - { name: cohort_id, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: include_archived, in: query, schema: { type: boolean } }
+      responses: { "200": { description: "{ learners: Learner[] }" } }
+    post:
+      summary: "Add one learner (learner.create). Returns the one-time setup code once."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { allOf: [{ $ref: "#/components/schemas/LearnerInput" }, { type: object, required: [cohort_id], properties: { cohort_id: { type: string, format: uuid } } }] } } } }
+      responses: { "201": { description: "{ learner, setup_code }" }, "422": { description: VALIDATION_FAILED with details } }
+  /v1/staff/learners/{learner_id}:
+    get: { summary: "One learner with phones (results.view)", security: [{ staffSession: [] }], responses: { "200": { description: Learner with devices } } }
+    patch: { summary: "Change staff-entered fields (learner.edit). cohort_id, learner_code and username are read-only.", security: [{ staffSession: [] }], responses: { "200": { description: Learner } } }
+  /v1/staff/learners/{learner_id}/archive:
+    post: { summary: "Archive (learner.archive); also switches off their phones. History stays.", security: [{ staffSession: [] }], responses: { "200": { description: Archived } } }
+  /v1/staff/learners/{learner_id}/setup-code:
+    post:
+      summary: "New one-time setup code for the same learner record (learner.setup_code). Earlier unused codes stop working."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { switch_off_existing_phones: { type: boolean, description: Also needs device.revoke. } } } } } }
+      responses: { "201": { description: "{ setup_code, phones_switched_off }" }, "409": { description: LEARNER_ARCHIVED } }
+  /v1/staff/learners/{learner_id}/devices/{device_id}/switch-off:
+    post: { summary: "Switch off one phone (device.revoke). Its later syncs get 401.", security: [{ staffSession: [] }], responses: { "200": { description: Switched off }, "404": { description: No active phone } } }
+  /v1/staff/learners/{learner_id}/purge:
+    post:
+      summary: "Permanently delete a learner and all their data for a privacy request (data.purge, Superadmin). Audited."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [confirm], properties: { confirm: { type: string, description: The learner's learner_code, typed back. } } } } } }
+      responses: { "200": { description: "{ ok, events_deleted }" }, "422": { description: CONFIRMATION_REQUIRED } }
+  /v1/staff/learners/import/check:
+    post:
+      summary: "Check a roster file (learner.import). Nothing is saved until commit; checks expire after 1 hour."
+      description: "Columns by header name: first_name, last_name, phone, email, training_level, note_1, note_2. One cohort per file."
+      security: [{ staffSession: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [cohort_id, file], properties: { cohort_id: { type: string, format: uuid }, file: { type: string, format: binary, description: .csv or .xlsx, max 2 MB, max 1000 rows } } }
+      responses: { "200": { description: "{ import_id, valid, rows_total, rows_ok, errors[{row, field, code, message}], warnings, preview }" } }
+  /v1/staff/learners/import/{import_id}/commit:
+    post:
+      summary: "Create the checked learners (learner.import). Setup codes appear only in this response."
+      security: [{ staffSession: [] }]
+      responses: { "201": { description: "{ created, learners: [{ learner_id, learner_code, first_name, last_name, setup_code }] }" }, "404": { description: IMPORT_NOT_FOUND }, "422": { description: IMPORT_INVALID } }
+
+  # ---------------------------------------------------------------- modules
+  /v1/staff/modules/check:
+    post:
+      summary: "Validate a module without saving (content.create)"
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/TetherlessModule" } } } }
+      responses: { "200": { description: "{ valid, will_be: new_module|new_version|blocked, summary, errors, warnings }" } }
+  /v1/staff/modules:
+    get: { summary: "Published modules (results.view)", security: [{ staffSession: [] }], responses: { "200": { description: "{ modules: [{ module_id, module_name, level, note, activity_type, latest_version, versions, used, archived }] }" } } }
+    post:
+      summary: "Publish a new module (content.create) or a new version (content.edit). Published versions never change."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/TetherlessModule" } } } }
+      responses: { "201": { description: "{ module_id, content_version, published_at, warnings }" }, "409": { description: VERSION_EXISTS }, "422": { description: VALIDATION_FAILED with details } }
+  /v1/staff/modules/{module_id}/versions/{content_version}:
+    get: { summary: "One published version (results.view)", security: [{ staffSession: [] }], responses: { "200": { description: TetherlessModule } } }
+  /v1/staff/modules/{module_id}/archive:
+    post: { summary: "Archive (content.archive). Leaves phones' lists; history stays.", security: [{ staffSession: [] }], responses: { "200": { description: Archived } } }
+  /v1/staff/modules/{module_id}:
+    delete: { summary: "Permanently delete a module nobody used or was assigned (data.purge)", security: [{ staffSession: [] }], responses: { "200": { description: Deleted }, "409": { description: IN_USE } } }
+
+  # ---------------------------------------------------------------- assignments
+  /v1/staff/assignments:
+    get:
+      summary: "Assignments for a cohort, including individual ones (results.view)"
+      security: [{ staffSession: [] }]
+      parameters: [{ name: cohort_id, in: query, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: "{ assignments }" } }
+    post:
+      summary: "Assign a module to a cohort or to one learner (assignment.manage). Omit content_version for the latest."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [module_id], properties: { module_id: { type: string }, content_version: { type: integer }, cohort_id: { type: string, format: uuid }, learner_id: { type: string, format: uuid } } } } } }
+      responses: { "201": { description: "{ assignment }" }, "409": { description: ALREADY_ASSIGNED or MODULE_ARCHIVED } }
+  /v1/staff/assignments/{assignment_id}/remove:
+    post: { summary: "Unassign (assignment.manage). Results already earned stay.", security: [{ staffSession: [] }], responses: { "200": { description: Removed } } }
+
+  # ---------------------------------------------------------------- reports
+  /v1/staff/cohorts/{cohort_id}/report:
+    get:
+      summary: "Scores, time and sync per learner (results.view). Feeds TrainerDataGateway.listLearners."
+      description: Each module adds module_name and status_label (passing, struggling, not_yet_passing, not_started). sync.may_have_unsynced_work is always true.
+      security: [{ staffSession: [] }]
+      parameters: [{ name: module_id, in: query, schema: { type: string } }]
+      responses: { "200": { description: "{ cohort, thresholds, module_ids, learners: [{ learner, modules, time, sync }] }" } }
+  /v1/staff/learners/{learner_id}/report:
+    get: { summary: "One learner's report with attempts and answers (results.view). Feeds getLearnerModuleDetail.", security: [{ staffSession: [] }], parameters: [{ name: module_id, in: query, schema: { type: string } }], responses: { "200": { description: Report row } } }
+  /v1/staff/cohorts/{cohort_id}/modules/{module_id}/summary:
+    get: { summary: "Cohort averages and counts for one module (results.view). Feeds getModuleCohortSummary.", security: [{ staffSession: [] }], responses: { "200": { description: "{ learner_count, started_count, completed_count, average_initial_score_percent, average_best_score_percent, average_mastery_percent, passing_count, struggling_count, not_yet_passing_count }" } } }
+  /v1/staff/cohorts/{cohort_id}/export:
+    get: { summary: "JSON export: report, learner records, assignments, every accepted and rejected event (results.export)", security: [{ staffSession: [] }], responses: { "200": { description: Attachment } } }
+
+  # ---------------------------------------------------------------- staff accounts, roles, settings
+  /v1/staff/accounts:
+    get: { summary: "Staff accounts (staff.create_trainer or staff.create_admin)", security: [{ staffSession: [] }], responses: { "200": { description: "{ accounts: Staff[] }" } } }
+    post:
+      summary: "Create an account with a temporary password. Trainer needs staff.create_trainer; Admin or Superadmin needs staff.create_admin."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [username, display_name, role, temporary_password], properties: { username: { type: string }, display_name: { type: string }, role: { enum: [superadmin, admin, trainer] }, temporary_password: { type: string, minLength: 12 } } } } } }
+      responses: { "201": { description: "{ account }" }, "409": { description: USERNAME_TAKEN } }
+  /v1/staff/accounts/{staff_id}/disable:
+    post: { summary: "Disable and sign out (same permission as creating that role). Can't disable yourself or the last Superadmin.", security: [{ staffSession: [] }], responses: { "200": { description: "{ account }" }, "409": { description: LOCKOUT_PREVENTED } } }
+  /v1/staff/accounts/{staff_id}/enable:
+    post: { security: [{ staffSession: [] }], responses: { "200": { description: "{ account }" } } }
+  /v1/staff/roles:
+    get: { summary: "Each role's permissions and the full permission list (permissions.manage)", security: [{ staffSession: [] }], responses: { "200": { description: "{ roles, permissions }" } } }
+  /v1/staff/roles/{role}/permissions:
+    put:
+      summary: "Replace a role's permissions (permissions.manage). The Superadmin role keeps permissions.manage."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [permissions], properties: { permissions: { type: array, items: { type: string } } } } } } }
+      responses: { "200": { description: "{ role, permissions }" }, "409": { description: LOCKOUT_PREVENTED }, "422": { description: UNKNOWN_PERMISSION } }
+  /v1/staff/settings/thresholds:
+    get: { summary: "Pass and struggling thresholds (results.view)", security: [{ staffSession: [] }], responses: { "200": { description: "{ pass_pct, struggling_pct, weak_topic_pct, weak_topic_min_answers }" } } }
+    put: { summary: "Change thresholds (settings.manage). struggling_pct can't exceed pass_pct.", security: [{ staffSession: [] }], responses: { "200": { description: New thresholds }, "422": { description: VALIDATION_FAILED } } }

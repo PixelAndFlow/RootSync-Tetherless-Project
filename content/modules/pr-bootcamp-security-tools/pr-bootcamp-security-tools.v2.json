@@ -1,0 +1,1504 @@
+{
+  "schema_version": 1,
+  "module_id": "pr-bootcamp-security-tools",
+  "content_version": 2,
+  "title": {
+    "en": "Security Tools Basics",
+    "es": "Conceptos básicos de herramientas de seguridad"
+  },
+  "topics": [
+    {
+      "topic_id": "firewalls",
+      "name": {
+        "en": "Firewalls",
+        "es": "Firewalls (cortafuegos)"
+      }
+    },
+    {
+      "topic_id": "vpn",
+      "name": {
+        "en": "VPNs",
+        "es": "VPN"
+      }
+    },
+    {
+      "topic_id": "mfa",
+      "name": {
+        "en": "Multi-factor authentication",
+        "es": "Autenticación multifactor"
+      }
+    },
+    {
+      "topic_id": "iam",
+      "name": {
+        "en": "Identity and access",
+        "es": "Identidad y acceso"
+      }
+    },
+    {
+      "topic_id": "edr-xdr",
+      "name": {
+        "en": "Endpoint protection (EDR/XDR)",
+        "es": "Protección de dispositivos (EDR/XDR)"
+      }
+    },
+    {
+      "topic_id": "password-managers",
+      "name": {
+        "en": "Password managers",
+        "es": "Gestores de contraseñas"
+      }
+    },
+    {
+      "topic_id": "backups",
+      "name": {
+        "en": "Backups",
+        "es": "Copias de seguridad"
+      }
+    }
+  ],
+  "questions": [
+    {
+      "question_id": "pr-bootcamp-security-tools-q01",
+      "type": "multiple_choice",
+      "topic": "firewalls",
+      "term": {
+        "en": "Firewall",
+        "es": "Firewall"
+      },
+      "prompt": {
+        "en": "What does a firewall do?",
+        "es": "¿Qué hace un firewall (cortafuegos)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Filters network traffic with rules",
+            "es": "Filtra el tráfico de red con reglas"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Generates complex passwords",
+            "es": "Genera contraseñas complejas"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Creates data backups",
+            "es": "Crea copias de seguridad"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Encrypts local storage",
+            "es": "Cifra el almacenamiento local"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "A firewall checks network traffic against rules and blocks what isn't allowed.",
+        "es": "Un firewall revisa el tráfico de red según reglas y bloquea lo que no está permitido."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q02",
+      "type": "multiple_choice",
+      "topic": "firewalls",
+      "term": {
+        "en": "Next-gen firewall (NGFW)",
+        "es": "Firewall de nueva generación (NGFW)"
+      },
+      "prompt": {
+        "en": "What does an NGFW include?",
+        "es": "¿Qué incluye un Firewall de Nueva Generación (NGFW)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Basic antivirus only",
+            "es": "Antivirus básico solamente"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Deep packet inspection & detection",
+            "es": "Inspección profunda de paquetes"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Biometric authentication",
+            "es": "Autenticación biométrica"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Tech support calls",
+            "es": "Llamadas de soporte técnico"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "A next-generation firewall looks inside the traffic itself (deep packet inspection) to catch threats a basic firewall would miss.",
+        "es": "Un firewall de nueva generación examina el contenido del tráfico (inspección profunda de paquetes) para detectar amenazas que un firewall básico no vería."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q03",
+      "type": "multiple_choice",
+      "topic": "vpn",
+      "term": {
+        "en": "VPN",
+        "es": "VPN"
+      },
+      "prompt": {
+        "en": "What is the main function of a VPN?",
+        "es": "¿Cuál es la función principal de una VPN?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Block browser ads",
+            "es": "Bloquear anuncios en navegadores"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Remove system viruses",
+            "es": "Eliminar virus del sistema"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Encrypt the internet connection",
+            "es": "Cifrar la conexión a internet"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Restore deleted files",
+            "es": "Restaurar archivos borrados"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "explanation": {
+        "en": "A VPN encrypts your internet connection so others on the network can't read what you send.",
+        "es": "Una VPN cifra tu conexión a internet para que otras personas en la red no puedan leer lo que envías."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q04",
+      "type": "multiple_choice",
+      "topic": "vpn",
+      "term": {
+        "en": "Remote access",
+        "es": "Acceso remoto"
+      },
+      "prompt": {
+        "en": "When is a VPN especially useful?",
+        "es": "¿Cuándo es especialmente útil una VPN?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "When working with remote access",
+            "es": "Al trabajar con acceso remoto"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "To speed up game downloads",
+            "es": "Para acelerar la descarga de juegos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "To clean the hard drive",
+            "es": "Para limpiar el disco duro"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "To format computers",
+            "es": "Para formatear computadoras"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "A VPN lets people working away from the office connect safely to their organization's network.",
+        "es": "Una VPN permite que quienes trabajan fuera de la oficina se conecten de forma segura a la red de su organización."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q05",
+      "type": "multiple_choice",
+      "topic": "mfa",
+      "term": {
+        "en": "MFA",
+        "es": "MFA"
+      },
+      "prompt": {
+        "en": "What does MFA add?",
+        "es": "¿Qué añade la autenticación multifactor (MFA)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "An extra verification step",
+            "es": "Un paso extra de verificación"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "More disk space",
+            "es": "Más espacio en el disco"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Higher internet speed",
+            "es": "Mayor velocidad de internet"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Automatic updates",
+            "es": "Actualizaciones automáticas"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "MFA adds a second proof of identity, so a stolen password alone isn't enough to get in.",
+        "es": "La MFA añade una segunda prueba de identidad, así que una contraseña robada no basta para entrar."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q06",
+      "type": "multiple_choice",
+      "topic": "mfa",
+      "term": {
+        "en": "Second factor",
+        "es": "Segundo factor"
+      },
+      "prompt": {
+        "en": "What is an example of MFA?",
+        "es": "¿Cuál es un ejemplo de MFA?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Using only a short password",
+            "es": "Usar solo una contraseña corta"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Authenticator app or YubiKey",
+            "es": "App autenticadora o llave YubiKey"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Typing your username",
+            "es": "Escribir tu nombre de usuario"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Clicking an email link",
+            "es": "Hacer clic en un enlace de email"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "An authenticator app or a security key like a YubiKey is something you have, added to the password you know.",
+        "es": "Una app autenticadora o una llave como YubiKey es algo que tienes, además de la contraseña que sabes."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q07",
+      "type": "multiple_choice",
+      "topic": "iam",
+      "term": {
+        "en": "IAM",
+        "es": "IAM"
+      },
+      "prompt": {
+        "en": "What does an IAM like Okta centralize?",
+        "es": "¿Qué centraliza una plataforma IAM como Okta?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Processor speed",
+            "es": "La velocidad del procesador"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Permissions and access control",
+            "es": "Permisos y control de acceso"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Cloud backups",
+            "es": "Copias de respaldo en la nube"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Physical network cables",
+            "es": "Cables de red física"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "IAM platforms like Okta manage who can access what, all from one place.",
+        "es": "Las plataformas IAM como Okta controlan desde un solo lugar quién puede acceder a qué."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q08",
+      "type": "multiple_choice",
+      "topic": "iam",
+      "term": {
+        "en": "Least privilege",
+        "es": "Menor privilegio"
+      },
+      "prompt": {
+        "en": "What principle guides IAM management?",
+        "es": "¿En qué principio se basa la gestión IAM?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Least Privilege (Zero Trust)",
+            "es": "Menor privilegio (Zero Trust)"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Total access for everyone",
+            "es": "Acceso total para todos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Public passwords",
+            "es": "Contraseñas públicas"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Absolute trust without check",
+            "es": "Confianza absoluta sin revisión"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "Least privilege gives each person only the access they need, and Zero Trust checks every request instead of trusting by default.",
+        "es": "El menor privilegio da a cada persona solo el acceso que necesita, y Zero Trust verifica cada solicitud en lugar de confiar por defecto."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q09",
+      "type": "multiple_choice",
+      "topic": "edr-xdr",
+      "term": {
+        "en": "EDR/XDR",
+        "es": "EDR/XDR"
+      },
+      "prompt": {
+        "en": "How does EDR/XDR evolve antivirus?",
+        "es": "¿Cómo evoluciona el EDR/XDR del antivirus?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Continuously monitors devices",
+            "es": "Monitorea dispositivos continuamente"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Scans only once a month",
+            "es": "Solo escanea una vez al mes"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Turns off servers at night",
+            "es": "Apaga los servidores de noche"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Disables network rules",
+            "es": "Desactiva las reglas de red"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "Antivirus scans for known threats; EDR/XDR watches devices all the time and reacts to suspicious behavior.",
+        "es": "El antivirus busca amenazas conocidas; EDR/XDR vigila los dispositivos todo el tiempo y reacciona ante comportamientos sospechosos."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q10",
+      "type": "multiple_choice",
+      "topic": "edr-xdr",
+      "term": {
+        "en": "Real-time AI response",
+        "es": "Respuesta con IA en tiempo real"
+      },
+      "prompt": {
+        "en": "What technology does EDR/XDR use?",
+        "es": "¿Qué tecnología usa EDR/XDR para responder?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "AI in real-time response",
+            "es": "Inteligencia Artificial en tiempo real"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Manual phone calls",
+            "es": "Llamadas telefónicas manuales"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "SMS text messages",
+            "es": "Mensajes de texto SMS"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Printing paper reports",
+            "es": "Impresión de reportes en papel"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "EDR/XDR tools use AI to spot and stop attacks in real time, faster than a person could.",
+        "es": "Las herramientas EDR/XDR usan IA para detectar y detener ataques en tiempo real, más rápido que una persona."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q11",
+      "type": "multiple_choice",
+      "topic": "edr-xdr",
+      "term": {
+        "en": "EDR/XDR tools",
+        "es": "Herramientas EDR/XDR"
+      },
+      "prompt": {
+        "en": "What are examples of EDR/XDR?",
+        "es": "¿Cuáles son ejemplos de EDR/XDR?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "1Password and Bitwarden",
+            "es": "1Password y Bitwarden"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Okta and YubiKey",
+            "es": "Okta y YubiKey"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "CrowdStrike and Microsoft Defender",
+            "es": "CrowdStrike y Microsoft Defender"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Cisco VPN and Firewalls",
+            "es": "Cisco VPN y Firewalls"
+          }
+        }
+      ],
+      "correct_choice_id": "c",
+      "explanation": {
+        "en": "CrowdStrike and Microsoft Defender are EDR/XDR products; the other pairs are password managers, identity tools and network tools.",
+        "es": "CrowdStrike y Microsoft Defender son productos EDR/XDR; los otros pares son gestores de contraseñas, herramientas de identidad y herramientas de red."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q12",
+      "type": "multiple_choice",
+      "topic": "password-managers",
+      "term": {
+        "en": "Password reuse",
+        "es": "Reutilización de contraseñas"
+      },
+      "prompt": {
+        "en": "What do password managers prevent?",
+        "es": "¿Qué evitan los gestores de contraseñas?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Password reuse",
+            "es": "La reutilización de contraseñas"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "File encryption",
+            "es": "El cifrado de archivos"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Use of MFA authentication",
+            "es": "El uso de autenticación MFA"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Connection to VPN networks",
+            "es": "La conexión a redes VPN"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "A password manager makes a different password for every account, so one leaked password doesn't unlock the rest.",
+        "es": "Un gestor de contraseñas crea una contraseña distinta para cada cuenta, así que una contraseña filtrada no abre las demás."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q13",
+      "type": "multiple_choice",
+      "topic": "password-managers",
+      "term": {
+        "en": "Password manager tools",
+        "es": "Herramientas de contraseñas"
+      },
+      "prompt": {
+        "en": "What tools are password managers?",
+        "es": "¿Qué herramientas son gestores de contraseñas?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Okta and CrowdStrike",
+            "es": "Okta y CrowdStrike"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "1Password and Bitwarden",
+            "es": "1Password y Bitwarden"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "YubiKey and Firewalls",
+            "es": "YubiKey y Firewalls"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Microsoft Defender and VPN",
+            "es": "Microsoft Defender y VPN"
+          }
+        }
+      ],
+      "correct_choice_id": "b",
+      "explanation": {
+        "en": "1Password and Bitwarden are password managers; the other pairs mix in identity, endpoint and network tools.",
+        "es": "1Password y Bitwarden son gestores de contraseñas; los otros pares mezclan herramientas de identidad, de dispositivos y de red."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q14",
+      "type": "multiple_choice",
+      "topic": "backups",
+      "term": {
+        "en": "Backup",
+        "es": "Copia de seguridad"
+      },
+      "prompt": {
+        "en": "What is a data backup?",
+        "es": "¿Qué es una copia de seguridad (backup)?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Copy of data in a secure place",
+            "es": "Duplicación de datos en lugar seguro"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "A type of computer virus",
+            "es": "Un tipo de virus informático"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "A rule to filter traffic",
+            "es": "Una regla para filtrar tráfico"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "A system to make passwords",
+            "es": "Un sistema para crear contraseñas"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "A backup is a copy of your data kept in a separate, secure place.",
+        "es": "Una copia de seguridad es un duplicado de tus datos guardado en un lugar separado y seguro."
+      },
+      "time_limit_sec": 60
+    },
+    {
+      "question_id": "pr-bootcamp-security-tools-q15",
+      "type": "multiple_choice",
+      "topic": "backups",
+      "term": {
+        "en": "Recovery",
+        "es": "Recuperación"
+      },
+      "prompt": {
+        "en": "Why are backups vital?",
+        "es": "¿Por qué son vitales los backups?"
+      },
+      "choices": [
+        {
+          "choice_id": "a",
+          "text": {
+            "en": "Allow restoring data after attack",
+            "es": "Permiten restaurar datos tras un ataque"
+          }
+        },
+        {
+          "choice_id": "b",
+          "text": {
+            "en": "Increase network speed",
+            "es": "Aumentan la velocidad de la red"
+          }
+        },
+        {
+          "choice_id": "c",
+          "text": {
+            "en": "Replace the need for MFA",
+            "es": "Reemplazan la necesidad de MFA"
+          }
+        },
+        {
+          "choice_id": "d",
+          "text": {
+            "en": "Block phishing attacks",
+            "es": "Bloquean ataques de phishing"
+          }
+        }
+      ],
+      "correct_choice_id": "a",
+      "explanation": {
+        "en": "If ransomware or a failure wipes your data, a backup lets you restore it instead of losing it or paying attackers.",
+        "es": "Si un ransomware o una falla borra tus datos, una copia de seguridad te permite restaurarlos en lugar de perderlos o pagarle a los atacantes."
+      },
+      "time_limit_sec": 60
+    }
+  ],
+  "boss_missions": [
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-firewalls",
+      "topic": "firewalls",
+      "title": {
+        "en": "Traffic flood",
+        "es": "Inundación de tráfico"
+      },
+      "scenario": {
+        "en": "Your school's computer lab is suddenly flooded with strange traffic from an address nobody recognizes.",
+        "es": "El laboratorio de computadoras de tu escuela de repente recibe muchísimo tráfico extraño desde una dirección que nadie reconoce."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-firewalls-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What should block the unknown traffic first?",
+            "es": "¿Qué debe bloquear primero el tráfico desconocido?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Firewall rules",
+                "es": "Reglas del firewall"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "A password manager",
+                "es": "Un gestor de contraseñas"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A backup",
+                "es": "Una copia de seguridad"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A new keyboard",
+                "es": "Un teclado nuevo"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Firewall rules decide which traffic is allowed in, so they are the first line of defense.",
+            "es": "Las reglas del firewall deciden qué tráfico puede entrar, así que son la primera línea de defensa."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-firewalls-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "The attack hides inside normal-looking web traffic. Which tool can look inside it?",
+            "es": "El ataque se esconde dentro de tráfico web que parece normal. ¿Qué herramienta puede examinarlo por dentro?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "A basic antivirus",
+                "es": "Un antivirus básico"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "A next-gen firewall with deep packet inspection",
+                "es": "Un firewall de nueva generación con inspección profunda de paquetes"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A VPN",
+                "es": "Una VPN"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A YubiKey",
+                "es": "Una YubiKey"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "Deep packet inspection reads the contents of traffic, not just where it comes from.",
+            "es": "La inspección profunda de paquetes lee el contenido del tráfico, no solo de dónde viene."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-vpn",
+      "topic": "vpn",
+      "title": {
+        "en": "Café Wi-Fi",
+        "es": "Wi-Fi del café"
+      },
+      "scenario": {
+        "en": "You're finishing homework on a café's free Wi-Fi and need to log in to your school portal.",
+        "es": "Estás terminando la tarea con el Wi-Fi gratis de un café y necesitas entrar al portal de tu escuela."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-vpn-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What protects what you send over the public Wi-Fi?",
+            "es": "¿Qué protege lo que envías por el Wi-Fi público?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Turning the screen brightness down",
+                "es": "Bajar el brillo de la pantalla"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Clearing your browser history",
+                "es": "Borrar el historial del navegador"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Connecting through a VPN",
+                "es": "Conectarte a través de una VPN"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Closing other apps",
+                "es": "Cerrar otras aplicaciones"
+              }
+            }
+          ],
+          "correct_choice_id": "c",
+          "explanation": {
+            "en": "A VPN encrypts your connection, so others on the same Wi-Fi can't read it.",
+            "es": "Una VPN cifra tu conexión, así que otras personas en el mismo Wi-Fi no pueden leerla."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-vpn-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Your teacher works from home and needs files on the school's private network. What lets her reach them safely?",
+            "es": "Tu maestra trabaja desde casa y necesita archivos de la red privada de la escuela. ¿Qué le permite llegar a ellos de forma segura?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "The school's VPN",
+                "es": "La VPN de la escuela"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Emailing the files to her personal account",
+                "es": "Enviarse los archivos a su correo personal"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A USB drive found in the parking lot",
+                "es": "Una memoria USB encontrada en el estacionamiento"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Turning off the firewall",
+                "es": "Apagar el firewall"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Remote access through the school's VPN keeps the files on a protected, encrypted connection.",
+            "es": "El acceso remoto por la VPN de la escuela mantiene los archivos en una conexión protegida y cifrada."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-mfa",
+      "topic": "mfa",
+      "title": {
+        "en": "Account locked?",
+        "es": "¿Cuenta bloqueada?"
+      },
+      "scenario": {
+        "en": "You get an email saying your school account is locked. It asks you to log in through a link to unlock it.",
+        "es": "Recibes un correo que dice que tu cuenta de la escuela está bloqueada. Te pide entrar por un enlace para desbloquearla."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-mfa-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What do you check first?",
+            "es": "¿Qué revisas primero?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "How urgent the message sounds",
+                "es": "Qué tan urgente suena el mensaje"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "The sender's address and where the link really goes",
+                "es": "La dirección de quien lo envía y adónde lleva realmente el enlace"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Whether it uses the school colors",
+                "es": "Si usa los colores de la escuela"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Nothing; click before it's too late",
+                "es": "Nada; haces clic antes de que sea tarde"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "Fake messages copy logos and create urgency; the sender's address and the real link give them away.",
+            "es": "Los mensajes falsos copian logos y crean urgencia; la dirección de quien envía y el enlace real los delatan."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-mfa-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Someone steals your password, but your account uses MFA. What stops them?",
+            "es": "Alguien roba tu contraseña, pero tu cuenta usa MFA. ¿Qué lo detiene?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "They still need your second factor, like your authenticator app",
+                "es": "Todavía necesitan tu segundo factor, como tu app autenticadora"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Nothing stops them",
+                "es": "Nada lo detiene"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Your username is secret",
+                "es": "Tu nombre de usuario es secreto"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "The website is slow",
+                "es": "El sitio web es lento"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "With MFA, a password alone isn't enough; the attacker also needs something only you have.",
+            "es": "Con MFA, la contraseña sola no basta; el atacante también necesita algo que solo tú tienes."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-iam",
+      "topic": "iam",
+      "title": {
+        "en": "The new intern",
+        "es": "La nueva pasante"
+      },
+      "scenario": {
+        "en": "A new intern joins the organization and needs access to do her job.",
+        "es": "Una nueva pasante entra a la organización y necesita acceso para hacer su trabajo."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-iam-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "How much access should the intern get?",
+            "es": "¿Cuánto acceso debe recibir la pasante?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Admin access to everything, just in case",
+                "es": "Acceso de administradora a todo, por si acaso"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Only what her job needs",
+                "es": "Solo lo que su trabajo necesita"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "The same access as her manager",
+                "es": "El mismo acceso que su supervisora"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A shared login with the whole team",
+                "es": "Un usuario compartido con todo el equipo"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "Least privilege limits the damage if her account is ever misused or stolen.",
+            "es": "El menor privilegio limita el daño si su cuenta llega a usarse mal o a ser robada."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-iam-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Where should an admin manage the intern's access?",
+            "es": "¿Dónde debe la administración gestionar el acceso de la pasante?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "In a central IAM platform like Okta",
+                "es": "En una plataforma IAM central como Okta"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "On sticky notes",
+                "es": "En notas adhesivas"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "In a shared spreadsheet of passwords",
+                "es": "En una hoja de cálculo compartida con contraseñas"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "In the team group chat",
+                "es": "En el chat del equipo"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "A central IAM platform makes it easy to give, review and remove access in one place.",
+            "es": "Una plataforma IAM central facilita dar, revisar y quitar acceso desde un solo lugar."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-edr-xdr",
+      "topic": "edr-xdr",
+      "title": {
+        "en": "2 a.m. alarm",
+        "es": "Alarma a las 2 a. m."
+      },
+      "scenario": {
+        "en": "At 2 a.m., a laptop on the network starts locking files one after another.",
+        "es": "A las 2 a. m., una laptop de la red empieza a bloquear archivos uno tras otro."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-edr-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Which tool would notice this behavior as it happens?",
+            "es": "¿Qué herramienta notaría este comportamiento mientras ocurre?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "A monthly virus scan",
+                "es": "Un escaneo de virus mensual"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "EDR/XDR monitoring",
+                "es": "El monitoreo EDR/XDR"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "A password manager",
+                "es": "Un gestor de contraseñas"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "A printed report",
+                "es": "Un reporte impreso"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "EDR/XDR watches devices continuously, so it can catch an attack in progress.",
+            "es": "EDR/XDR vigila los dispositivos continuamente, así que puede detectar un ataque en curso."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-edr-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What can EDR/XDR do right away to limit the damage?",
+            "es": "¿Qué puede hacer EDR/XDR de inmediato para limitar el daño?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Isolate the laptop from the network",
+                "es": "Aislar la laptop de la red"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Email the attacker",
+                "es": "Enviarle un correo al atacante"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Turn off every server in the building",
+                "es": "Apagar todos los servidores del edificio"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Wait until morning",
+                "es": "Esperar hasta la mañana"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Cutting the infected device off the network stops the attack from spreading.",
+            "es": "Desconectar el dispositivo infectado de la red evita que el ataque se propague."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-password-managers",
+      "topic": "password-managers",
+      "title": {
+        "en": "One password for everything",
+        "es": "Una contraseña para todo"
+      },
+      "scenario": {
+        "en": "Your friend uses the same password for email, games and banking. A game site gets hacked.",
+        "es": "Tu amigo usa la misma contraseña para el correo, los juegos y el banco. Hackean un sitio de juegos."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-pm-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What's the biggest risk now?",
+            "es": "¿Cuál es el mayor riesgo ahora?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Attackers try that password on his other accounts",
+                "es": "Los atacantes prueban esa contraseña en sus otras cuentas"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "His games run slower",
+                "es": "Sus juegos van más lentos"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "His phone battery drains",
+                "es": "Se le descarga la batería del teléfono"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "There is no risk",
+                "es": "No hay ningún riesgo"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "Reused passwords let one leak unlock many accounts.",
+            "es": "Las contraseñas reutilizadas permiten que una sola filtración abra muchas cuentas."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-pm-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What's the best fix?",
+            "es": "¿Cuál es la mejor solución?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "Add a 1 to the end of the same password",
+                "es": "Agregar un 1 al final de la misma contraseña"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Use a password manager with a unique password for each account",
+                "es": "Usar un gestor de contraseñas con una contraseña única para cada cuenta"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Write the password on his phone case",
+                "es": "Escribir la contraseña en el estuche del teléfono"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Stop using the internet",
+                "es": "Dejar de usar internet"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "A password manager creates and remembers a strong, different password for every account.",
+            "es": "Un gestor de contraseñas crea y recuerda una contraseña fuerte y distinta para cada cuenta."
+          }
+        }
+      ]
+    },
+    {
+      "mission_id": "pr-bootcamp-security-tools-boss-backups",
+      "topic": "backups",
+      "title": {
+        "en": "Ransom note",
+        "es": "Nota de rescate"
+      },
+      "scenario": {
+        "en": "Ransomware locks every file on the club's shared computer and demands payment to unlock them.",
+        "es": "Un ransomware bloquea todos los archivos de la computadora compartida del club y exige un pago para desbloquearlos."
+      },
+      "questions": [
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-backups-1",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "What lets the club get its files back without paying?",
+            "es": "¿Qué permite al club recuperar sus archivos sin pagar?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "A recent backup stored somewhere else",
+                "es": "Una copia de seguridad reciente guardada en otro lugar"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "Restarting the computer",
+                "es": "Reiniciar la computadora"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "Renaming the files",
+                "es": "Cambiar el nombre de los archivos"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Paying the ransom",
+                "es": "Pagar el rescate"
+              }
+            }
+          ],
+          "correct_choice_id": "a",
+          "explanation": {
+            "en": "A separate, recent backup lets you restore your data and ignore the ransom demand.",
+            "es": "Una copia de seguridad reciente y separada te permite restaurar tus datos e ignorar la exigencia de rescate."
+          }
+        },
+        {
+          "question_id": "pr-bootcamp-security-tools-boss-backups-2",
+          "type": "multiple_choice",
+          "prompt": {
+            "en": "Where should the club keep its backups?",
+            "es": "¿Dónde debe guardar el club sus copias de seguridad?"
+          },
+          "choices": [
+            {
+              "choice_id": "a",
+              "text": {
+                "en": "In a folder on the same computer",
+                "es": "En una carpeta en la misma computadora"
+              }
+            },
+            {
+              "choice_id": "b",
+              "text": {
+                "en": "In a separate, secure place, like an offline drive or protected cloud storage",
+                "es": "En un lugar separado y seguro, como un disco desconectado o una nube protegida"
+              }
+            },
+            {
+              "choice_id": "c",
+              "text": {
+                "en": "In the computer's trash can",
+                "es": "En la papelera de la computadora"
+              }
+            },
+            {
+              "choice_id": "d",
+              "text": {
+                "en": "Nowhere; backups slow things down",
+                "es": "En ningún lugar; las copias hacen todo más lento"
+              }
+            }
+          ],
+          "correct_choice_id": "b",
+          "explanation": {
+            "en": "Ransomware can lock a backup on the same machine, so keep copies somewhere it can't reach.",
+            "es": "El ransomware puede bloquear una copia guardada en la misma máquina, así que guarda copias donde no pueda llegar."
+          }
+        }
+      ]
+    }
+  ],
+  "retired_question_ids": [],
+  "source": {
+    "format": "json",
+    "file_name": "pr-bootcamp-security-tools.v2.json"
+  }
+}

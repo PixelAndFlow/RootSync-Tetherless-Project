@@ -7,7 +7,7 @@ import { FakeTransport } from "./fakes/fake-transport.ts";
 import { openDatabase } from "../../src/sync/stores/db.ts";
 import { SyncEngine } from "../../src/sync/engine/sync.ts";
 import type { IDBDatabaseLike } from "../../src/sync/stores/idb.ts";
-import type { ActivityEvent, EventType } from "../../src/sync/types.ts";
+import type { ActivityEvent, AnswerSubmittedEvent } from "../../src/sync/types.ts";
 
 let dbCounter = 0;
 
@@ -18,9 +18,9 @@ export interface Harness {
   /** Advance the fake clock. */
   tick(ms: number): void;
   now(): number;
-  makeEvent(over?: Partial<ActivityEvent>): ActivityEvent;
+  makeEvent(over?: Partial<AnswerSubmittedEvent>): ActivityEvent;
   /** Record an event the way the app would, returning its event_id. */
-  record(over?: Partial<ActivityEvent>): Promise<string>;
+  record(over?: Partial<AnswerSubmittedEvent>): Promise<string>;
 }
 
 export async function harness(opts: { owner?: string; maxAttempts?: number } = {}): Promise<Harness> {
@@ -45,12 +45,12 @@ export async function harness(opts: { owner?: string; maxAttempts?: number } = {
   });
 
   let seq = 0;
-  const makeEvent = (over: Partial<ActivityEvent> = {}): ActivityEvent => {
+  const makeEvent = (over: Partial<AnswerSubmittedEvent> = {}): ActivityEvent => {
     seq += 1;
     return {
       event_id: `evt-${String(seq).padStart(4, "0")}`,
       schema_version: 1,
-      event_type: "answer_submitted" as EventType,
+      event_type: "answer_submitted",
       device_id: "device-1",
       device_seq: seq,
       session_id: "session-1",
@@ -65,7 +65,7 @@ export async function harness(opts: { owner?: string; maxAttempts?: number } = {
     };
   };
 
-  const record = async (over: Partial<ActivityEvent> = {}): Promise<string> => {
+  const record = async (over: Partial<AnswerSubmittedEvent> = {}): Promise<string> => {
     const { recordEvent } = await import("../../src/sync/stores/db.ts");
     const e = makeEvent(over);
     await recordEvent(db, e, now());

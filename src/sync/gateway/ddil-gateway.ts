@@ -26,8 +26,11 @@ import type {
   AttemptKind,
   AttemptRecord,
   CompleteAttemptInput,
+  DeviceApi,
   LearnerModuleRecord,
+  LearnerProfile,
   ModuleProgress,
+  ModuleSummary,
   OfflineLearningGateway,
   SaveAnswerInput,
   SessionRecord,
@@ -35,13 +38,20 @@ import type {
   StartRemediationInput,
   StartSessionInput,
   SyncSummary,
+  TetherlessModule,
 } from "./contract.ts";
-import type { ActivityEvent, DeliveryRecord, EventType } from "../types.ts";
+import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptCompletedEvent, DeliveryRecord } from "../types.ts";
 
 export interface DdilGatewayOptions {
   idb: IDBFactoryLike;
   /** The network seam. A FakeTransport until Marc's contract is frozen. */
   transport: SyncTransport;
+  /**
+   * The two device-scoped HTTP calls beyond POST /v1/sync/events: setup and
+   * module catalog/download (API Spec v1.30 §6.1, §6.4). Omit in tests that
+   * never call setupDevice/listAssignedModules/getModule.
+   */
+  api?: DeviceApi;
   /** Stable per install. Generated and persisted on first open if absent. */
   deviceId?: string;
   /** "device_id:tab_id" — the lease owner. */
@@ -51,6 +61,12 @@ export interface DdilGatewayOptions {
   isOnline?: () => boolean;
   maxEventsPerBatch?: number;
   maxAttempts?: number;
+  /**
+   * Called whenever the persisted device token changes (loaded at init, or
+   * set by setupDevice). Lets the composition root's HttpTransport/DeviceApi
+   * read the current token without DdilLearningGateway owning their construction.
+   */
+  onTokenChange?: (token: string | null) => void;
   backoff?: import("../engine/retry.ts").BackoffOptions;
   reopenFailedOnStart?: boolean;
 }
@@ -77,10 +93,12 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * content package carries its own version (RCO's schema, still open).
    */
   private contentVersion = 1;
+  /** content_version each attempt was started with; every later event of that attempt reuses it. */
+  private readonly attemptVersions = new Map<string, number>();
   /** Set from setup; used to start an implicit session if one is missing. */
   private currentLearnerId: string | null = null;
-  /** Last module touched, so attempt_abandoned can carry module_id. */
-  private lastModuleId: string | null = null;
+  /** The device token from /v1/setup, protected store only — never localStorage (API Spec v1.30 §6.1). */
+  private deviceToken: string | null = null;
 
   constructor(opts: DdilGatewayOptions) {
     this.opts = opts;
@@ -94,6 +112,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
     this.deviceId = this.opts.deviceId ?? (await getMeta<string>(db, "device_id")) ?? newId();
     await setMeta(db, "device_id", this.deviceId);
+
+    this.deviceToken = (await getMeta<string>(db, "device_token")) ?? null;
+    this.opts.onTokenChange?.(this.deviceToken);
 
     const savedSession = await getMeta<string>(db, "active_session_id");
     if (savedSession) {
@@ -118,6 +139,13 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       backoff: this.opts.backoff,
       reopenFailedOnStart: this.opts.reopenFailedOnStart,
     });
+
+    // SyncStatusProvider subscribes on mount, before the composition root's
+    // init() promise can possibly have resolved. Its own first emit (below)
+    // rejects quietly in that case, so push a real one now that the gateway
+    // is actually ready, rather than leaving that subscriber with nothing
+    // until the next unrelated event.
+    void this.emit();
   }
 
   // ---------------------------------------------------------------- sessions
@@ -154,7 +182,6 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   // ---------------------------------------------------------------- attempts
 
   async startAttempt(input: StartAttemptInput): Promise<AttemptRecord> {
-    this.lastModuleId = input.moduleId;
     const attempt: AttemptRecord = {
       id: newId(),
       learnerId: input.learnerId,
@@ -165,10 +192,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       answers: [],
     };
 
+    const contentVersion = await this.pinAttemptVersion(attempt.id, input.contentVersion);
     await this.record({
       event_type: "attempt_started",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: contentVersion,
       attempt_id: attempt.id,
       payload: { attempt_kind: input.kind },
     });
@@ -189,7 +217,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await this.record({
       event_type: "answer_submitted",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: await this.versionOfAttempt(input.attemptId),
       attempt_id: input.attemptId,
       question_id: input.answer.questionId,
       // Only fields the strict schema allows. xp_award and answered_at are
@@ -228,7 +256,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await this.record({
       event_type: "attempt_completed",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: await this.versionOfAttempt(input.attemptId),
       attempt_id: input.attemptId,
       payload: {
         local_correct: input.correctQuestionIds.length,
@@ -274,10 +302,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       questionIds: input.questionIds,
     };
 
+    const contentVersion = await this.pinAttemptVersion(attempt.id, input.contentVersion);
     await this.record({
       event_type: "attempt_started",
       module_id: input.moduleId,
-      content_version: this.contentVersion,
+      content_version: contentVersion,
       attempt_id: attempt.id,
       payload: { attempt_kind: "practice", question_ids: input.questionIds },
     });
@@ -297,9 +326,10 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   async getModuleProgress(learnerId: string, moduleId: string): Promise<ModuleProgress> {
     const events = await allEvents(this.require());
     const mine = events.filter(
-      (e) => e.module_id === moduleId && (e.event_type === "answer_submitted" || e.event_type === "attempt_completed"),
+      (e): e is AnswerSubmittedEvent | AttemptCompletedEvent =>
+        (e.event_type === "answer_submitted" || e.event_type === "attempt_completed") && e.module_id === moduleId,
     );
-    const answers = mine.filter((e) => e.event_type === "answer_submitted");
+    const answers = mine.filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted");
     const distinctQuestions = new Set(answers.map((e) => e.question_id).filter(Boolean));
 
     return {
@@ -369,10 +399,13 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   subscribeToSyncStatus(callback: (summary: SyncSummary) => void): () => void {
     this.subscribers.add(callback);
     // Emit immediately, matching Chris's mock: the UI gets current state on
-    // subscribe rather than waiting for the next change.
+    // subscribe rather than waiting for the next change. Swallowed here
+    // because a subscriber mounted before init() resolves — SyncStatusProvider
+    // does, on every page — would otherwise see this as an unhandled
+    // rejection; init() pushes a real emit once it is actually ready.
     void this.getSyncSummary().then((s) => {
       if (this.subscribers.has(callback)) callback(s);
-    });
+    }).catch(() => {});
     return () => {
       this.subscribers.delete(callback);
     };
@@ -380,15 +413,18 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   // -------------------------------------------------------------- internals
 
-  /** Record one event durably, then advance the sequence. */
-  private async record(input: {
-    event_type: EventType;
-    payload: Record<string, unknown>;
-    module_id?: string;
-    content_version?: number;
-    attempt_id?: string;
-    question_id?: string;
-  }): Promise<ActivityEvent> {
+  /**
+   * Record one event durably, then advance the sequence.
+   *
+   * `input` is typed as the full ActivityEventInput union, so module_id /
+   * content_version / attempt_id (and question_id, for answer_submitted)
+   * are required together at every call site below — the compiler rejects
+   * a call that forgets one, instead of silently building an event the
+   * server will reject later. The cast at the end is safe because `input`
+   * is already checked against that union at the call site; the envelope
+   * fields added here are valid on every member.
+   */
+  private async record(input: ActivityEventInput): Promise<ActivityEvent> {
     const db = this.require();
     if (!this.sessionId) {
       // The server requires a UUID session_id on every event and rejects
@@ -399,21 +435,16 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     return withDeviceSeqLock(async () => {
       const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
 
-      const event: ActivityEvent = {
+      const event = {
         event_id: newId(),
         schema_version: 1,
-        event_type: input.event_type,
         device_id: this.deviceId,
         device_seq: seq,
         session_id: this.sessionId!,
         occurred_at: new Date(this.now()).toISOString(),
         monotonic_ms: this.elapsedMonotonic(),
-        payload: input.payload,
-        ...(input.module_id ? { module_id: input.module_id } : {}),
-        ...(input.content_version ? { content_version: input.content_version } : {}),
-        ...(input.attempt_id ? { attempt_id: input.attempt_id } : {}),
-        ...(input.question_id ? { question_id: input.question_id } : {}),
-      };
+        ...input,
+      } as ActivityEvent;
 
       // Durability: this awaits the transaction commit, not the write queue.
       await recordEvent(db, event, this.now());
@@ -457,7 +488,40 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     return 0;
   }
 
-  /** Pin the content version stamped onto attempt events. */
+  /**
+   * Record which content version an attempt was started with, durably, and return it.
+   * Every later event of the attempt (answers, completion, abandonment) carries this
+   * same version, so a module upgraded mid-attempt, or two attempts on different
+   * versions, are each scored against the answer key they were played with.
+   * Callers outside TypeScript that omit it get the gateway default (see setContentVersion).
+   */
+  private async pinAttemptVersion(attemptId: string, requested: number | undefined): Promise<number> {
+    const version = requested ?? this.contentVersion;
+    if (!Number.isInteger(version) || version < 1) {
+      throw new Error("contentVersion must be a whole number of 1 or more");
+    }
+    await setMeta(this.require(), `attempt_version:${attemptId}`, version);
+    this.attemptVersions.set(attemptId, version);
+    return version;
+  }
+
+  /**
+   * The version an attempt was started with: from memory, else from the store (the app
+   * was restarted mid-attempt), else the gateway default for attempts that began before
+   * versions were recorded.
+   */
+  private async versionOfAttempt(attemptId: string): Promise<number> {
+    const known = this.attemptVersions.get(attemptId);
+    if (known !== undefined) return known;
+    const stored = await getMeta<number>(this.require(), `attempt_version:${attemptId}`);
+    if (stored !== undefined && stored !== null) {
+      this.attemptVersions.set(attemptId, stored);
+      return stored;
+    }
+    return this.contentVersion;
+  }
+
+  /** Default content version, used only for an attempt with no recorded version. */
   setContentVersion(version: number): void {
     if (!Number.isInteger(version) || version < 1) {
       throw new Error("content_version must be a whole number of 1 or more");
@@ -484,16 +548,121 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   /**
    * Abandon an attempt (N-8). Reason is required by the server.
+   *
+   * Takes moduleId from the caller (API Spec v1.30 §8.1) rather than
+   * inferring it from `this.lastModuleId`, as this originally did.
+   *
+   * Bug fixed earlier here: the old version defaulted to
+   * `this.lastModuleId ?? ""` when no module had been touched yet. "" is
+   * falsy, so the old flat-optional record() silently omitted
+   * module_id/content_version/attempt_id rather than send an empty one —
+   * but the contract requires those three together on every
+   * attempt_abandoned event, so the server would have rejected it as
+   * INVALID_EVENT ("module_id is required."), and per the DDIL rule that a
+   * rejection is final, that event would have been lost for good. The same
+   * guard stays here: there is nothing meaningful to abandon without a
+   * module, so recording nothing is the correct outcome.
    */
-  async abandonAttempt(attemptId: string, reason: "restart" | "quit" | "replaced" = "quit"): Promise<void> {
+  async abandonAttempt(input: { attemptId: string; moduleId: string; reason: "restart" | "quit" | "replaced" }): Promise<void> {
+    if (!input.moduleId) return;
+
     await this.record({
       event_type: "attempt_abandoned",
-      module_id: this.lastModuleId ?? "",
-      content_version: this.contentVersion,
-      attempt_id: attemptId,
-      payload: { reason },
+      module_id: input.moduleId,
+      content_version: await this.versionOfAttempt(input.attemptId),
+      attempt_id: input.attemptId,
+      payload: { reason: input.reason },
     });
     await this.emit();
+  }
+
+  // ------------------------------------------------------- device setup (API Spec v1.30 §8.1)
+
+  /**
+   * One-time, online, per phone. The device token is stored only here — in
+   * the protected IDB store — never in localStorage (§6.1).
+   */
+  async setupDevice(input: { setupCode: string; username: string }): Promise<LearnerProfile> {
+    const db = this.require();
+    if (!this.opts.api) throw new Error("setupDevice requires DdilGatewayOptions.api");
+    const body = (await this.opts.api.post(
+      "/v1/setup",
+      { setup_code: input.setupCode, username: input.username, device_id: this.deviceId },
+      { auth: false },
+    )) as { device_token: string; learner: { learner_id: string; learner_code: string; username: string; cohort_name: string } };
+
+    this.deviceToken = body.device_token;
+    await setMeta(db, "device_token", this.deviceToken);
+    this.opts.onTokenChange?.(this.deviceToken);
+    this.currentLearnerId = body.learner.learner_id;
+
+    const profile: LearnerProfile = {
+      learnerId: body.learner.learner_id,
+      deviceId: this.deviceId,
+      username: body.learner.username,
+      learnerCode: body.learner.learner_code,
+      cohortName: body.learner.cohort_name,
+    };
+    await setMeta(db, "learner_profile", profile);
+    return profile;
+  }
+
+  async getLearnerProfile(): Promise<LearnerProfile | null> {
+    return (await getMeta<LearnerProfile>(this.require(), "learner_profile")) ?? null;
+  }
+
+  // --------------------------------------------------------------- modules (§6.4, §8.1)
+
+  /** Cached list; refreshed from the server when online. */
+  async listAssignedModules(): Promise<ModuleSummary[]> {
+    const db = this.require();
+    if (!this.opts.api) throw new Error("listAssignedModules requires DdilGatewayOptions.api");
+    const body = (await this.opts.api.get("/v1/me/modules")) as {
+      modules: { module_id: string; content_version: number; title: { en: string; es?: string }; level: string; activity_type: string }[];
+    };
+    const summaries = await Promise.all(body.modules.map(async (m): Promise<ModuleSummary> => ({
+      moduleId: m.module_id,
+      contentVersion: m.content_version,
+      title: m.title,
+      level: m.level,
+      activityType: m.activity_type,
+      downloadState: (await getMeta(db, this.moduleKey(m.module_id, m.content_version))) ? "available_offline" : "not_downloaded",
+    })));
+    return summaries;
+  }
+
+  /** Downloads one module version, verifies it parses, and caches it for offline use. */
+  async prepareModuleForOffline(moduleId: string, contentVersion: number): Promise<ModuleSummary> {
+    const module = await this.fetchAndCacheModule(moduleId, contentVersion);
+    return {
+      moduleId,
+      contentVersion,
+      title: module.title,
+      level: module.level,
+      activityType: module.activity_type ?? "",
+      downloadState: "available_offline",
+    };
+  }
+
+  /** From the local cache; fetches and caches it first if not already downloaded. */
+  async getModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
+    const cached = await getMeta<TetherlessModule>(this.require(), this.moduleKey(moduleId, contentVersion));
+    if (cached) return cached;
+    return this.fetchAndCacheModule(moduleId, contentVersion);
+  }
+
+  private async fetchAndCacheModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
+    const db = this.require();
+    if (!this.opts.api) throw new Error("getModule requires DdilGatewayOptions.api");
+    const module = (await this.opts.api.get(`/v1/content/modules/${encodeURIComponent(moduleId)}/versions/${contentVersion}`)) as TetherlessModule;
+    // Module packages live in a removable store, separate from learner records (§8.3) —
+    // same meta table, distinctly namespaced keys, so eviction can tell them apart later.
+    await setMeta(db, this.moduleKey(moduleId, contentVersion), module);
+    return module;
+  }
+
+  private moduleKey(moduleId: string, contentVersion: number): string {
+    return `module:${moduleId}:${contentVersion}`;
   }
 
   /** Read-only view for tests and diagnostics. */

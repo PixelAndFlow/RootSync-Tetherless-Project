@@ -13,19 +13,20 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { fileURLToPath } from "node:url";
 
-import { createApp } from "/tmp/marc-backend/packages/server/src/app.ts";
-import { loadConfig } from "/tmp/marc-backend/packages/server/src/config.ts";
-import { ContentRegistry } from "/tmp/marc-backend/packages/server/src/content.ts";
-import { MemoryStore } from "/tmp/marc-backend/packages/server/src/memory-store.ts";
-import { createStaffAccount } from "/tmp/marc-backend/packages/server/src/admin.ts";
+import { createApp } from "../../packages/server/src/app.ts";
+import { loadConfig } from "../../packages/server/src/config.ts";
+import { ContentRegistry } from "../../packages/server/src/content.ts";
+import { MemoryStore } from "../../packages/server/src/memory-store.ts";
+import { createStaffAccount } from "../../packages/server/src/admin.ts";
 
 import { FakeIDBFactory } from "./fakes/fake-idb.ts";
 import { DdilLearningGateway } from "../../src/sync/gateway/ddil-gateway.ts";
 import { HttpTransport } from "../../src/sync/transport/http-transport.ts";
 import { allDelivery, allEvents, getDelivery, getMeta } from "../../src/sync/stores/db.ts";
 
-const CONTENT_DIR = "/tmp/marc-backend/content/modules";
+const CONTENT_DIR = fileURLToPath(new URL("../../content/modules", import.meta.url));
 const PW = "correct horse battery staple";
 
 let server: Server;

@@ -12,11 +12,25 @@ Built for **RAICES Cyber Organization Inc. (RCO)** via
 
 ## Status
 
-**Pre-kickoff / scope not yet locked.** Product scope, architecture,
-and tech stack are being finalized with the client. See
-[`RootSync-Tetherless-Project-Docs`](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs)
-(private) for the current planning state. This README will be
-updated with real build/run instructions once the stack is chosen.
+In development for Pursuit Demo Day.
+
+**Trial run (2026-10-15):** the folders below were built on branch `trial/2026-10-15-trial-run` to test execution. They are not adopted; see `TRIAL-RUN.md`.
+
+| Path | What it is |
+|---|---|
+| `packages/contract` | Sync contract: event types, validation, API spec (`openapi.yaml`) |
+| `packages/content` | Content format, validator and importer (Kahoot, CSV, JSON) |
+| `packages/analytics` | Scoring, active time and the trainer report |
+| `packages/server` | API server: enrollment, sync, trainer report and export |
+| `content/modules` | Published learning modules |
+| `prototypes/block-the-threat` | Playable game prototype built from the modules |
+| `docker-compose.yml` | API + PostgreSQL for self-hosting |
+
+Run every test (Node 22.18+, no install needed):
+
+```sh
+scripts/test-all.sh
+```
 
 ## Team
 

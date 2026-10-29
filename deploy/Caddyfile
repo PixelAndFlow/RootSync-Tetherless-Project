@@ -1,0 +1,6 @@
+# HTTPS reverse proxy for the API. Caddy gets and renews the certificate automatically.
+# Set TRUST_PROXY=true for the api service when using this.
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8080
+}
