@@ -18,17 +18,27 @@ export function useModuleCatalog(): AsyncResource<ModuleSummary[]> {
 
   useEffect(() => {
     let cancelled = false;
-    setState({ data: null, loading: true, error: null });
-    void (async () => {
+    let request = 0;
+    const refresh = async () => {
+      const current = ++request;
       try {
         if (ready) await ready;
         const modules = await loadModuleCatalog(gateway);
-        if (!cancelled) setState({ data: modules, loading: false, error: null });
+        if (!cancelled && current === request) setState({ data: modules, loading: false, error: null });
       } catch (error) {
-        if (!cancelled) setState({ data: null, loading: false, error });
+        if (!cancelled && current === request) setState({ data: null, loading: false, error });
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    const visible = () => { if (document.visibilityState === "visible") void refresh(); };
+    setState({ data: null, loading: true, error: null });
+    void refresh();
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", visible);
+    };
   }, [gateway, ready]);
 
   return state;

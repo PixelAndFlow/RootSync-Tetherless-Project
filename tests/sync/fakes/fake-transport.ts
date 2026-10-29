@@ -6,8 +6,8 @@
  * server, a token, or Marc's Postgres.
  */
 
-import type { SyncTransport, SendResponse, SendFailure } from "../../src/sync/transport/transport.ts";
-import type { ActivityEvent, EventOutcome } from "../../src/sync/types.ts";
+import type { SyncTransport, SendResponse, SendFailure } from "../../../src/sync/transport/transport.ts";
+import type { ActivityEvent, EventOutcome } from "../../../src/sync/types.ts";
 
 export interface SentBatch {
   events: ActivityEvent[];

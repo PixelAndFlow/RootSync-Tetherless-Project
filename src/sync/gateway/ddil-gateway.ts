@@ -42,7 +42,7 @@ import type {
   SyncSummary,
   TetherlessModule,
 } from "./contract.ts";
-import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptCompletedEvent, AttemptStartedEvent, DeliveryRecord } from "../types.ts";
+import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptAbandonedEvent, AttemptCompletedEvent, AttemptStartedEvent, DeliveryRecord } from "../types.ts";
 
 export interface DdilGatewayOptions {
   idb: IDBFactoryLike;
@@ -386,14 +386,15 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     attempts: AttemptRecord[];
     engagement: EngagementSummary;
   }> {
-    type AttemptEvent = AttemptStartedEvent | AnswerSubmittedEvent | AttemptCompletedEvent;
+    type AttemptEvent = AttemptStartedEvent | AnswerSubmittedEvent | AttemptCompletedEvent | AttemptAbandonedEvent;
     const events = (await allEvents(this.require()))
       .filter(
         (e): e is AttemptEvent =>
-          (e.event_type === "attempt_started" || e.event_type === "answer_submitted" || e.event_type === "attempt_completed") &&
+          (e.event_type === "attempt_started" || e.event_type === "answer_submitted" || e.event_type === "attempt_completed" || e.event_type === "attempt_abandoned") &&
           e.module_id === moduleId,
       )
-      .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+      // This is one installation's history. Sequence survives clock changes.
+      .sort((a, b) => a.device_seq - b.device_seq);
 
     const byAttempt = new Map<string, AttemptEvent[]>();
     for (const e of events) {
@@ -404,14 +405,20 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
     const attempts: AttemptRecord[] = [];
     let latestContentVersion: number | undefined;
-    let firstFullAttemptId: string | undefined;
     let firstFullStartedAt: string | undefined;
 
     for (const [attemptId, attemptEvents] of byAttempt) {
       const started = attemptEvents.find((e): e is AttemptStartedEvent => e.event_type === "attempt_started");
       const completed = attemptEvents.find((e): e is AttemptCompletedEvent => e.event_type === "attempt_completed");
+      const abandoned = attemptEvents.find((e) => e.event_type === "attempt_abandoned");
+      const seenQuestions = new Set<string>();
       const answers: AnswerRecord[] = attemptEvents
         .filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted")
+        .filter((e) => {
+          if (seenQuestions.has(e.question_id)) return false;
+          seenQuestions.add(e.question_id);
+          return true;
+        })
         .map((e) => ({
           questionId: e.question_id,
           selectedChoiceId: String(e.payload.choice_id ?? ""),
@@ -423,33 +430,47 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       const kindRaw = started?.payload.attempt_kind;
       const kind: AttemptKind = kindRaw === "practice" || kindRaw === "remediation" ? "remediation" : "full";
       const startedAt = started?.occurred_at ?? answers[0]?.answeredAt ?? completed?.occurred_at ?? new Date(this.now()).toISOString();
-      const localCorrect = typeof completed?.payload.local_correct === "number" ? completed.payload.local_correct : undefined;
       const localTotal = typeof completed?.payload.local_total === "number" ? completed.payload.local_total : undefined;
+      const version = started?.content_version ?? completed?.content_version;
+      // Validate a completed full attempt against the package it was played on.
+      // An interrupted attempt or a premature completion cannot establish a score.
+      let attemptModule: TetherlessModule | undefined;
+      if (version !== undefined) {
+        try { attemptModule = await this.getModule(moduleId, version); } catch { /* Retain history when its package is unavailable. */ }
+        latestContentVersion = Math.max(latestContentVersion ?? version, version);
+      }
+      const requiredIds = attemptModule?.questions.map((q) => q.id);
+      const completeFull = requiredIds
+        ? requiredIds.length > 0 && requiredIds.every((id) => seenQuestions.has(id))
+        : localTotal !== undefined && localTotal > 0 && seenQuestions.size >= localTotal;
+      const isCompleted = Boolean(completed && !abandoned && (kind !== "full" || completeFull));
+      const correctCount = answers.filter((a) => a.isCorrect && (!requiredIds || requiredIds.includes(a.questionId))).length;
+      const total = requiredIds?.length ?? localTotal;
 
       attempts.push({
         id: attemptId,
         learnerId,
         moduleId,
+        contentVersion: version,
         kind,
-        status: completed ? "completed" : "in_progress",
+        status: abandoned ? "abandoned" : isCompleted ? "completed" : "in_progress",
         startedAt,
-        completedAt: completed?.occurred_at,
+        completedAt: isCompleted ? completed?.occurred_at : undefined,
         answers,
-        initialCorrectCount: kind === "full" ? localCorrect : undefined,
-        initialScorePercent: kind === "full" && localCorrect !== undefined && localTotal ? Math.round((localCorrect / localTotal) * 100) : undefined,
+        initialCorrectCount: kind === "full" && isCompleted ? correctCount : undefined,
+        initialScorePercent: kind === "full" && isCompleted && total ? Math.round((correctCount / total) * 100) : undefined,
         questionIds: kind === "remediation" ? (started?.payload.question_ids as string[] | undefined) : undefined,
       });
 
-      const version = started?.content_version ?? completed?.content_version;
-      if (version !== undefined) latestContentVersion = version;
-
-      if (kind === "full" && (!firstFullStartedAt || startedAt.localeCompare(firstFullStartedAt) < 0)) {
-        firstFullAttemptId = attemptId;
-        firstFullStartedAt = startedAt;
-      }
+      if (kind === "full") firstFullStartedAt ??= startedAt;
     }
 
-    attempts.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+    const fullAttempts = attempts.filter((a) => a.kind === "full");
+    // A later full start replaces an unfinished one, even if the old UI did
+    // not explicitly record attempt_abandoned. Match the server's rule.
+    for (const attempt of fullAttempts.slice(0, -1)) {
+      if (attempt.status === "in_progress") attempt.status = "abandoned";
+    }
 
     const masteredQuestionIds = new Set<string>();
     const answeredQuestionIds = new Set<string>();
@@ -469,21 +490,12 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       bestStreak = Math.max(bestStreak, currentStreak);
     }
 
-    const firstFullEvents = firstFullAttemptId ? byAttempt.get(firstFullAttemptId) : undefined;
-    const firstFullCompleted = firstFullEvents?.find((e): e is AttemptCompletedEvent => e.event_type === "attempt_completed");
-    const firstFullCorrect = typeof firstFullCompleted?.payload.local_correct === "number" ? firstFullCompleted.payload.local_correct : undefined;
-    const firstFullTotal = typeof firstFullCompleted?.payload.local_total === "number" ? firstFullCompleted.payload.local_total : undefined;
-    const initialMissedQuestionIds = firstFullCompleted
-      ? [...new Set(
-          (firstFullEvents ?? [])
-            .filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted" && !e.payload.local_is_correct)
-            .map((e) => e.question_id),
-        )]
-      : [];
+    const firstCompleted = fullAttempts.find((a) => a.status === "completed");
+    const initialMissedQuestionIds = firstCompleted?.answers.filter((a) => !a.isCorrect).map((a) => a.questionId) ?? [];
 
-    const completionStatus: "not_started" | "in_progress" | "completed" = attempts.some((a) => a.kind === "full" && a.status === "completed")
+    const completionStatus: "not_started" | "in_progress" | "completed" = firstCompleted
       ? "completed"
-      : answeredQuestionIds.size > 0
+      : attempts.length > 0
         ? "in_progress"
         : "not_started";
 
@@ -491,9 +503,14 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     let questionXp = 0;
     let sectorAwards: { sectorId: string; questionIds: string[]; bonusXp: number }[] = [];
     let missionAward: { badgeId?: string; bonusXp: number } | undefined;
+    let currentQuestionIds: Set<string> | undefined;
     try {
-      const module = await this.getModule(moduleId, latestContentVersion ?? this.contentVersion);
+      const profile = await this.getLearnerProfile();
+      const catalog = await getMeta<ModuleSummary[]>(this.require(), `assignment_catalog:${this.deviceId}:${profile?.learnerId ?? this.currentLearnerId ?? ""}`);
+      const assignedVersion = catalog?.find((m) => m.moduleId === moduleId)?.contentVersion;
+      const module = await this.getModule(moduleId, assignedVersion ?? latestContentVersion ?? this.contentVersion);
       questionsTotal = module.questions.length;
+      currentQuestionIds = new Set(module.questions.map((q) => q.id));
       const awards = gamificationAwards(module);
       questionXp = awards.questionXp;
       sectorAwards = awards.sectorAwards;
@@ -501,6 +518,13 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     } catch {
       // Not cached and offline: still report what the learner has done
       // locally, just without a denominator or award totals yet.
+    }
+
+    // Historic attempts remain intact. Only current questions contribute to
+    // current mastery/progress and module awards; retired IDs cannot inflate it.
+    if (currentQuestionIds) {
+      for (const id of masteredQuestionIds) if (!currentQuestionIds.has(id)) masteredQuestionIds.delete(id);
+      for (const id of answeredQuestionIds) if (!currentQuestionIds.has(id)) answeredQuestionIds.delete(id);
     }
 
     const completedSectorIds = sectorAwards
@@ -519,9 +543,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       currentMasteryPercent: questionsTotal > 0 ? Math.round((masteredQuestionIds.size / questionsTotal) * 100) : 0,
       stillUnmasteredCount: Math.max(0, questionsTotal - masteredQuestionIds.size),
       completionStatus,
-      initialScorePercent: firstFullCorrect !== undefined && firstFullTotal ? Math.round((firstFullCorrect / firstFullTotal) * 100) : undefined,
+      initialScorePercent: firstCompleted?.initialScorePercent,
       firstStartedAt: firstFullStartedAt,
-      firstCompletedAt: firstFullCompleted?.occurred_at,
+      firstCompletedAt: firstCompleted?.completedAt,
       attempts,
       engagement: {
         xp: masteredQuestionIds.size * questionXp + sectorBonusXp + missionBonusXp,
@@ -776,22 +800,48 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   // --------------------------------------------------------------- modules (§6.4, §8.1)
 
-  /** Cached list; refreshed from the server when online. */
+  /** Refresh while reachable; retain a student/device-scoped catalog for offline restart. */
   async listAssignedModules(): Promise<ModuleSummary[]> {
     const db = this.require();
     if (!this.opts.api) throw new Error("listAssignedModules requires DdilGatewayOptions.api");
-    const body = (await this.opts.api.get("/v1/me/modules")) as {
-      modules: { module_id: string; content_version: number; title: { en: string; es?: string }; level: string; activity_type: string }[];
-    };
-    const summaries = await Promise.all(body.modules.map(async (m): Promise<ModuleSummary> => ({
-      moduleId: m.module_id,
-      contentVersion: m.content_version,
-      title: m.title,
-      level: m.level,
-      activityType: m.activity_type,
-      downloadState: (await getMeta(db, this.moduleKey(m.module_id, m.content_version))) ? "available_offline" : "not_downloaded",
+    const profile = await this.getLearnerProfile();
+    const key = `assignment_catalog:${this.deviceId}:${profile?.learnerId ?? this.currentLearnerId ?? ""}`;
+    const cached = await getMeta<ModuleSummary[]>(db, key);
+    const online = this.opts.isOnline?.() ?? (typeof navigator === "undefined" || navigator.onLine !== false);
+    let catalog: ModuleSummary[];
+    if (!online) {
+      if (!cached) throw new Error("No assigned-module catalog is available offline yet.");
+      catalog = cached;
+    } else {
+      let body: { modules: { module_id: string; content_version: number; title: { en: string; es?: string }; level: string; activity_type: string }[] } | undefined;
+      let received = false;
+      try {
+        body = await this.opts.api.get("/v1/me/modules") as typeof body;
+        received = true;
+      } catch (error) {
+        const status = (error as { status?: number } | null)?.status;
+        // Authentication/permission/client errors must remain visible, not be
+        // disguised as a successful cached response. Network/server outages may
+        // use the last known assignments without deleting any local work.
+        if ((status !== undefined && status !== 0 && status < 500 && status !== 429) || !cached) throw error;
+      }
+      if (received) {
+        if (!body || !Array.isArray(body.modules) || body.modules.some((m) => !m || typeof m.module_id !== "string" || !Number.isInteger(m.content_version) || m.content_version < 1 || typeof m.title?.en !== "string" || typeof m.level !== "string" || typeof m.activity_type !== "string")) {
+          throw new Error("The service returned an invalid assigned-module catalog.");
+        }
+        catalog = body.modules.map((m) => ({ moduleId: m.module_id, contentVersion: m.content_version, title: m.title, level: m.level, activityType: m.activity_type, downloadState: "not_downloaded" }));
+        await setMeta(db, key, catalog);
+      } else {
+        if (!cached) throw new Error("The assigned-module catalog could not be loaded.");
+        catalog = cached;
+      }
+    }
+    // Recompute even for a cached catalog: opening a module may have downloaded
+    // its package since this assignment list was saved.
+    return Promise.all(catalog.map(async (m): Promise<ModuleSummary> => ({
+      ...m,
+      downloadState: (await getMeta(db, this.moduleKey(m.moduleId, m.contentVersion))) ? "available_offline" : "not_downloaded",
     })));
-    return summaries;
   }
 
   /** Downloads one module version, verifies it parses, and caches it for offline use. */
