@@ -24,11 +24,12 @@ import {
   toSyncStatus,
 } from "../../src/sync/gateway/status-map.ts";
 import type { DeliveryRecord } from "../../src/sync/types.ts";
+import type { DeviceApi, TetherlessModule } from "../../src/sync/gateway/contract.ts";
 
 let clock = 1_700_000_000_000;
 const now = () => clock;
 
-async function gateway(over: { online?: boolean } = {}) {
+async function gateway(over: { online?: boolean; api?: DeviceApi } = {}) {
   const transport = new FakeTransport(now);
   const gw = new DdilLearningGateway({
     idb: new FakeIDBFactory(),
@@ -37,9 +38,42 @@ async function gateway(over: { online?: boolean } = {}) {
     owner: "device-1:tab-1",
     now,
     isOnline: () => over.online ?? true,
+    api: over.api,
   });
   await gw.init();
   return { gw, transport };
+}
+
+/** A module with a sector over q1/q2 and a mission badge over all three, for award tests. */
+function progressModule(): TetherlessModule {
+  return {
+    schema_version: "1.0",
+    module_id: "m1",
+    content_version: 1,
+    level: "foundation",
+    title: { en: "Test Module" },
+    settings: { question_count: 3, timer_seconds: null, show_immediate_feedback: true, allow_retry: true, spanish_assist_default: false },
+    questions: [
+      { id: "q1", topic: "t", type: "multiple_choice", presentation: "kahoot_cards", prompt: { en: "Q1" }, choices: [{ id: "a", en: "A" }, { id: "b", en: "B" }], correct_choice: "a", feedback: { en: "F1" } },
+      { id: "q2", topic: "t", type: "multiple_choice", presentation: "kahoot_cards", prompt: { en: "Q2" }, choices: [{ id: "a", en: "A" }, { id: "b", en: "B" }], correct_choice: "a", feedback: { en: "F2" } },
+      { id: "q3", topic: "t", type: "multiple_choice", presentation: "kahoot_cards", prompt: { en: "Q3" }, choices: [{ id: "a", en: "A" }, { id: "b", en: "B" }], correct_choice: "a", feedback: { en: "F3" } },
+    ],
+    gamification: {
+      xp: { first_time_question_mastery_xp: 5, mission_mastery_bonus_xp: 20 },
+      sectors: [{ id: "sector-1", order: 1, name: { en: "Sector 1" }, question_ids: ["q1", "q2"], mastery_bonus_xp: 10 }],
+      mission_badge: { id: "badge-1", en: "Badge" },
+    },
+  };
+}
+
+function apiServing(module: TetherlessModule): DeviceApi {
+  return {
+    get: async (path: string) => {
+      if (path === `/v1/content/modules/${module.module_id}/versions/${module.content_version}`) return module;
+      throw new Error(`unexpected GET ${path}`);
+    },
+    post: async () => { throw new Error("not used in these tests"); },
+  };
 }
 
 // ---------------------------------------------------------------- contract
@@ -85,6 +119,7 @@ test("the gateway declares no methods outside the contract", () => {
     "getModule",
     "fetchAndCacheModule",
     "moduleKey",
+    "deriveModuleState",
   ]);
   const extra = declared.filter((n) => !allowed.has(n) && !internal.has(n));
   assert.deepEqual(extra, [], "unexpected public method — update the contract mirror");
@@ -374,4 +409,75 @@ test("practice attempts carry question_ids, which v1.10 accepts", async () => {
   assert.ok(started);
   assert.deepEqual(started!.payload.question_ids, ["q1", "q2"]);
   assert.equal(started!.payload.attempt_kind, "practice");
+});
+
+// --------------------------------------------------------------- progress
+
+test("getModuleProgress reports not_started before any activity", async () => {
+  const { gw } = await gateway();
+  const progress = await gw.getModuleProgress("l1", "m1");
+  assert.equal(progress.completionStatus, "not_started");
+  assert.equal(progress.questionsAnswered, 0);
+  assert.equal(progress.currentMasteryPercent, 0);
+});
+
+test("getLearnerModuleRecord returns null before any activity", async () => {
+  const { gw } = await gateway();
+  assert.equal(await gw.getLearnerModuleRecord("l1", "m1"), null);
+});
+
+test("getModuleProgress reflects answers against the real module size, not zero", async () => {
+  const module = progressModule();
+  const { gw } = await gateway({ api: apiServing(module) });
+  const attempt = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full", contentVersion: 1 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: attempt.id, answer: { questionId: "q1", selectedChoiceId: "a", isCorrect: true, answeredAt: "t1" }, xpAward: 5 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: attempt.id, answer: { questionId: "q2", selectedChoiceId: "b", isCorrect: false, answeredAt: "t2" }, xpAward: 5 });
+
+  const progress = await gw.getModuleProgress("l1", "m1");
+  assert.equal(progress.questionsTotal, 3, "pulled from the cached module, not hardcoded");
+  assert.equal(progress.questionsAnswered, 2);
+  assert.equal(progress.currentMasteryPercent, 33, "1 of 3 questions mastered");
+  assert.equal(progress.stillUnmasteredCount, 2);
+  assert.equal(progress.completionStatus, "in_progress", "no attempt_completed yet");
+});
+
+test("getLearnerModuleRecord tracks initial misses, mastery, and awards across a full attempt then remediation", async () => {
+  const module = progressModule();
+  const { gw } = await gateway({ api: apiServing(module) });
+
+  const full = await gw.startAttempt({ learnerId: "l1", moduleId: "m1", kind: "full", contentVersion: 1 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: full.id, answer: { questionId: "q1", selectedChoiceId: "a", isCorrect: true, answeredAt: "t1" }, xpAward: 5 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: full.id, answer: { questionId: "q2", selectedChoiceId: "b", isCorrect: false, answeredAt: "t2" }, xpAward: 5 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: full.id, answer: { questionId: "q3", selectedChoiceId: "b", isCorrect: false, answeredAt: "t3" }, xpAward: 5 });
+  await gw.completeAttempt({ learnerId: "l1", moduleId: "m1", attemptId: full.id, questionsTotal: 3, correctQuestionIds: ["q1"] });
+
+  let record = await gw.getLearnerModuleRecord("l1", "m1");
+  assert.ok(record);
+  assert.equal(record!.completionStatus, "completed");
+  assert.deepEqual(new Set(record!.initialMissedQuestionIds), new Set(["q2", "q3"]));
+  assert.deepEqual(record!.masteredQuestionIds, ["q1"]);
+  assert.equal(record!.engagement.xp, 5, "one mastered question so far, no sector/mission bonus yet");
+  assert.equal(record!.engagement.completedSectorIds.length, 0);
+  assert.equal(record!.attempts.length, 1);
+  assert.equal(record!.attempts[0]!.kind, "full");
+  assert.equal(record!.attempts[0]!.initialScorePercent, 33);
+
+  const remediation = await gw.startRemediation({ learnerId: "l1", moduleId: "m1", contentVersion: 1, questionIds: ["q2", "q3"] });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: remediation.id, answer: { questionId: "q2", selectedChoiceId: "a", isCorrect: true, answeredAt: "t4" }, xpAward: 5 });
+  await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: remediation.id, answer: { questionId: "q3", selectedChoiceId: "a", isCorrect: true, answeredAt: "t5" }, xpAward: 5 });
+  await gw.completeAttempt({ learnerId: "l1", moduleId: "m1", attemptId: remediation.id, questionsTotal: 2, correctQuestionIds: ["q2", "q3"] });
+
+  record = await gw.getLearnerModuleRecord("l1", "m1");
+  assert.ok(record);
+  assert.deepEqual(new Set(record!.masteredQuestionIds), new Set(["q1", "q2", "q3"]), "remediation mastery counts toward the module");
+  assert.deepEqual(record!.initialMissedQuestionIds, ["q2", "q3"], "the initial attempt's miss list never changes retroactively");
+  assert.equal(record!.currentMasteryPercent, 100);
+  assert.equal(record!.stillUnmasteredCount, 0);
+  assert.equal(record!.engagement.completedSectorIds[0], "sector-1", "q1+q2 now both mastered");
+  assert.deepEqual(record!.engagement.earnedBadgeIds, ["badge-1"], "all three questions mastered");
+  // 3 questions * 5xp + 10 sector bonus + 20 mission bonus
+  assert.equal(record!.engagement.xp, 3 * 5 + 10 + 20);
+  assert.equal(record!.attempts.length, 2);
+  assert.equal(record!.attempts[1]!.kind, "remediation");
+  assert.deepEqual(record!.attempts[1]!.questionIds, ["q2", "q3"]);
 });
