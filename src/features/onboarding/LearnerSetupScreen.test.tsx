@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LearnerProfileProvider } from "../../app/providers/LearnerProfileProvider";
@@ -56,13 +56,14 @@ describe("mock-backed device setup", () => {
     expect(button).toBeDisabled();
     expect(screen.getByLabelText("Setup code")).toBeDisabled();
   });
-  it("does not navigate if local demo profile storage fails", async () => {
+  it("still proceeds to missions when local demo profile storage fails", async () => {
+    // The gateway-side setup has already succeeded by the time localStorage
+    // is written; a quota/permission failure here must not strand the
+    // learner on a setup code the backend now considers consumed.
     setup(); fill();
     const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Quota", "QuotaExceededError"); });
     fireEvent.click(screen.getByRole("button", { name: "Continue to missions" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("could not be saved");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Continue to missions" })).toBeEnabled());
-    expect(screen.queryByRole("heading", { name: "Mission library" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mission library" })).toBeVisible();
     spy.mockRestore();
   });
   it("does not silently substitute mocks if the setup adapter is absent", () => {

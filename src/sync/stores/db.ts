@@ -172,6 +172,17 @@ export async function setMeta(db: IDBDatabaseLike, key: string, value: unknown):
   await tx(t);
 }
 
+/**
+ * Write several meta keys in one transaction, so a caller that must persist
+ * related keys together (e.g. device_token and learner_profile at setup) can
+ * never end up with one written and not the other.
+ */
+export async function setMetaMany(db: IDBDatabaseLike, entries: Array<[string, unknown]>): Promise<void> {
+  const t = db.transaction([STORE_META], "readwrite");
+  for (const [key, value] of entries) t.objectStore(STORE_META).put({ key, value });
+  await tx(t);
+}
+
 /** Counts by status. Cheap enough for a UI badge; no cursor walk needed at this size. */
 export function countByStatus(records: DeliveryRecord[]): Record<DeliveryStatus, number> {
   const out: Record<string, number> = {

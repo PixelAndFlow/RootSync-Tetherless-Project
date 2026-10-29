@@ -26,6 +26,11 @@ export function useOfflineLearningGateway(): OfflineLearningGateway {
   return useAppGateways().offlineLearning;
 }
 
+/** Non-throwing variant for providers that may legitimately mount outside GatewayProvider in tests. */
+export function useOfflineLearningGatewayOptional(): OfflineLearningGateway | undefined {
+  return useContext(GatewayContext)?.offlineLearning;
+}
+
 /** Resolves once offlineLearning is ready; undefined in mock mode, where it is ready immediately. */
 export function useOfflineLearningGatewayReady(): Promise<void> | undefined {
   return useAppGateways().offlineLearningReady;

@@ -1,5 +1,7 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { GatewayProvider } from "./GatewayProvider";
+import { createMockGateways } from "../../services/gateways";
 import { LearnerProfileProvider, useLearnerProfile } from "./LearnerProfileProvider";
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -62,5 +64,33 @@ describe("LearnerProfileProvider", () => {
     act(() => result.result.current.resetProfile());
     expect(result.result.current.profile).toBeNull();
     expect(window.localStorage.getItem("tetherless.learner-profile.v1")).toBeNull();
+  });
+
+  it("recovers identity from the gateway when localStorage has nothing to show", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Jordan" });
+    function wrapperWithGateway({ children }: { children: React.ReactNode }) {
+      return <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    }
+    const result = renderHook(() => useLearnerProfile(), { wrapper: wrapperWithGateway });
+    expect(result.result.current.profile).toBeNull();
+    await waitFor(() => expect(result.result.current.profile).not.toBeNull());
+    expect(result.result.current.profile).toMatchObject({ username: "Jordan", learnerCode: "DEMO-001", cohortName: "Frontend demo cohort" });
+    expect(JSON.parse(window.localStorage.getItem("tetherless.learner-profile.v1")!)).toMatchObject({ username: "Jordan" });
+  });
+
+  it("never overrides a profile already found in localStorage with the gateway's", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Gateway Learner" });
+    window.localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({
+      learnerId: "local-learner", deviceId: "local-device", displayName: "Local Learner", username: "local",
+    }));
+    function wrapperWithGateway({ children }: { children: React.ReactNode }) {
+      return <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    }
+    const result = renderHook(() => useLearnerProfile(), { wrapper: wrapperWithGateway });
+    expect(result.result.current.profile).toMatchObject({ username: "local" });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(result.result.current.profile).toMatchObject({ username: "local" });
   });
 });

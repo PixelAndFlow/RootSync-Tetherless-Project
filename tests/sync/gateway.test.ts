@@ -481,3 +481,42 @@ test("getLearnerModuleRecord tracks initial misses, mastery, and awards across a
   assert.equal(record!.attempts[1]!.kind, "remediation");
   assert.deepEqual(record!.attempts[1]!.questionIds, ["q2", "q3"]);
 });
+
+// ----------------------------------------------------------- device setup (§8.1)
+
+function apiWithSetup(posts: { count: number }): DeviceApi {
+  return {
+    get: async (path: string) => { throw new Error(`unexpected GET ${path}`); },
+    post: async (path: string) => {
+      if (path !== "/v1/setup") throw new Error(`unexpected POST ${path}`);
+      posts.count += 1;
+      return {
+        device_token: `token-${posts.count}`,
+        learner: { learner_id: "learner-1", learner_code: "L-001", username: "demo", cohort_name: "Cohort A" },
+      };
+    },
+  };
+}
+
+test("getLearnerProfile is null before setup, then returns the claimed profile", async () => {
+  const posts = { count: 0 };
+  const { gw } = await gateway({ api: apiWithSetup(posts) });
+  assert.equal(await gw.getLearnerProfile(), null);
+  const profile = await gw.setupDevice({ setupCode: "CODE-1", username: "demo" });
+  assert.deepEqual(await gw.getLearnerProfile(), profile);
+});
+
+test("setupDevice is idempotent: a device that already claimed a profile never re-consumes a setup code", async () => {
+  const posts = { count: 0 };
+  const { gw } = await gateway({ api: apiWithSetup(posts) });
+  const first = await gw.setupDevice({ setupCode: "CODE-1", username: "demo" });
+  assert.equal(posts.count, 1);
+
+  // A second submit — e.g. a retry after the UI lost track of a successful
+  // setup — must return the device's existing profile, not silently rebind
+  // it to a different learner and leave this device's local event history
+  // misattributed.
+  const second = await gw.setupDevice({ setupCode: "CODE-2", username: "someone-else" });
+  assert.deepEqual(second, first, "returns the device's existing profile instead of rebinding");
+  assert.equal(posts.count, 1, "never re-consumes a setup code once the device is already set up");
+});
