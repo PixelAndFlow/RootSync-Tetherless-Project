@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SetupProfile } from "../../services/setup/LearnerSetupGateway";
+import { useOfflineLearningGatewayOptional } from "./GatewayProvider";
 
 export interface LearnerProfile {
   learnerId: string;
@@ -52,29 +53,62 @@ function readStoredProfile(): LearnerProfile | null {
 }
 
 export function LearnerProfileProvider({ children }: { children: React.ReactNode }) {
+  const gateway = useOfflineLearningGatewayOptional();
   const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const updateProfile = (nextProfile: LearnerProfile) => {
-    window.localStorage.setItem(storageKey, JSON.stringify(nextProfile));
+    try { window.localStorage.setItem(storageKey, JSON.stringify(nextProfile)); }
+    catch {
+      // Best effort. A learner whose gateway-side setup already succeeded
+      // must not get stuck here just because this browser's storage is full
+      // or unavailable — only persistence across reload is lost, not the
+      // current session, and the gateway reconciliation effect below can
+      // recover identity from its own durable store on the next mount.
+    }
     setProfile(nextProfile);
   };
 
+  const acceptDemoSetup = (input: SetupProfile) => updateProfile({
+    learnerId: input.learnerId,
+    deviceId: input.deviceId,
+    username: input.username,
+    learnerCode: input.learnerCode,
+    cohortName: input.cohortName,
+    displayName: input.username,
+    spanishAssist: profile?.spanishAssist ?? false,
+    highContrast: profile?.highContrast ?? false,
+    reducedMotion: profile?.reducedMotion ?? false,
+    colorTheme: profile?.colorTheme ?? "dark",
+  });
+  const acceptDemoSetupRef = useRef(acceptDemoSetup);
+  acceptDemoSetupRef.current = acceptDemoSetup;
+
+  // Recovers identity from the gateway's own durable store (IndexedDB, in live
+  // mode) when localStorage has nothing to show — cleared, never written, or
+  // corrupted — but the device already completed setup there. Without this,
+  // a learner who clears/loses localStorage (or whose earlier setup write to
+  // it failed) is shown the setup screen again for a device the backend
+  // already considers claimed, with no way to recover the original identity.
+  // Runs once on mount; never overwrites a profile that appeared locally in
+  // the meantime (checked via profileRef, not the closed-over `profile`).
+  useEffect(() => {
+    if (profile || !gateway || !gateway.getLearnerProfile) return;
+    let active = true;
+    gateway.getLearnerProfile().then((recovered) => {
+      if (active && recovered && !profileRef.current) acceptDemoSetupRef.current(recovered);
+    }).catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gateway]);
+
   const value = useMemo<LearnerProfileContextValue>(() => ({
     profile,
-    // This provider persists DEMO presentation/profile data only. Real credentials
-    // and profile recovery belong to Naquan's adapter, never to React/localStorage.
-    acceptDemoSetup: (input) => updateProfile({
-      learnerId: input.learnerId,
-      deviceId: input.deviceId,
-      username: input.username,
-      learnerCode: input.learnerCode,
-      cohortName: input.cohortName,
-      displayName: input.username,
-      spanishAssist: profile?.spanishAssist ?? false,
-      highContrast: profile?.highContrast ?? false,
-      reducedMotion: profile?.reducedMotion ?? false,
-      colorTheme: profile?.colorTheme ?? "dark",
-    }),
+    // This provider persists DEMO presentation/profile data only. Real
+    // credentials belong to Naquan's adapter, never to React/localStorage —
+    // profile recovery now defers to the gateway above when local data is missing.
+    acceptDemoSetup,
     saveProfile: ({ displayName, username }) => updateProfile({
       learnerId: profile?.learnerId ?? crypto.randomUUID(),
       deviceId: profile?.deviceId ?? crypto.randomUUID(),
