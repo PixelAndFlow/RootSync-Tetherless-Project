@@ -21,12 +21,14 @@ import { SyncEngine } from "../engine/sync.ts";
 import { withDeviceSeqLock } from "../engine/lease.ts";
 import type { SyncTransport } from "../transport/transport.ts";
 import { summarize } from "./status-map.ts";
+import { gamificationAwards } from "../../utils/gamification.ts";
 import type {
   AnswerRecord,
   AttemptKind,
   AttemptRecord,
   CompleteAttemptInput,
   DeviceApi,
+  EngagementSummary,
   LearnerModuleRecord,
   LearnerProfile,
   ModuleProgress,
@@ -40,7 +42,7 @@ import type {
   SyncSummary,
   TetherlessModule,
 } from "./contract.ts";
-import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptCompletedEvent, DeliveryRecord } from "../types.ts";
+import type { ActivityEvent, ActivityEventInput, AnswerSubmittedEvent, AttemptCompletedEvent, AttemptStartedEvent, DeliveryRecord } from "../types.ts";
 
 export interface DdilGatewayOptions {
   idb: IDBFactoryLike;
@@ -324,27 +326,16 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    * figure is a projection for the learner's benefit and never an authority.
    */
   async getModuleProgress(learnerId: string, moduleId: string): Promise<ModuleProgress> {
-    const events = await allEvents(this.require());
-    const mine = events.filter(
-      (e): e is AnswerSubmittedEvent | AttemptCompletedEvent =>
-        (e.event_type === "answer_submitted" || e.event_type === "attempt_completed") && e.module_id === moduleId,
-    );
-    const answers = mine.filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted");
-    const distinctQuestions = new Set(answers.map((e) => e.question_id).filter(Boolean));
-
+    const state = await this.deriveModuleState(learnerId, moduleId);
     return {
       learnerId,
       moduleId,
-      questionsTotal: 0,
-      questionsAnswered: distinctQuestions.size,
-      currentMasteryPercent: 0,
-      stillUnmasteredCount: 0,
-      completionStatus:
-        mine.some((e) => e.event_type === "attempt_completed")
-          ? "completed"
-          : distinctQuestions.size > 0
-            ? "in_progress"
-            : "not_started",
+      questionsTotal: state.questionsTotal,
+      questionsAnswered: state.masteredOrAnsweredCount,
+      initialScorePercent: state.initialScorePercent,
+      currentMasteryPercent: state.currentMasteryPercent,
+      stillUnmasteredCount: state.stillUnmasteredCount,
+      completionStatus: state.completionStatus,
     };
   }
 
@@ -352,21 +343,193 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     learnerId: string,
     moduleId: string,
   ): Promise<LearnerModuleRecord | null> {
-    const progress = await this.getModuleProgress(learnerId, moduleId);
-    if (progress.completionStatus === "not_started") return null;
+    const state = await this.deriveModuleState(learnerId, moduleId);
+    if (state.completionStatus === "not_started") return null;
 
     return {
-      ...progress,
-      attempts: [],
-      initialMissedQuestionIds: [],
-      masteredQuestionIds: [],
+      learnerId,
+      moduleId,
+      questionsTotal: state.questionsTotal,
+      questionsAnswered: state.masteredOrAnsweredCount,
+      initialScorePercent: state.initialScorePercent,
+      currentMasteryPercent: state.currentMasteryPercent,
+      stillUnmasteredCount: state.stillUnmasteredCount,
+      completionStatus: state.completionStatus,
+      attempts: state.attempts,
+      firstStartedAt: state.firstStartedAt,
+      firstCompletedAt: state.firstCompletedAt,
+      initialMissedQuestionIds: state.initialMissedQuestionIds,
+      masteredQuestionIds: [...state.masteredQuestionIds],
+      engagement: state.engagement,
+    };
+  }
+
+  /**
+   * Replays this module's local event history — the only source either
+   * progress method may read from (see the comment above getModuleProgress).
+   * Nothing here is sent to, or trusted from, the server.
+   */
+  private async deriveModuleState(
+    learnerId: string,
+    moduleId: string,
+  ): Promise<{
+    questionsTotal: number;
+    masteredOrAnsweredCount: number;
+    masteredQuestionIds: Set<string>;
+    initialMissedQuestionIds: string[];
+    currentMasteryPercent: number;
+    stillUnmasteredCount: number;
+    completionStatus: "not_started" | "in_progress" | "completed";
+    initialScorePercent?: number;
+    firstStartedAt?: string;
+    firstCompletedAt?: string;
+    attempts: AttemptRecord[];
+    engagement: EngagementSummary;
+  }> {
+    type AttemptEvent = AttemptStartedEvent | AnswerSubmittedEvent | AttemptCompletedEvent;
+    const events = (await allEvents(this.require()))
+      .filter(
+        (e): e is AttemptEvent =>
+          (e.event_type === "attempt_started" || e.event_type === "answer_submitted" || e.event_type === "attempt_completed") &&
+          e.module_id === moduleId,
+      )
+      .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+
+    const byAttempt = new Map<string, AttemptEvent[]>();
+    for (const e of events) {
+      const list = byAttempt.get(e.attempt_id);
+      if (list) list.push(e);
+      else byAttempt.set(e.attempt_id, [e]);
+    }
+
+    const attempts: AttemptRecord[] = [];
+    let latestContentVersion: number | undefined;
+    let firstFullAttemptId: string | undefined;
+    let firstFullStartedAt: string | undefined;
+
+    for (const [attemptId, attemptEvents] of byAttempt) {
+      const started = attemptEvents.find((e): e is AttemptStartedEvent => e.event_type === "attempt_started");
+      const completed = attemptEvents.find((e): e is AttemptCompletedEvent => e.event_type === "attempt_completed");
+      const answers: AnswerRecord[] = attemptEvents
+        .filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted")
+        .map((e) => ({
+          questionId: e.question_id,
+          selectedChoiceId: String(e.payload.choice_id ?? ""),
+          isCorrect: Boolean(e.payload.local_is_correct),
+          answeredAt: e.occurred_at,
+        }));
+      // startRemediation writes "practice" (the wire's historical value);
+      // startAttempt writes the AttemptKind directly. Both mean "remediation" here.
+      const kindRaw = started?.payload.attempt_kind;
+      const kind: AttemptKind = kindRaw === "practice" || kindRaw === "remediation" ? "remediation" : "full";
+      const startedAt = started?.occurred_at ?? answers[0]?.answeredAt ?? completed?.occurred_at ?? new Date(this.now()).toISOString();
+      const localCorrect = typeof completed?.payload.local_correct === "number" ? completed.payload.local_correct : undefined;
+      const localTotal = typeof completed?.payload.local_total === "number" ? completed.payload.local_total : undefined;
+
+      attempts.push({
+        id: attemptId,
+        learnerId,
+        moduleId,
+        kind,
+        status: completed ? "completed" : "in_progress",
+        startedAt,
+        completedAt: completed?.occurred_at,
+        answers,
+        initialCorrectCount: kind === "full" ? localCorrect : undefined,
+        initialScorePercent: kind === "full" && localCorrect !== undefined && localTotal ? Math.round((localCorrect / localTotal) * 100) : undefined,
+        questionIds: kind === "remediation" ? (started?.payload.question_ids as string[] | undefined) : undefined,
+      });
+
+      const version = started?.content_version ?? completed?.content_version;
+      if (version !== undefined) latestContentVersion = version;
+
+      if (kind === "full" && (!firstFullStartedAt || startedAt.localeCompare(firstFullStartedAt) < 0)) {
+        firstFullAttemptId = attemptId;
+        firstFullStartedAt = startedAt;
+      }
+    }
+
+    attempts.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+
+    const masteredQuestionIds = new Set<string>();
+    const answeredQuestionIds = new Set<string>();
+    const chronologicalCorrectness: boolean[] = [];
+    for (const attempt of attempts) {
+      for (const answer of attempt.answers) {
+        answeredQuestionIds.add(answer.questionId);
+        if (answer.isCorrect) masteredQuestionIds.add(answer.questionId);
+        chronologicalCorrectness.push(answer.isCorrect);
+      }
+    }
+
+    let currentStreak = 0;
+    let bestStreak = 0;
+    for (const correct of chronologicalCorrectness) {
+      currentStreak = correct ? currentStreak + 1 : 0;
+      bestStreak = Math.max(bestStreak, currentStreak);
+    }
+
+    const firstFullEvents = firstFullAttemptId ? byAttempt.get(firstFullAttemptId) : undefined;
+    const firstFullCompleted = firstFullEvents?.find((e): e is AttemptCompletedEvent => e.event_type === "attempt_completed");
+    const firstFullCorrect = typeof firstFullCompleted?.payload.local_correct === "number" ? firstFullCompleted.payload.local_correct : undefined;
+    const firstFullTotal = typeof firstFullCompleted?.payload.local_total === "number" ? firstFullCompleted.payload.local_total : undefined;
+    const initialMissedQuestionIds = firstFullCompleted
+      ? [...new Set(
+          (firstFullEvents ?? [])
+            .filter((e): e is AnswerSubmittedEvent => e.event_type === "answer_submitted" && !e.payload.local_is_correct)
+            .map((e) => e.question_id),
+        )]
+      : [];
+
+    const completionStatus: "not_started" | "in_progress" | "completed" = attempts.some((a) => a.kind === "full" && a.status === "completed")
+      ? "completed"
+      : answeredQuestionIds.size > 0
+        ? "in_progress"
+        : "not_started";
+
+    let questionsTotal = 0;
+    let questionXp = 0;
+    let sectorAwards: { sectorId: string; questionIds: string[]; bonusXp: number }[] = [];
+    let missionAward: { badgeId?: string; bonusXp: number } | undefined;
+    try {
+      const module = await this.getModule(moduleId, latestContentVersion ?? this.contentVersion);
+      questionsTotal = module.questions.length;
+      const awards = gamificationAwards(module);
+      questionXp = awards.questionXp;
+      sectorAwards = awards.sectorAwards;
+      missionAward = awards.missionAward;
+    } catch {
+      // Not cached and offline: still report what the learner has done
+      // locally, just without a denominator or award totals yet.
+    }
+
+    const completedSectorIds = sectorAwards
+      .filter((s) => s.questionIds.length > 0 && s.questionIds.every((id) => masteredQuestionIds.has(id)))
+      .map((s) => s.sectorId);
+    const sectorBonusXp = sectorAwards.filter((s) => completedSectorIds.includes(s.sectorId)).reduce((sum, s) => sum + s.bonusXp, 0);
+    const missionComplete = questionsTotal > 0 && masteredQuestionIds.size === questionsTotal;
+    const earnedBadgeIds = missionComplete && missionAward?.badgeId ? [missionAward.badgeId] : [];
+    const missionBonusXp = missionComplete ? missionAward?.bonusXp ?? 0 : 0;
+
+    return {
+      questionsTotal,
+      masteredOrAnsweredCount: answeredQuestionIds.size,
+      masteredQuestionIds,
+      initialMissedQuestionIds,
+      currentMasteryPercent: questionsTotal > 0 ? Math.round((masteredQuestionIds.size / questionsTotal) * 100) : 0,
+      stillUnmasteredCount: Math.max(0, questionsTotal - masteredQuestionIds.size),
+      completionStatus,
+      initialScorePercent: firstFullCorrect !== undefined && firstFullTotal ? Math.round((firstFullCorrect / firstFullTotal) * 100) : undefined,
+      firstStartedAt: firstFullStartedAt,
+      firstCompletedAt: firstFullCompleted?.occurred_at,
+      attempts,
       engagement: {
-        xp: 0,
-        currentStreak: 0,
-        bestStreak: 0,
-        xpAwardedQuestionIds: [],
-        completedSectorIds: [],
-        earnedBadgeIds: [],
+        xp: masteredQuestionIds.size * questionXp + sectorBonusXp + missionBonusXp,
+        currentStreak,
+        bestStreak,
+        xpAwardedQuestionIds: [...masteredQuestionIds],
+        completedSectorIds,
+        earnedBadgeIds,
       },
     };
   }
