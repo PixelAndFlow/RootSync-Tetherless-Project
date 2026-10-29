@@ -11,7 +11,8 @@ import { MissionReviewScreen } from "../features/review/MissionReviewScreen";
 import { SyncStatusScreen } from "../features/sync-status/SyncStatusScreen";
 import { TrainerLearnerDetailScreen } from "../features/trainer/TrainerLearnerDetailScreen";
 import { RouteErrorScreen, RouteNotFoundScreen } from "../features/system/RouteFallbackScreen";
-import { moduleLibrary } from "../content/modules";
+import { loadModuleCatalog } from "../features/missions/moduleCatalog";
+import { appGateways } from "../services/gateways";
 import { LearnerSettingsScreen } from "../features/settings/LearnerSettingsScreen";
 import { StaffSignInScreen } from "../features/staff/StaffSignInScreen";
 import { StaffPasswordChangeScreen } from "../features/staff/StaffPasswordChangeScreen";
@@ -22,8 +23,17 @@ import { StaffPermissionScreen } from "../features/staff/StaffPermissionScreen";
 import { StaffAccountsScreen } from "../features/staff/StaffAccountsScreen";
 import { StaffPasswordGate } from "../features/staff/StaffPasswordGate";
 
-function requireKnownModule({ params }: LoaderFunctionArgs) {
-  if (!moduleLibrary.some((module) => module.module_id === params.moduleId)) {
+/**
+ * Guards the mission routes against an unknown module ID before the screen
+ * mounts. Checks the real assigned-module list (API Spec v1.30 §8.1
+ * listAssignedModules) in live mode, the demo fixtures otherwise — the same
+ * fallback loadModuleCatalog uses everywhere else, so this 404 gate and what
+ * the screens themselves load never disagree.
+ */
+async function requireKnownModule({ params }: LoaderFunctionArgs) {
+  if (appGateways.offlineLearningReady) await appGateways.offlineLearningReady.catch(() => {});
+  const modules = await loadModuleCatalog(appGateways.offlineLearning).catch(() => []);
+  if (!modules.some((module) => module.moduleId === params.moduleId)) {
     throw new Response("Mission not found.", { status: 404, statusText: "Mission not found" });
   }
   return null;
