@@ -31,8 +31,8 @@ import { StaffPasswordGate } from "../features/staff/StaffPasswordGate";
  * the screens themselves load never disagree.
  */
 async function requireKnownModule({ params }: LoaderFunctionArgs) {
-  if (appGateways.offlineLearningReady) await appGateways.offlineLearningReady.catch(() => {});
-  const modules = await loadModuleCatalog(appGateways.offlineLearning).catch(() => []);
+  if (appGateways.offlineLearningReady) await appGateways.offlineLearningReady;
+  const modules = await loadModuleCatalog(appGateways.offlineLearning);
   if (!modules.some((module) => module.moduleId === params.moduleId)) {
     throw new Response("Mission not found.", { status: 404, statusText: "Mission not found" });
   }

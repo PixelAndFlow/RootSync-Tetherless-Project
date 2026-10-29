@@ -25,6 +25,8 @@ function fixtureSummaries(): ModuleSummary[] {
   }));
 }
 
+// Deduplicate simultaneous requests, but let a later visit refresh assignments.
+// Durable offline fallback belongs to DDIL, not a process-lifetime UI cache.
 const catalogCache = new WeakMap<OfflineLearningGateway, Promise<ModuleSummary[]>>();
 const moduleCache = new WeakMap<OfflineLearningGateway, Map<string, Promise<TetherlessModule>>>();
 
@@ -35,7 +37,10 @@ export function loadModuleCatalog(gateway: OfflineLearningGateway): Promise<Modu
   if (cached) return cached;
   const pending = gateway.listAssignedModules();
   catalogCache.set(gateway, pending);
-  void pending.catch(() => catalogCache.delete(gateway));
+  const clear = () => {
+    if (catalogCache.get(gateway) === pending) catalogCache.delete(gateway);
+  };
+  void pending.then(clear, clear);
   return pending;
 }
 
@@ -78,5 +83,7 @@ export async function loadModule(
 
 async function versionFromCatalog(gateway: OfflineLearningGateway, moduleId: string): Promise<number> {
   const catalog = await loadModuleCatalog(gateway);
-  return catalog.find((module) => module.moduleId === moduleId)?.contentVersion ?? 1;
+  const assigned = catalog.find((module) => module.moduleId === moduleId);
+  if (!assigned) throw new Error(`Module is not assigned: ${moduleId}`);
+  return assigned.contentVersion;
 }

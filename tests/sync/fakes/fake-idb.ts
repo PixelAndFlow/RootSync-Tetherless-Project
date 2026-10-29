@@ -18,7 +18,7 @@ import type {
   IDBObjectStoreLike,
   IDBRequestLike,
   IDBTransactionLike,
-} from "../../src/sync/stores/idb.ts";
+} from "../../../src/sync/stores/idb.ts";
 
 interface Row {
   key: unknown;

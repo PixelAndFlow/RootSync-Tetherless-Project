@@ -39,7 +39,7 @@ export interface TetherlessEvent<TPayload = unknown> {
 }
 
 export type AttemptKind = "full" | "remediation";
-export type AttemptStatus = "in_progress" | "completed";
+export type AttemptStatus = "in_progress" | "completed" | "abandoned";
 
 export interface AnswerRecord {
   questionId: string;
@@ -52,6 +52,8 @@ export interface AttemptRecord {
   id: string;
   learnerId: string;
   moduleId: string;
+  /** Published package used by this attempt; absent only in legacy/demo records. */
+  contentVersion?: number;
   kind: AttemptKind;
   status: AttemptStatus;
   startedAt: string;
