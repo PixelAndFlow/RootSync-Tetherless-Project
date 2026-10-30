@@ -18,6 +18,7 @@ import {
   type IDBDatabaseLike,
   type IDBFactoryLike,
   type IDBObjectStoreLike,
+  type IDBRequestLike,
 } from "./idb.ts";
 import type {
   ActivityEvent,
@@ -96,6 +97,7 @@ export async function recordEvent(
     next_attempt_at: now,
     last_error: null,
     lease_owner: null,
+    lease_id: null,
     lease_expires_at: null,
     inflight_started_at: null,
     rejected_code: null,
@@ -123,26 +125,21 @@ export async function recordEvent(
  * write in another lets two writers observe the same value.
  */
 export async function reserveDeviceSeq(db: IDBDatabaseLike): Promise<number> {
-  // N6: read and write must be in ONE transaction, and the put must be issued
-  // from the read's success handler. An `await` between get and put lets the
-  // transaction auto-commit, and the put then throws.
-  //
-  // Uses the plain get/put helpers rather than store.put() directly: the
-  // transaction-scoped facade in the test double buffers writes, while the
-  // committed store does not.
+  // Keep the read and write in the same active transaction, including on
+  // browsers whose transaction lifetime ends after the request callback.
   const t = db.transaction([STORE_META], "readwrite");
+  const committed = tx(t);
   const store = t.objectStore(STORE_META);
   const get = store.get(DEVICE_SEQ_KEY);
-  const next = await new Promise<number>((resolve, reject) => {
-    get.onsuccess = () => {
+  let next = 0;
+  get.onsuccess = () => {
+    try {
       const row = get.result as MetaRecord | undefined;
-      const value = ((row?.value as number | undefined) ?? 0) + 1;
-      resolve(value);
-    };
-    get.onerror = () => reject(get.error ?? new Error("device_seq read failed"));
-  });
-  store.put({ key: DEVICE_SEQ_KEY, value: next });
-  await tx(t);
+      next = ((row?.value as number | undefined) ?? 0) + 1;
+      store.put({ key: DEVICE_SEQ_KEY, value: next });
+    } catch { t.abort(); }
+  };
+  await committed;
   return next;
 }
 
@@ -179,6 +176,52 @@ export async function putDelivery(db: IDBDatabaseLike, record: DeliveryRecord): 
   const t = db.transaction([STORE_DELIVERY], "readwrite");
   t.objectStore(STORE_DELIVERY).put(record);
   await tx(t);
+}
+
+/** Read, check and write while holding the native delivery-store transaction. */
+function changeDelivery<T, R>(
+  db: IDBDatabaseLike,
+  read: (store: IDBObjectStoreLike) => IDBRequestLike<T>,
+  change: (current: T, store: IDBObjectStoreLike) => R,
+): Promise<R> {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction([STORE_DELIVERY], "readwrite");
+    let result: R;
+    let failure: unknown;
+    t.oncomplete = () => resolve(result);
+    t.onerror = t.onabort = () => reject(failure ?? t.error ?? new Error("Delivery transaction failed"));
+    const store = t.objectStore(STORE_DELIVERY);
+    const request = read(store);
+    request.onerror = () => { failure = request.error; t.abort(); };
+    request.onsuccess = () => {
+      try { result = change(request.result, store); }
+      catch (error) { failure = error; t.abort(); }
+    };
+  });
+}
+
+export function updateDelivery(
+  db: IDBDatabaseLike,
+  eventId: string,
+  change: (current: DeliveryRecord | undefined) => DeliveryRecord | undefined,
+): Promise<DeliveryRecord | undefined> {
+  return changeDelivery(db, (store) => store.get(eventId), (current, store) => {
+    const next = change(current);
+    if (next) store.put(next);
+    return next;
+  });
+}
+
+/** Selection and updates share a transaction, so another tab cannot claim a stale snapshot. */
+export function updateDeliveryRecords(
+  db: IDBDatabaseLike,
+  change: (current: DeliveryRecord[]) => DeliveryRecord[],
+): Promise<DeliveryRecord[]> {
+  return changeDelivery(db, (store) => store.getAll(), (current, store) => {
+    const changed = change(current);
+    for (const record of changed) store.put(record);
+    return changed;
+  });
 }
 
 export async function appendAttempt(

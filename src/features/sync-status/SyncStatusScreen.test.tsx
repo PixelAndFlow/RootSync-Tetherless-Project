@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { GatewayProvider } from "../../app/providers/GatewayProvider";
 import { SyncStatusProvider } from "../../app/providers/SyncStatusProvider";
 import { createMockGateways } from "../../services/gateways";
@@ -8,6 +9,20 @@ import { MockOfflineLearningGateway } from "../../services/offline/MockOfflineLe
 import { SyncStatusScreen } from "./SyncStatusScreen";
 
 describe("authorization-paused sync", () => {
+  it("checks authorization explicitly and leaves the queue paused when verification fails", async () => {
+    const gateways = createMockGateways();
+    const offline = gateways.offlineLearning as MockOfflineLearningGateway;
+    offline.simulateBlockedAuthorization();
+    const recover = vi.fn().mockRejectedValue(new Error("401"));
+    gateways.offlineLearning = Object.assign(offline, { recoverAuth: recover });
+    const sync = vi.spyOn(offline, "requestSync");
+    render(<MemoryRouter><GatewayProvider gateways={gateways}><SyncStatusProvider><SyncStatusScreen /></SyncStatusProvider></GatewayProvider></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", { name: "Check authorization" }));
+    expect(await screen.findByText(/Authorization could not be confirmed/)).toBeVisible();
+    expect(recover).toHaveBeenCalledTimes(1);
+    expect(sync).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Sync now" })).toBeDisabled();
+  });
   it("keeps pending work, blocks retry, and remains visible offline", async () => {
     const gateways = createMockGateways();
     const offline = gateways.offlineLearning as MockOfflineLearningGateway;

@@ -1,20 +1,9 @@
 /**
  * Delivery status → frontend sync status.
  *
- * Chris's `SyncStatus` has six values and no `blocked_auth`. The DDIL layer has
- * six delivery states including it. This mapping is the reconciliation, and it
- * is deliberately a separate module so the whole contract between the two
- * layers is one readable table.
- *
- * Two states cannot be expressed honestly in six values:
- *
- *   - an expired credential  (recovers by itself on the next connection)
- *   - a revoked device       (does not recover; needs a trainer-issued relink)
- *
- * Both are `blocked_auth` internally but they are NOT the same message to a
- * learner, so `blockedAuthReason` carries the difference through the existing
- * `failureReason` field. That keeps the frontend unblocked today and gives
- * Chris a reason to add a seventh status when he gets to it.
+ * The frontend and DDIL mirror share a dedicated blocked_auth state. It
+ * remains visible offline and requires explicit verification before recovery;
+ * no display text promises that a revoked or invalid token fixes itself.
  */
 
 import type { DeliveryRecord, DeliveryStatus } from "../types.ts";
@@ -23,10 +12,10 @@ import type { SyncStatus, SyncSummary } from "./contract.ts";
 export type BlockedAuthReason = "expired_credential" | "revoked_device";
 
 export const BLOCKED_AUTH_MESSAGES: Record<BlockedAuthReason, string> = {
-  // Wait. It fixes itself.
-  expired_credential: "Sync paused — this device needs authorization. It will resume on its own.",
+  // The legacy reason name does not imply that device tokens expire on a timer.
+  expired_credential: "Sync paused — this device needs authorization. Ask your trainer for help; saved work remains on this device.",
   // Do not wait. Someone has to act.
-  revoked_device: "Sync paused — this device needs authorization. Ask your trainer for a new setup code.",
+  revoked_device: "Sync paused — this device needs authorization. Ask your trainer for help. Do not clear this device's data.",
 };
 
 /**
@@ -45,10 +34,7 @@ export function toSyncStatus(status: DeliveryStatus): SyncStatus {
     case "acknowledged":
       return "synced";
     case "blocked_auth":
-      // The honest gap: there is no dedicated frontend state yet. Falling back
-      // to retryable_error keeps the learner from being told work is lost,
-      // and the specific reason travels in failureReason.
-      return "retryable_error";
+      return "blocked_auth";
     case "rejected":
       return "rejected";
     case "failed":
@@ -88,6 +74,8 @@ export function summarize(
   const base = {
     pendingEventCount,
     lastSyncedAt: opts.lastSyncedAt ?? undefined,
+    // Keep recovery discoverable even if a rejection takes display precedence.
+    ...(n("blocked_auth") ? { authorizationReason: blockedAuthReasonOf(records.find((r) => r.status === "blocked_auth")) === "revoked_device" ? "revoked_device" as const : "unknown" as const } : {}),
   };
 
   if (n("rejected") > 0) {

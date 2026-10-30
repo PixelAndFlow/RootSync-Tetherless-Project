@@ -321,8 +321,8 @@ test("P0-3 & P0-4: 401 Auth Expiration during sync and explicit recovery", async
   const summary = await gw.requestSync();
   assert.equal(
     summary.status,
-    "retryable_error",
-    "Chris's 6-status contract rolls up blocked_auth to retryable_error without losing work",
+    "blocked_auth",
+    "authorization is distinct from retryable network failures without losing work",
   );
   assert.ok(
     summary.failureReason?.includes("authorization"),
@@ -356,12 +356,12 @@ test("P0-3 & P0-4: 401 Auth Expiration during sync and explicit recovery", async
   // 2. Recovery: Valid credentials restored
   activeToken = creds.token;
 
-  // startSession re-establishes session and automatically unblocks auth records
-  await gw.startSession({ learnerId: creds.learnerId, deviceId: creds.deviceId });
+  // Learning session creation is not credential restoration.
+  await gw.recoverAuth();
 
   const unblockedDeliveries = await gw.deliveryRecords();
   const readyPending = unblockedDeliveries.filter((d) => d.status === "pending");
-  assert.ok(readyPending.length >= 2, "Blocked records transitioned to pending upon startSession");
+  assert.ok(readyPending.length >= 2, "Explicit credential recovery transitions blocked records to pending");
 
   // Sync completes cleanly
   const recoveredSummary = await gw.requestSync();

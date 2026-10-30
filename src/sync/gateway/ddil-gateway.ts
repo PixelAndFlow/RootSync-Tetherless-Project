@@ -134,7 +134,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     this.engine = new SyncEngine({
       db,
       transport: this.opts.transport,
-      owner: this.opts.owner ?? `${this.deviceId}:main`,
+      owner: this.opts.owner ?? `${this.deviceId}:${newId()}`,
       now: this.now,
       maxEventsPerBatch: this.opts.maxEventsPerBatch,
       maxAttempts: this.opts.maxAttempts,
@@ -168,9 +168,6 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     await setMeta(db, "active_session_id", session.id);
     await setMeta(db, "active_learner_id", input.learnerId);
     await setMeta(db, "session_start_wall_ms", this.sessionStartedAtWall);
-
-    // Unblock any records waiting in blocked_auth
-    await this.engine?.unblockAuth();
 
     await this.record({
       event_type: "session_started",
@@ -583,6 +580,14 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    */
   async recoverAuth(): Promise<number> {
     if (!this.engine) throw new Error("gateway not initialized — call init() first");
+    if (this.opts.api) {
+      // A protected, uncached API request proves the restored token is valid.
+      // Re-read it so another tab's authorized restoration is observed too.
+      this.deviceToken = (await getMeta<string>(this.require(), "device_token")) ?? null;
+      this.opts.onTokenChange?.(this.deviceToken);
+      if (!this.deviceToken) throw new Error("Device authorization has not been restored");
+      await this.opts.api.get("/v1/me/modules");
+    }
     const count = await this.engine.unblockAuth(this.now());
     await this.emit();
     return count;
@@ -590,6 +595,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
   async requestSync(): Promise<SyncSummary> {
     if (!this.engine) throw new Error("gateway not initialized — call init() first");
+    // New offline answers may be pending beside older blocked records. They
+    // must wait too, until explicit recovery confirms device authorization.
+    if ((await allDelivery(this.require())).some((r) => r.status === "blocked_auth")) return this.getSyncSummary();
     this.syncing = true;
     await this.emit();
     try {

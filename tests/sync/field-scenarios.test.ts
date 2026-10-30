@@ -5,7 +5,7 @@
  *  2. The 401 Authentication Trap (Lifecycle & Observable Recovery)
  *  3. The Four-Store Consistency Test (IndexedDB Invariants Across Restart)
  *  4. The Single-Flight Concurrency Test (Mutual Exclusion & Mid-Sync Ingestion)
- *  5. The 422 Terminal-Rejection Test (Evidence Preservation & Non-Retryable Invariants)
+ *  5. Per-event terminal rejection (Evidence Preservation & Non-Retryable Invariants)
  */
 
 import { test } from "node:test";
@@ -193,9 +193,10 @@ test("SCENARIO 2: The 401 Authentication Trap Test", async () => {
   // User re-authenticates or session is refreshed.
   transport.always({ kind: "accept_all" });
 
-  // Explicit recovery path: startSession() re-establishes credentials and un-strands auth-blocked records
-  const newSession = await gw.startSession({ learnerId: "learner-field-02", deviceId: "device-athlete-02" });
-  assert.ok(newSession.id, "New session started with refreshed credentials");
+  // The transport seam now represents restored credentials. Starting a
+  // learning session is not authentication; recovery is a separate action.
+  const recovered = await gw.recoverAuth();
+  assert.equal(recovered, blockedRecords.length, "Explicit recovery reopens auth-blocked work");
 
   const deliveryAfterUnblock = await allDelivery(db);
   const readyPending = deliveryAfterUnblock.filter((d) => d.status === "pending");
@@ -250,8 +251,8 @@ test("SCENARIO 3: The Four-Store Consistency Test", async () => {
   // 3. Simulate a terminal rejection (Attempt 2: rejected)
   transport.always({
     kind: "reject_all",
-    code: "DEADLINE_PASSED",
-    message: "Submission deadline for mod-cve has closed.",
+    code: "UNKNOWN_QUESTION",
+    message: "The question is not in this module version.",
   });
   clock += 10_000;
   await gw1.requestSync();
@@ -281,7 +282,7 @@ test("SCENARIO 3: The Four-Store Consistency Test", async () => {
   const targetDelivery = deliveries.find((d) => d.event_id === log4jEvent.event_id);
   assert.ok(targetDelivery, "Delivery row exists");
   assert.equal(targetDelivery.status, "rejected", "Terminal rejection status matches state machine");
-  assert.equal(targetDelivery.rejected_code, "DEADLINE_PASSED");
+  assert.equal(targetDelivery.rejected_code, "UNKNOWN_QUESTION");
   assert.equal(targetDelivery.next_attempt_at, null);
 
   // Invariant 3: `delivery_log` store — historical records are preserved rather than overwritten
@@ -305,7 +306,7 @@ test("SCENARIO 3: The Four-Store Consistency Test", async () => {
   // Invariant 5: Inspector reflects real IndexedDB, not out-of-sync UI state
   const summary = await gw2.getSyncSummary();
   assert.equal(summary.status, "rejected", "Inspector summary directly reflects persisted DB status");
-  assert.ok(summary.failureReason?.includes("deadline") || summary.failureReason?.includes("DEADLINE_PASSED"));
+  assert.ok(summary.failureReason?.includes("question") || summary.failureReason?.includes("UNKNOWN_QUESTION"));
 });
 
 // ============================================================================
@@ -321,11 +322,16 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
   let activeSendCount = 0;
   let totalDispatches = 0;
   let unblockPromise: ((res: SendResponse) => void) | null = null;
+  let entered!: () => void;
+  const sending = new Promise<void>((resolve) => { entered = resolve; });
+  let sentEvents: ActivityEvent[] = [];
 
   const blockingTransport: SyncTransport = {
     async send(events: ActivityEvent[]): Promise<SendResponse> {
       activeSendCount++;
       totalDispatches++;
+      sentEvents = events;
+      entered();
       return new Promise<SendResponse>((resolve) => {
         unblockPromise = resolve;
       });
@@ -345,8 +351,8 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
   // 1. Start synchronization request (held open)
   const syncPromise1 = gw.requestSync();
 
-  // Allow microtask to enter transport.send
-  await new Promise((r) => setTimeout(r, 10));
+  // Wait for the transport boundary, not a scheduler-dependent delay.
+  await sending;
   assert.equal(activeSendCount, 1, "First sync is in-flight");
 
   // 2. Trigger several additional SYNC requests while first is still in flight
@@ -373,10 +379,7 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
   unblockPromise!({
     ok: true,
     result: {
-      outcomes: [
-        { event_id: "evt-0001", status: "accepted" },
-        { event_id: "evt-0002", status: "accepted" },
-      ],
+      outcomes: sentEvents.map((event) => ({ event_id: event.event_id, status: "accepted" })),
       received_at: at,
     },
   });
@@ -403,10 +406,13 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
 
   // 7. Repeat Single-Flight under thrown transport error
   let throwUnblock: (() => void) | null = null;
+  let throwing!: () => void;
+  const throwEntered = new Promise<void>((resolve) => { throwing = resolve; });
   const throwTransport: SyncTransport = {
     async send(): Promise<SendResponse> {
       return new Promise<SendResponse>((_, reject) => {
         throwUnblock = () => reject(new Error("Simulated network drop"));
+        throwing();
       });
     },
   };
@@ -422,7 +428,7 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
   });
 
   const throwSyncPromise1 = gw.requestSync();
-  await new Promise((r) => setTimeout(r, 10));
+  await throwEntered;
   const throwSyncPromise2 = gw.requestSync(); // Concurrent call
 
   throwUnblock!(); // Throw error
@@ -435,10 +441,10 @@ test("SCENARIO 4: The Single-Flight Concurrency Test", async () => {
 });
 
 // ============================================================================
-// 5. THE 422 TERMINAL-REJECTION TEST
+// 5. PER-EVENT TERMINAL REJECTION
 // ============================================================================
 
-test("SCENARIO 5: The 422 Terminal-Rejection Test", async () => {
+test("SCENARIO 5: terminal per-event rejection preserves submitted work", async () => {
   const factory = new FakeIDBFactory();
   let clock = 1_700_000_000_000;
   const now = () => clock;
@@ -467,11 +473,11 @@ test("SCENARIO 5: The 422 Terminal-Rejection Test", async () => {
   const targetEvent = events.find((e) => e.question_id === "q-terminal-test");
   assert.ok(targetEvent, "Answer recorded");
 
-  // Server returns 422 Unprocessable Entity / DEADLINE_PASSED
+  // The batch response is 200 with a terminal per-event rejected outcome.
   transport.always({
     kind: "reject_all",
-    code: "DEADLINE_PASSED",
-    message: "The assessment window for mod-exam closed on 2026-10-24T23:59:59Z.",
+    code: "UNKNOWN_QUESTION",
+    message: "The question is not in this module version.",
   });
 
   // Execute sync pass
@@ -480,8 +486,8 @@ test("SCENARIO 5: The 422 Terminal-Rejection Test", async () => {
   // 1. Rejection is recorded in delivery store
   const delivery = await getDelivery(db, targetEvent.event_id);
   assert.equal(delivery?.status, "rejected", "Delivery status is terminal 'rejected'");
-  assert.equal(delivery?.rejected_code, "DEADLINE_PASSED", "Machine-readable rejection code stored");
-  assert.ok(delivery?.last_error?.includes("closed"), "Human-readable explanation stored");
+  assert.equal(delivery?.rejected_code, "UNKNOWN_QUESTION", "Machine-readable rejection code stored");
+  assert.ok(delivery?.last_error?.includes("question"), "Human-readable explanation stored");
   assert.ok(delivery?.settled_at !== null, "settled_at timestamp is stamped");
 
   // 2. The event remains available on disk for inspection and export (evidence preservation)
