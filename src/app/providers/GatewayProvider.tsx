@@ -6,10 +6,9 @@ import type { StaffAdminGateway } from "../../services/staff/StaffAdminGateway";
 
 const GatewayContext = createContext<AppGateways | null>(null);
 
-/** Profile recovery also works in isolated demo/provider tests without a gateway. */
-export function useOptionalOfflineLearningGateway(): OfflineLearningGateway | undefined {
-  const gateways = useContext(GatewayContext);
-  return gateways?.offlineLearningReady ? gateways.offlineLearning : undefined;
+/** Profile providers may also mount outside GatewayProvider in isolated tests. */
+export function useOfflineLearningGatewayReadyOptional(): Promise<void> | undefined {
+  return useContext(GatewayContext)?.offlineLearningReady;
 }
 
 interface GatewayProviderProps {
@@ -30,6 +29,11 @@ function useAppGateways(): AppGateways {
 
 export function useOfflineLearningGateway(): OfflineLearningGateway {
   return useAppGateways().offlineLearning;
+}
+
+/** Non-throwing variant for providers that may legitimately mount outside GatewayProvider in tests. */
+export function useOfflineLearningGatewayOptional(): OfflineLearningGateway | undefined {
+  return useContext(GatewayContext)?.offlineLearning;
 }
 
 /** Resolves once offlineLearning is ready; undefined in mock mode, where it is ready immediately. */

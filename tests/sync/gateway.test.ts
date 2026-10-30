@@ -482,3 +482,41 @@ test("getLearnerModuleRecord tracks initial misses, mastery, and awards across a
   assert.equal(record!.attempts[1]!.kind, "remediation");
   assert.deepEqual(record!.attempts[1]!.questionIds, ["q2", "q3"]);
 });
+
+// ----------------------------------------------------------- device setup (§8.1)
+
+function apiWithSetup(posts: { count: number }): DeviceApi {
+  return {
+    get: async (path: string) => { throw new Error(`unexpected GET ${path}`); },
+    post: async (path: string) => {
+      if (path !== "/v1/setup") throw new Error(`unexpected POST ${path}`);
+      posts.count += 1;
+      return {
+        device_token: `token-${posts.count}`,
+        learner: { learner_id: `learner-${posts.count}`, learner_code: `L-00${posts.count}`, username: "demo", cohort_name: "Cohort A" },
+      };
+    },
+  };
+}
+
+test("getLearnerProfile is null before setup, then returns the claimed profile", async () => {
+  const posts = { count: 0 };
+  const { gw } = await gateway({ api: apiWithSetup(posts) });
+  assert.equal(await gw.getLearnerProfile(), null);
+  const profile = await gw.setupDevice({ setupCode: "CODE-1", username: "demo" });
+  assert.deepEqual(await gw.getLearnerProfile(), profile);
+});
+
+test("setupDevice re-runs on an already-claimed device, e.g. handing a shared device to a new student", async () => {
+  const posts = { count: 0 };
+  const { gw } = await gateway({ api: apiWithSetup(posts) });
+  const first = await gw.setupDevice({ setupCode: "CODE-1", username: "demo" });
+  assert.equal(posts.count, 1);
+
+  // The server, not this method, is the one place that knows whether a code
+  // may still be consumed — a genuinely reused code is its job to reject.
+  // This call must always reach it rather than short-circuit locally.
+  const second = await gw.setupDevice({ setupCode: "CODE-2", username: "someone-else" });
+  assert.equal(posts.count, 2, "always asks the server; it alone enforces one-time use");
+  assert.notDeepEqual(second, first, "a new successful setup replaces the device's previous profile");
+});
