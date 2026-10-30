@@ -21,6 +21,7 @@ export type SyncStatus =
   | "pending"
   | "syncing"
   | "synced"
+  | "blocked_auth"
   | "retryable_error"
   | "rejected";
 
@@ -32,12 +33,14 @@ export interface AnswerRecord {
 }
 
 export type AttemptKind = "full" | "remediation";
-export type AttemptStatus = "in_progress" | "completed";
+export type AttemptStatus = "in_progress" | "completed" | "abandoned";
 
 export interface AttemptRecord {
   id: string;
   learnerId: string;
   moduleId: string;
+  /** Published package used by this attempt; absent only in legacy/demo records. */
+  contentVersion?: number;
   kind: AttemptKind;
   status: AttemptStatus;
   startedAt: string;
@@ -89,6 +92,7 @@ export interface SyncSummary {
   pendingEventCount: number;
   lastSyncedAt?: string;
   failureReason?: string;
+  authorizationReason?: "invalid_credential" | "revoked_device" | "unknown";
 }
 
 export interface StartSessionInput {
@@ -142,6 +146,7 @@ export interface StartRemediationInput {
 }
 
 export interface OfflineLearningGateway {
+  recoverAuth?(): Promise<number>;
   startSession(input: StartSessionInput): Promise<SessionRecord>;
   startAttempt(input: StartAttemptInput): Promise<AttemptRecord>;
   saveAnswer(input: SaveAnswerInput): Promise<void>;

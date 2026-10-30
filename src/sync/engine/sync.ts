@@ -17,15 +17,13 @@
 
 import {
   appendAttempt,
-  allDelivery,
   allEvents,
-  getDelivery,
-  getMeta,
-  putDelivery,
+  updateDelivery,
+  updateDeliveryRecords,
   setMeta,
 } from "../stores/db.ts";
 import type { IDBDatabaseLike } from "../stores/idb.ts";
-import { claimBatch, recoverExpiredLeases, renewLease, withSyncLock } from "./lease.ts";
+import { claimBatch, recoverExpiredLeases, withSyncLock } from "./lease.ts";
 import {
   DEFAULT_MAX_ATTEMPTS,
   backoffMs,
@@ -80,6 +78,7 @@ const EMPTY: SyncPassResult = {
 
 export class SyncEngine {
   private readonly opts: SyncOptions;
+  private running = false;
 
   constructor(opts: SyncOptions) {
     this.opts = opts;
@@ -98,19 +97,15 @@ export class SyncEngine {
    * Call after credentials/tokens are restored.
    */
   async unblockAuth(now = this.now()): Promise<number> {
-    const records = await allDelivery(this.opts.db);
-    let count = 0;
-    for (const r of records) {
-      if (r.status !== "blocked_auth") continue;
-      await putDelivery(this.opts.db, {
+    const changed = await updateDeliveryRecords(this.opts.db, (records) => records
+      .filter((r) => r.status === "blocked_auth")
+      .map((r): DeliveryRecord => ({
         ...r,
         status: "pending",
         next_attempt_at: now,
         last_error: null,
-      });
-      count += 1;
-    }
-    return count;
+      })));
+    return changed.length;
   }
 
   /**
@@ -120,8 +115,12 @@ export class SyncEngine {
    * second concurrent call a no-op rather than a duplicate send.
    */
   async runOnce(): Promise<SyncPassResult> {
-    const result = await withSyncLock(SYNC_LOCK_NAME, () => this.pass());
-    return result ?? { ...EMPTY, skipped: true };
+    if (this.running) return { ...EMPTY, skipped: true };
+    this.running = true;
+    try {
+      const result = await withSyncLock(SYNC_LOCK_NAME, () => this.pass());
+      return result ?? { ...EMPTY, skipped: true };
+    } finally { this.running = false; }
   }
 
   private async pass(): Promise<SyncPassResult> {
@@ -143,11 +142,7 @@ export class SyncEngine {
 
     // Optional: give previously-failed work one more chance on a new pass.
     if (this.opts.reopenFailedOnStart) {
-      const records = await allDelivery(db);
-      for (const r of records) {
-        if (r.status !== "failed") continue;
-        await putDelivery(db, reopenFailed(r, this.now()));
-      }
+      await updateDeliveryRecords(db, (records) => records.filter((r) => r.status === "failed").map((r) => reopenFailed(r, this.now())));
     }
 
     // Step 3 — claim.
@@ -251,36 +246,27 @@ export class SyncEngine {
     error?: string,
     extra?: { code?: string; retryAfterSec?: number; receivedAt?: string | null },
   ): Promise<void> {
-    // Guard against stale overwrites from expired leases (N4)
-    const current = await getDelivery(this.opts.db, record.event_id);
-    if (current) {
-      if (current.status === "acknowledged") {
-        return;
-      }
-      if (current.lease_owner !== null && current.lease_owner !== this.opts.owner) {
-        return;
-      }
-      if (
-        record.lease_expires_at !== null &&
-        record.lease_expires_at < this.now() &&
-        current.status !== "inflight"
-      ) {
-        return;
-      }
-    }
-
-    const { record: next, shouldRetry } = transition({
-      record,
-      response,
-      now: this.now(),
-      code: extra?.code,
-      error,
-      retryAfterSec: extra?.retryAfterSec,
-      maxAttempts: this.opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-      backoff: this.opts.backoff,
+    let shouldRetry = false;
+    const next = await updateDelivery(this.opts.db, record.event_id, (current) => {
+      // Read and transition under the same lock as the write. A unique claim
+      // token also fences a newer claim held by the very same tab/owner.
+      if (!current || current.status !== "inflight" || current.lease_owner !== this.opts.owner ||
+          !record.lease_id || current.lease_id !== record.lease_id ||
+          current.lease_expires_at === null || current.lease_expires_at <= this.now()) return undefined;
+      const result = transition({
+        record: current,
+        response,
+        now: this.now(),
+        code: extra?.code,
+        error,
+        retryAfterSec: extra?.retryAfterSec,
+        maxAttempts: this.opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        backoff: this.opts.backoff,
+      });
+      shouldRetry = result.shouldRetry;
+      return { ...result.record, lease_id: null };
     });
-
-    await putDelivery(this.opts.db, next);
+    if (!next) return;
 
     switch (next.status) {
       case "acknowledged":

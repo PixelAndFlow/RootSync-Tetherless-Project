@@ -18,7 +18,7 @@ import type {
   IDBObjectStoreLike,
   IDBRequestLike,
   IDBTransactionLike,
-} from "../../src/sync/stores/idb.ts";
+} from "../../../src/sync/stores/idb.ts";
 
 interface Row {
   key: unknown;
@@ -301,10 +301,15 @@ class FakeDatabase implements IDBDatabaseLike {
 
   transaction(names: string[], mode = "readonly"): IDBTransactionLike {
     const t = new FakeTransaction(this, names, mode);
-    // The real API auto-commits when the microtask queue drains. Tests that
-    // need to assert rollback call abort() first.
+    // Real IndexedDB keeps a transaction open while requests are pending and
+    // auto-commits only once the queue drains. Committing on the first
+    // microtask closed it before a read's success handler could issue its
+    // write — which is exactly the read-modify-write pattern the engine uses.
+    // Defer the commit a turn so pending handlers can issue their writes.
     queueMicrotask(() => {
-      if (!(t as unknown as { aborted: boolean }).aborted) t.commit();
+      setTimeout(() => {
+        if (!(t as unknown as { aborted: boolean }).aborted) t.commit();
+      }, 0);
     });
     return t;
   }

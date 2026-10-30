@@ -7,6 +7,7 @@ import { MockOfflineLearningGateway } from "../../services/offline/MockOfflineLe
 import { MockTrainerDataGateway } from "../../services/trainer/MockTrainerDataGateway";
 import { moduleLibrary } from "../../content/modules";
 import { MissionDetailScreen } from "./MissionDetailScreen";
+import type { ModuleSummary } from "../../services/offline/OfflineLearningGateway";
 
 function renderDetail(moduleId: string, offlineLearning: MockOfflineLearningGateway) {
   return render(
@@ -36,7 +37,9 @@ describe("MissionDetailScreen", () => {
     };
     const gateway = new MockOfflineLearningGateway() as MockOfflineLearningGateway & {
       getModule: (moduleId: string, contentVersion: number) => Promise<unknown>;
+      listAssignedModules: () => Promise<ModuleSummary[]>;
     };
+    gateway.listAssignedModules = vi.fn().mockResolvedValue([{ moduleId: "phishing-basics", contentVersion: 1, title: serverModule.title, level: "foundation", activityType: "multiple_choice", downloadState: "not_downloaded" }]);
     gateway.getModule = vi.fn().mockResolvedValue(serverModule);
 
     renderDetail("phishing-basics", gateway);
@@ -48,7 +51,9 @@ describe("MissionDetailScreen", () => {
   it("shows an unavailable state when the module fails to download", async () => {
     const gateway = new MockOfflineLearningGateway() as MockOfflineLearningGateway & {
       getModule: (moduleId: string, contentVersion: number) => Promise<unknown>;
+      listAssignedModules: () => Promise<ModuleSummary[]>;
     };
+    gateway.listAssignedModules = vi.fn().mockResolvedValue([{ moduleId: "phishing-basics", contentVersion: 1, title: { en: "Phishing Basics" }, level: "foundation", activityType: "multiple_choice", downloadState: "not_downloaded" }]);
     gateway.getModule = vi.fn().mockRejectedValue(new Error("network down"));
 
     renderDetail("phishing-basics", gateway);
