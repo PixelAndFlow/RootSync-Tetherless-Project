@@ -70,6 +70,7 @@ test("the gateway declares no methods outside the contract", () => {
     "require",
     "retainLocal",
     "setContentVersion",
+    "recoverAuth",
     "pinAttemptVersion",
     "versionOfAttempt",
     // §6.3 N-7/N-8: emitted outside the nine-method gateway for now.

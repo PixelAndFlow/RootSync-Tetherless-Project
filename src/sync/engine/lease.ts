@@ -195,6 +195,11 @@ export async function withDeviceSeqLock<T>(fn: () => Promise<T>): Promise<T> {
     return res;
   };
 
+  // `deviceSeqChain` only serializes within one JavaScript realm. Two tabs each
+  // have their own chain, so the in-memory queue is a per-tab guard, not a
+  // cross-tab one. Without Web Locks the allocation is only as safe as the
+  // storage primitive; see recordEvent's atomic sequence reserve.
+
   if (!locks) return runLocally();
 
   return locks.request("tetherless-device-seq", { mode: "exclusive" }, () => runLocally());
