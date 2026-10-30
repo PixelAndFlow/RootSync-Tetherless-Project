@@ -15,7 +15,7 @@
  * resolving, so a resolve must mean "on disk", never "write queued".
  */
 
-import { openDatabase, allDelivery, allEvents, getEvent, getMeta, recordEvent, setMeta } from "../stores/db.ts";
+import { openDatabase, allDelivery, allEvents, getEvent, getMeta, recordEvent, reserveDeviceSeq, setMeta } from "../stores/db.ts";
 import type { IDBDatabaseLike, IDBFactoryLike } from "../stores/idb.ts";
 import { SyncEngine } from "../engine/sync.ts";
 import { withDeviceSeqLock } from "../engine/lease.ts";
@@ -382,6 +382,25 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     });
   }
 
+  /**
+   * Re-open work paused by an authentication failure (N3).
+   *
+   * blocked_auth is a pause, not a terminal state: nothing claims it, and
+   * nothing ever moves it back. Without an explicit call here, a learner's
+   * answers stay on the device forever after a 401, even once credentials are
+   * valid again.
+   *
+   * Deliberately NOT called from requestSync(): a sync request while the
+   * session is still invalid must not dispatch outbound calls, or a revoked
+   * device retries in a storm. The caller that restores credentials calls this.
+   */
+  async recoverAuth(): Promise<number> {
+    if (!this.engine) throw new Error("gateway not initialized — call init() first");
+    const count = await this.engine.unblockAuth(this.now());
+    await this.emit();
+    return count;
+  }
+
   async requestSync(): Promise<SyncSummary> {
     if (!this.engine) throw new Error("gateway not initialized — call init() first");
     this.syncing = true;
@@ -433,7 +452,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     }
 
     return withDeviceSeqLock(async () => {
-      const seq = ((await getMeta<number>(db, "device_seq")) ?? 0) + 1;
+      // N6: the sequence is reserved atomically in the store, not read here
+      // and written later, so two tabs cannot observe the same value.
+      const seq = await reserveDeviceSeq(db);
 
       const event = {
         event_id: newId(),
@@ -448,7 +469,6 @@ export class DdilLearningGateway implements OfflineLearningGateway {
 
       // Durability: this awaits the transaction commit, not the write queue.
       await recordEvent(db, event, this.now());
-      await setMeta(db, "device_seq", seq);
       return event;
     });
   }
