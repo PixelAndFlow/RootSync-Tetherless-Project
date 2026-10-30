@@ -31,6 +31,8 @@ export interface ModuleSummary {
  * mock mission behavior is unchanged.
  */
 export interface StudentOfflineCapabilities {
+  /** Verify restored device authorization before reopening paused deliveries. */
+  recoverAuth?(): Promise<number>;
   setupDevice?(input: { setupCode: string; username: string }): Promise<LearnerProfile>;
   getLearnerProfile?(): Promise<LearnerProfile | null>;
   listAssignedModules?(): Promise<ModuleSummary[]>;

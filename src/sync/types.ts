@@ -167,6 +167,8 @@ export interface DeliveryRecord {
   last_error: string | null;
   /** Owner of the current lease, e.g. "<device_id>:<tab_id>". */
   lease_owner: string | null;
+  /** Unique claim token. Optional only for rows written by an older app. */
+  lease_id?: string | null;
   /** Epoch ms. The lease expires on its own so a crash cannot strand work. */
   lease_expires_at: number | null;
   /** Epoch ms, for observability only. The lease is what enforces correctness. */

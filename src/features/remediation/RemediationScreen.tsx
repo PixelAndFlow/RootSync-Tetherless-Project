@@ -30,8 +30,10 @@ export function RemediationScreen() {
   useEffect(() => {
     if (profile && module) void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord);
   }, [module, profile]);
-  const questionIds = record?.initialMissedQuestionIds.filter((id) => !record.masteredQuestionIds.includes(id)) ?? [];
-  const questions = module ? module.questions.filter((question) => questionIds.includes(question.id)) : [];
+  // Practice uses the assigned version; retired historical IDs cannot be sent
+  // as questions belonging to that newer package.
+  const questions = module && record ? module.questions.filter((question) => record.initialMissedQuestionIds.includes(question.id) && !record.masteredQuestionIds.includes(question.id)) : [];
+  const questionIds = questions.map((question) => question.id);
   useEffect(() => {
     if (!profile || !module || !record || !questions.length || started.current) return;
     started.current = true;

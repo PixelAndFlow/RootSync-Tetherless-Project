@@ -15,8 +15,8 @@
  * a crash; the lease alone lets two tabs fight over the same batch.
  */
 
-import { tx, type IDBDatabaseLike } from "../stores/idb.ts";
-import { putDeliveryIn, allDelivery } from "../stores/db.ts";
+import type { IDBDatabaseLike } from "../stores/idb.ts";
+import { updateDeliveryRecords } from "../stores/db.ts";
 import type { DeliveryRecord } from "../types.ts";
 
 /** A lease longer than this is a bug; shorter than this and slow networks thrash. */
@@ -44,31 +44,20 @@ export async function recoverExpiredLeases(
   db: IDBDatabaseLike,
   now: number,
 ): Promise<DeliveryRecord[]> {
-  const records = await allDelivery(db);
-  const stale = records.filter(
+  return updateDeliveryRecords(db, (records) => records.filter(
     (r) =>
       r.status === "inflight" &&
       (r.lease_expires_at === null || r.lease_expires_at <= now),
-  );
-  if (stale.length === 0) return [];
-
-  const t = db.transaction(["delivery"], "readwrite");
-  const recovered: DeliveryRecord[] = [];
-  for (const r of stale) {
-    const next: DeliveryRecord = {
+  ).map((r): DeliveryRecord => ({
       ...r,
       status: "pending",
       // Attempts deliberately unchanged — see the note above.
       next_attempt_at: now,
       lease_owner: null,
+      lease_id: null,
       lease_expires_at: null,
       inflight_started_at: null,
-    };
-    putDeliveryIn(t, next);
-    recovered.push(next);
-  }
-  await tx(t);
-  return recovered;
+    })));
 }
 
 /**
@@ -87,41 +76,41 @@ export async function claimBatch(
   events: { event_id: string; device_seq: number }[],
   opts: ClaimOptions,
 ): Promise<DeliveryRecord[]> {
-  const records = await allDelivery(db);
-  const byId = new Map(records.map((r) => [r.event_id, r]));
+  return updateDeliveryRecords(db, (records) => {
+    const byId = new Map(records.map((r) => [r.event_id, r]));
 
-  const eligible: DeliveryRecord[] = [];
-  for (const e of events) {
-    const r = byId.get(e.event_id);
-    if (!r) continue;
-    if (r.status !== "pending") continue;
-    if (r.next_attempt_at !== null && r.next_attempt_at > opts.now) continue;
-    eligible.push(r);
-  }
+    const eligible: DeliveryRecord[] = [];
+    for (const e of events) {
+      const r = byId.get(e.event_id);
+      if (!r) continue;
+      if (r.status !== "pending") continue;
+      if (r.next_attempt_at !== null && r.next_attempt_at > opts.now) continue;
+      eligible.push(r);
+    }
 
-  // Order by device_seq so a batch is contiguous and gap-detectable.
-  const seqOf = new Map(events.map((e) => [e.event_id, e.device_seq]));
-  eligible.sort((a, b) => (seqOf.get(a.event_id) ?? 0) - (seqOf.get(b.event_id) ?? 0));
+    // Order by device_seq so a batch is contiguous and gap-detectable.
+    const seqOf = new Map(events.map((e) => [e.event_id, e.device_seq]));
+    eligible.sort((a, b) => (seqOf.get(a.event_id) ?? 0) - (seqOf.get(b.event_id) ?? 0));
 
-  const claimed = eligible.slice(0, opts.maxEvents);
-  if (claimed.length === 0) return [];
+    const claimed = eligible.slice(0, opts.maxEvents);
+    if (claimed.length === 0) return [];
 
-  const leaseMs = opts.leaseMs ?? LEASE_MS;
-  const t = db.transaction(["delivery"], "readwrite");
-  const out: DeliveryRecord[] = [];
-  for (const r of claimed) {
-    const next: DeliveryRecord = {
-      ...r,
-      status: "inflight",
-      lease_owner: opts.owner,
-      lease_expires_at: opts.now + leaseMs,
-      inflight_started_at: opts.now,
-    };
-    putDeliveryIn(t, next);
-    out.push(next);
-  }
-  await tx(t);
-  return out;
+    const leaseMs = opts.leaseMs ?? LEASE_MS;
+    const leaseId = crypto.randomUUID();
+    const out: DeliveryRecord[] = [];
+    for (const r of claimed) {
+      const next: DeliveryRecord = {
+        ...r,
+        status: "inflight",
+        lease_owner: opts.owner,
+        lease_id: leaseId,
+        lease_expires_at: opts.now + leaseMs,
+        inflight_started_at: opts.now,
+      };
+      out.push(next);
+    }
+    return out;
+  });
 }
 
 /**
@@ -135,15 +124,10 @@ export async function renewLease(
   now: number,
   leaseMs = LEASE_MS,
 ): Promise<void> {
-  const records = await allDelivery(db);
   const mine = new Set(eventIds);
-  const t = db.transaction(["delivery"], "readwrite");
-  for (const r of records) {
-    if (!mine.has(r.event_id)) continue;
-    if (r.status !== "inflight" || r.lease_owner !== owner) continue;
-    putDeliveryIn(t, { ...r, lease_expires_at: now + leaseMs });
-  }
-  await tx(t);
+  await updateDeliveryRecords(db, (records) => records
+    .filter((r) => mine.has(r.event_id) && r.status === "inflight" && r.lease_owner === owner)
+    .map((r) => ({ ...r, lease_expires_at: now + leaseMs })));
 }
 
 /**
@@ -194,6 +178,11 @@ export async function withDeviceSeqLock<T>(fn: () => Promise<T>): Promise<T> {
     deviceSeqChain = res.then(() => {}, () => {});
     return res;
   };
+
+  // `deviceSeqChain` only serializes within one JavaScript realm. Two tabs each
+  // have their own chain, so the in-memory queue is a per-tab guard, not a
+  // cross-tab one. Without Web Locks the allocation is only as safe as the
+  // storage primitive; see recordEvent's atomic sequence reserve.
 
   if (!locks) return runLocally();
 

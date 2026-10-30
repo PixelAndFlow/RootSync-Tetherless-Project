@@ -47,12 +47,13 @@ describe("loadModuleCatalog", () => {
     expect(modules).toEqual([serverSummary]);
   });
 
-  it("only asks the gateway once per gateway instance, reusing the pending/settled result", async () => {
+  it("deduplicates simultaneous catalog requests and refreshes on a later visit", async () => {
     const listAssignedModules = vi.fn().mockResolvedValue([serverSummary]);
     const gateway = fakeLiveGateway({ listAssignedModules });
     await Promise.all([loadModuleCatalog(gateway), loadModuleCatalog(gateway)]);
-    await loadModuleCatalog(gateway);
     expect(listAssignedModules).toHaveBeenCalledTimes(1);
+    await loadModuleCatalog(gateway);
+    expect(listAssignedModules).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -104,6 +104,7 @@ test("the gateway declares no methods outside the contract", () => {
     "require",
     "retainLocal",
     "setContentVersion",
+    "recoverAuth",
     "pinAttemptVersion",
     "versionOfAttempt",
     // §6.3 N-7/N-8: emitted outside the nine-method gateway for now.
@@ -243,7 +244,7 @@ test("an expired credential surfaces as a wait, not a lost-work message", async 
 
   const summary = await gw.requestSync();
 
-  assert.equal(summary.status, "retryable_error", "no dedicated frontend state yet");
+  assert.equal(summary.status, "blocked_auth", "authorization pauses are distinct from normal retries");
   assert.equal(summary.failureReason, BLOCKED_AUTH_MESSAGES.expired_credential);
   assert.ok(summary.pendingEventCount > 0, "work is still counted as pending, not lost");
 });
@@ -298,10 +299,9 @@ test("every delivery status maps to a frontend status", () => {
   }
 });
 
-test("blocked_auth and failed both fall back to retryable_error — the known gap", () => {
-  assert.equal(toSyncStatus("blocked_auth"), "retryable_error");
+test("blocked_auth remains distinct from retryable delivery failures", () => {
+  assert.equal(toSyncStatus("blocked_auth"), "blocked_auth");
   assert.equal(toSyncStatus("failed"), "retryable_error");
-  // Documented so that adding a seventh SyncStatus is a deliberate change.
 });
 
 test("summarize puts rejection ahead of auth ahead of failure ahead of pending", () => {
@@ -320,7 +320,8 @@ test("summarize puts rejection ahead of auth ahead of failure ahead of pending",
   });
 
   assert.equal(summarize([rec("pending"), rec("rejected")]).status, "rejected");
-  assert.equal(summarize([rec("pending"), rec("blocked_auth")]).status, "retryable_error");
+  assert.equal(summarize([rec("rejected"), rec("blocked_auth")]).authorizationReason, "unknown", "auth recovery stays discoverable beside a rejection");
+  assert.equal(summarize([rec("pending"), rec("blocked_auth")]).status, "blocked_auth");
   assert.equal(summarize([rec("pending"), rec("failed")]).status, "retryable_error");
   assert.equal(summarize([rec("pending")]).status, "pending");
   assert.equal(summarize([rec("acknowledged")]).status, "synced");

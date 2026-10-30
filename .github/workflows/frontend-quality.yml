@@ -28,7 +28,10 @@ jobs:
       - run: npm run validate:content
       - run: npm run report:spanish-coverage
       - run: npm test
+      - run: npm run test:ddil
       - run: npm run build
+      - run: npm run test:student-api
+      - run: npm run test:ddil-browser
       - run: npm run check:bundle
       - run: node scripts/check-performance-budget.mjs
       - run: npx playwright test
