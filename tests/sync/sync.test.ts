@@ -234,3 +234,52 @@ test("failed work is re-opened by a later pass, and only once", async () => {
   assert.equal(r.acknowledged, 1, "the learner recovers without support");
   assert.equal((await getDelivery(h.db, "evt-0001"))?.status, "acknowledged");
 });
+
+// ------------------------------------------------------- N4 regression
+
+test("REGRESSION N4: a stale worker cannot reverse a newer acknowledgment", async () => {
+  const { harness } = await import("./helpers.ts");
+  const { claimBatch, recoverExpiredLeases } = await import("../../src/sync/engine/lease.ts");
+  const { allEvents } = await import("../../src/sync/stores/db.ts");
+  const { transition } = await import("../../src/sync/engine/retry.ts");
+  const { putDelivery } = await import("../../src/sync/stores/db.ts");
+
+  const h = await harness();
+  await h.record();
+  const events = await allEvents(h.db);
+
+  // Worker A claims, then stalls past its lease.
+  const [a] = await claimBatch(h.db, events, { maxEvents: 10, owner: "worker-A", now: h.now(), leaseMs: 60_000 });
+  assert.equal(a?.lease_owner, "worker-A");
+
+  h.tick(61_000);
+  await recoverExpiredLeases(h.db, h.now());
+  const [b] = await claimBatch(h.db, events, { maxEvents: 10, owner: "worker-B", now: h.now(), leaseMs: 60_000 });
+  assert.equal(b?.lease_owner, "worker-B");
+
+  // B delivers successfully.
+  await putDelivery(h.db, transition({ record: b!, response: "success", now: h.now() }).record);
+  assert.equal((await import("../../src/sync/stores/db.ts")).getDelivery ? (await (await import("../../src/sync/stores/db.ts")).getDelivery(h.db, events[0]!.event_id))?.status : "", "acknowledged");
+
+  // A's stale response finally lands. It must not un-settle delivered work.
+  const engine = new (await import("../../src/sync/engine/sync.ts")).SyncEngine({
+    db: h.db,
+    transport: h.transport,
+    owner: "worker-A",
+    now: h.now,
+  });
+  // Drive the guarded apply path directly.
+  await (engine as unknown as {
+    applyOne(
+      record: unknown,
+      response: string,
+      startedAt: number,
+      out: unknown,
+      error?: string,
+    ): Promise<void>;
+  }).applyOne(a!, "terminal", h.now(), { claimed: 0, acknowledged: 0, rejected: 0, blockedAuth: 0, retried: 0, failed: 0, recovered: 0, skipped: false }, "stale worker");
+
+  const { getDelivery } = await import("../../src/sync/stores/db.ts");
+  const after = await getDelivery(h.db, events[0]!.event_id);
+  assert.equal(after?.status, "acknowledged", "delivered work must not be un-settled by a stale lease holder");
+});

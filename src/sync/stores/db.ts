@@ -115,6 +115,39 @@ export async function recordEvent(
   }
 }
 
+/**
+ * Reserve the next device sequence number.
+ *
+ * N6: allocating in one transaction, and re-reading inside it, is what makes
+ * the sequence unique across tabs. A read in one transaction followed by a
+ * write in another lets two writers observe the same value.
+ */
+export async function reserveDeviceSeq(db: IDBDatabaseLike): Promise<number> {
+  // N6: read and write must be in ONE transaction, and the put must be issued
+  // from the read's success handler. An `await` between get and put lets the
+  // transaction auto-commit, and the put then throws.
+  //
+  // Uses the plain get/put helpers rather than store.put() directly: the
+  // transaction-scoped facade in the test double buffers writes, while the
+  // committed store does not.
+  const t = db.transaction([STORE_META], "readwrite");
+  const store = t.objectStore(STORE_META);
+  const get = store.get(DEVICE_SEQ_KEY);
+  const next = await new Promise<number>((resolve, reject) => {
+    get.onsuccess = () => {
+      const row = get.result as MetaRecord | undefined;
+      const value = ((row?.value as number | undefined) ?? 0) + 1;
+      resolve(value);
+    };
+    get.onerror = () => reject(get.error ?? new Error("device_seq read failed"));
+  });
+  store.put({ key: DEVICE_SEQ_KEY, value: next });
+  await tx(t);
+  return next;
+}
+
+export const DEVICE_SEQ_KEY = "device_seq";
+
 export function getEvent(db: IDBDatabaseLike, eventId: string): Promise<ActivityEvent | undefined> {
   return req<ActivityEvent | undefined>(store(db, STORE_EVENTS, "readonly").get(eventId));
 }

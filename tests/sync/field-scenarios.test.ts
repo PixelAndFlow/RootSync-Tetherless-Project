@@ -521,3 +521,84 @@ test("SCENARIO 5: The 422 Terminal-Rejection Test", async () => {
   const originalDeliveryCheck = await getDelivery(db, targetEvent.event_id);
   assert.equal(originalDeliveryCheck?.status, "rejected", "Original rejected row remains permanently preserved in audit record");
 });
+
+// ============================================================================
+// 6. REGRESSION: N3 — blocked_auth had no exit
+// ============================================================================
+
+test("REGRESSION N3: work stranded by a 401 is recoverable without a new session", async () => {
+  const factory = new FakeIDBFactory();
+  let clock = 1_700_000_000_000;
+  const now = () => clock;
+  const transport = new FakeTransport(now);
+
+  const gw = new DdilLearningGateway({ idb: factory, transport, deviceId: "device-n3", now });
+  await gw.init();
+  await gw.startSession({ learnerId: "learner-n3", deviceId: "device-n3" });
+  const attempt = await gw.startAttempt({ learnerId: "learner-n3", moduleId: "mod-n3", kind: "full" });
+  await gw.saveAnswer({
+    learnerId: "learner-n3",
+    moduleId: "mod-n3",
+    attemptId: attempt.id,
+    answer: { questionId: "q-n3", selectedChoiceId: "c1", isCorrect: true, answeredAt: new Date(now()).toISOString() },
+    xpAward: 5,
+  });
+
+  const db = await openDatabase(factory);
+  const before = (await allDelivery(db)).length;
+
+  // 401 strands everything.
+  transport.always({ kind: "fail", failure: { kind: "auth", error: "switched off" } });
+  await gw.requestSync();
+  assert.equal((await allDelivery(db)).filter((d) => d.status === "blocked_auth").length, before);
+
+  // Credentials come back. The defect: nothing re-claims blocked_auth, so a
+  // sync pass on its own sends nothing and the work stays stranded forever.
+  transport.always({ kind: "accept_all" });
+  const sendsBefore = transport.sendCount;
+  await gw.requestSync();
+  assert.equal(transport.sendCount, sendsBefore, "a bare sync must not dispatch while paused (no retry storm)");
+  assert.equal(
+    (await allDelivery(db)).filter((d) => d.status === "blocked_auth").length,
+    before,
+    "work is still blocked before recovery is requested",
+  );
+
+  // The fix: an explicit recovery call re-opens the queue, and the next pass drains it.
+  const recovered = await gw.recoverAuth();
+  assert.equal(recovered, before, "every blocked record is re-opened");
+
+  const summary = await gw.requestSync();
+  assert.equal(summary.status, "synced", "the queue drains once auth is restored");
+  assert.equal(summary.pendingEventCount, 0);
+  assert.ok((await allDelivery(db)).every((d) => d.status === "acknowledged"));
+});
+
+// ============================================================================
+// 7. REGRESSION: N6 — device_seq must be unique across writers
+// ============================================================================
+
+test("REGRESSION N6: two gateways on one database never allocate the same device_seq", async () => {
+  const factory = new FakeIDBFactory();
+  const now = () => 1_700_000_000_000;
+
+  // Two tabs: same database, different lease owners.
+  const a = new DdilLearningGateway({ idb: factory, transport: new FakeTransport(now), deviceId: "device-n6", owner: "device-n6:tab-a", now });
+  const b = new DdilLearningGateway({ idb: factory, transport: new FakeTransport(now), deviceId: "device-n6", owner: "device-n6:tab-b", now });
+  await a.init();
+  await b.init();
+
+  // Interleave writes from both tabs.
+  for (let i = 0; i < 4; i += 1) {
+    await a.startAttempt({ learnerId: "learner-n6", moduleId: "mod-n6", kind: "full" });
+    await b.startAttempt({ learnerId: "learner-n6", moduleId: "mod-n6", kind: "full" });
+  }
+
+  const db = await openDatabase(factory);
+  // Each init()/startAttempt pair may emit a session event too, so assert the
+  // invariant (uniqueness) rather than an exact count.
+  const seqs = (await allEvents(db)).map((e) => e.device_seq);
+  assert.ok(seqs.length >= 8, `expected at least 8 events, got ${seqs.length}`);
+  assert.equal(new Set(seqs).size, seqs.length, `device_seq collided across tabs: ${seqs.join(",")}`);
+  assert.deepEqual([...seqs].sort((a, b) => a - b), [...Array(seqs.length).keys()].map((i) => i + 1), "sequence is dense with no gaps");
+});
