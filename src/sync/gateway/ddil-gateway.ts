@@ -748,13 +748,11 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   async setupDevice(input: { setupCode: string; username: string }): Promise<LearnerProfile> {
     const db = this.require();
 
-    // Idempotent: a device that already completed setup must not silently
-    // re-bind to a different learner on a second submit (e.g. a retry after
-    // the UI lost track of a successful setup) — that would leave this
-    // device's local, un-synced event history misattributed.
-    const alreadySetUp = await getMeta<LearnerProfile>(db, "learner_profile");
-    if (alreadySetUp) return alreadySetUp;
-
+    // Re-running setup on an already-claimed device is intentional, not a
+    // bug — e.g. handing a shared/loaner device to a new student — and the
+    // server is the one source of truth for whether a given code may still
+    // be consumed (an already-used code is rejected there, not silently
+    // reused here). This must stay a straight pass-through for that reason.
     if (!this.opts.api) throw new Error("setupDevice requires DdilGatewayOptions.api");
     const body = (await this.opts.api.post(
       "/v1/setup",

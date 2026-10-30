@@ -492,7 +492,7 @@ function apiWithSetup(posts: { count: number }): DeviceApi {
       posts.count += 1;
       return {
         device_token: `token-${posts.count}`,
-        learner: { learner_id: "learner-1", learner_code: "L-001", username: "demo", cohort_name: "Cohort A" },
+        learner: { learner_id: `learner-${posts.count}`, learner_code: `L-00${posts.count}`, username: "demo", cohort_name: "Cohort A" },
       };
     },
   };
@@ -506,17 +506,16 @@ test("getLearnerProfile is null before setup, then returns the claimed profile",
   assert.deepEqual(await gw.getLearnerProfile(), profile);
 });
 
-test("setupDevice is idempotent: a device that already claimed a profile never re-consumes a setup code", async () => {
+test("setupDevice re-runs on an already-claimed device, e.g. handing a shared device to a new student", async () => {
   const posts = { count: 0 };
   const { gw } = await gateway({ api: apiWithSetup(posts) });
   const first = await gw.setupDevice({ setupCode: "CODE-1", username: "demo" });
   assert.equal(posts.count, 1);
 
-  // A second submit — e.g. a retry after the UI lost track of a successful
-  // setup — must return the device's existing profile, not silently rebind
-  // it to a different learner and leave this device's local event history
-  // misattributed.
+  // The server, not this method, is the one place that knows whether a code
+  // may still be consumed — a genuinely reused code is its job to reject.
+  // This call must always reach it rather than short-circuit locally.
   const second = await gw.setupDevice({ setupCode: "CODE-2", username: "someone-else" });
-  assert.deepEqual(second, first, "returns the device's existing profile instead of rebinding");
-  assert.equal(posts.count, 1, "never re-consumes a setup code once the device is already set up");
+  assert.equal(posts.count, 2, "always asks the server; it alone enforces one-time use");
+  assert.notDeepEqual(second, first, "a new successful setup replaces the device's previous profile");
 });
