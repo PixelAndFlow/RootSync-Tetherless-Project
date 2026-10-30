@@ -6,6 +6,12 @@ import type { StaffAdminGateway } from "../../services/staff/StaffAdminGateway";
 
 const GatewayContext = createContext<AppGateways | null>(null);
 
+/** Profile recovery also works in isolated demo/provider tests without a gateway. */
+export function useOptionalOfflineLearningGateway(): OfflineLearningGateway | undefined {
+  const gateways = useContext(GatewayContext);
+  return gateways?.offlineLearningReady ? gateways.offlineLearning : undefined;
+}
+
 interface GatewayProviderProps {
   children: React.ReactNode;
   gateways?: AppGateways;

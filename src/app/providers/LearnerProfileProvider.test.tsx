@@ -1,10 +1,53 @@
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, renderHook, screen, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LearnerProfileProvider, useLearnerProfile } from "./LearnerProfileProvider";
+import { GatewayProvider } from "./GatewayProvider";
+import { createMockGateways } from "../../services/gateways";
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return <LearnerProfileProvider>{children}</LearnerProfileProvider>;
 }
+
+describe("durable student identity recovery", () => {
+  const enrolled = { learnerId: "real-student", deviceId: "real-device", username: "Sam", learnerCode: "TEST-1", cohortName: "Test" };
+  function liveWrapper(read = vi.fn().mockResolvedValue(enrolled)) {
+    const gateways = createMockGateways();
+    gateways.offlineLearning.getLearnerProfile = read;
+    gateways.offlineLearningReady = Promise.resolve();
+    return ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+  }
+  beforeEach(() => window.localStorage.clear());
+  it("restores enrollment when the presentation cache is absent", async () => {
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper() });
+    await waitFor(() => expect(result.result.current?.profile).toMatchObject(enrolled));
+  });
+  it("does not trust stale local identity when DDIL has no enrolled student", async () => {
+    localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ ...enrolled, displayName: "Sam" }));
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper(vi.fn().mockResolvedValue(null)) });
+    await waitFor(() => expect(result.result.current).toBeTruthy());
+    expect(result.result.current.profile).toBeNull();
+  });
+  it("accepts committed live setup despite presentation-cache quota failure", async () => {
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper(vi.fn().mockResolvedValue(null)) });
+    await waitFor(() => expect(result.result.current).toBeTruthy());
+    const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
+    try {
+      act(() => result.result.current.acceptDemoSetup(enrolled));
+      expect(result.result.current.profile).toMatchObject(enrolled);
+    } finally { write.mockRestore(); }
+  });
+  it("blocks fresh setup after a recovery read failure and offers a safe retry", async () => {
+    const read = vi.fn().mockRejectedValueOnce(new Error("storage unavailable")).mockResolvedValue(enrolled);
+    const Wrapper = liveWrapper(read);
+    function Child() { return <p>Student: {useLearnerProfile().profile?.username}</p>; }
+    render(<Wrapper><Child /></Wrapper>);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your data has not been cleared");
+    expect(screen.queryByText("Student:")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Student: Sam")).toBeVisible();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("LearnerProfileProvider", () => {
   beforeEach(() => window.localStorage.clear());
