@@ -26,7 +26,6 @@ export function LearnerSetupScreen() {
   const submitting = useRef(false);
   const [error, setError] = useState<unknown>(null);
   const [fieldErrors, setFieldErrors] = useState<{ setupCode?: string; username?: string }>({});
-  const [storageError, setStorageError] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,12 +36,10 @@ export function LearnerSetupScreen() {
     submitting.current = true;
     setBusy(true);
     setError(null);
-    setStorageError(false);
     try {
       if (gatewayReady) await gatewayReady;
       const result = await gateway.setupDevice({ setupCode, username });
-      try { acceptDemoSetup(result); }
-      catch { setStorageError(true); return; }
+      acceptDemoSetup(result);
       setSetupCode("");
       navigate("/learner/missions");
     } catch (reason) { setError(reason); }
@@ -64,7 +61,6 @@ export function LearnerSetupScreen() {
           <input id="setup-username" autoComplete="username" disabled={busy} aria-invalid={Boolean(fieldErrors.username)} aria-describedby="username-help" className="integration-input" onChange={(event) => setUsername(event.target.value)} placeholder="Choose a username" value={username} />
           <p id="username-help" className="text-sm" role={fieldErrors.username ? "alert" : undefined}>{fieldErrors.username ?? "2–24 letters, numbers, spaces, dots, dashes or underscores."}</p>
           {error !== null && <ApiErrorNotice error={error} />}
-          {storageError && <p role="alert">The demo profile could not be saved on this device. Check browser storage permissions and try again. Existing data has not been cleared.</p>}
           {!gateway.setupDevice && <p role="alert">Device setup is not connected. The team must supply the setup adapter.</p>}
           <button className="ui-action mt-2" disabled={busy || !gateway.setupDevice} type="submit">{busy ? "Setting up…" : "Continue to missions"}</button>
         </form>}

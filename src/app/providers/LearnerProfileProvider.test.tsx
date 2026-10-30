@@ -52,6 +52,28 @@ describe("durable student identity recovery", () => {
 describe("LearnerProfileProvider", () => {
   beforeEach(() => window.localStorage.clear());
 
+  it("preserves main's recovery from a prepared mock gateway when presentation data is missing", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Jordan" });
+    const wrapperWithGateway = ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    const result = renderHook(useLearnerProfile, { wrapper: wrapperWithGateway });
+    expect(result.result.current.profile).toBeNull();
+    await waitFor(() => expect(result.result.current.profile).toMatchObject({ username: "Jordan", learnerCode: "DEMO-001" }));
+    expect(JSON.parse(localStorage.getItem("tetherless.learner-profile.v1")!)).toMatchObject({ username: "Jordan" });
+  });
+
+  it("does not replace an existing demo profile with the mock gateway's identity", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Gateway Student" });
+    localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ learnerId: "local", deviceId: "local-device", displayName: "Local", username: "local" }));
+    const read = vi.spyOn(gateways.offlineLearning, "getLearnerProfile");
+    const wrapperWithGateway = ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    const result = renderHook(useLearnerProfile, { wrapper: wrapperWithGateway });
+    await act(async () => {});
+    expect(result.result.current.profile?.username).toBe("local");
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it("trims profile input and preserves the learner/device identity across updates and reloads", () => {
     const first = renderHook(() => useLearnerProfile(), { wrapper });
     act(() => first.result.current.saveProfile({ displayName: "  Chris  ", username: "  cwoz  " }));

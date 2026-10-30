@@ -15,7 +15,7 @@
  * resolving, so a resolve must mean "on disk", never "write queued".
  */
 
-import { openDatabase, allDelivery, allEvents, getEvent, getMeta, recordEvent, reserveDeviceSeq, setMeta } from "../stores/db.ts";
+import { openDatabase, allDelivery, allEvents, getEvent, getMeta, recordEvent, reserveDeviceSeq, setMeta, setMetaMany } from "../stores/db.ts";
 import type { IDBDatabaseLike, IDBFactoryLike } from "../stores/idb.ts";
 import { SyncEngine } from "../engine/sync.ts";
 import { withDeviceSeqLock } from "../engine/lease.ts";
@@ -800,6 +800,12 @@ export class DdilLearningGateway implements OfflineLearningGateway {
    */
   async setupDevice(input: { setupCode: string; username: string }): Promise<LearnerProfile> {
     const db = this.require();
+
+    // Re-running setup on an already-claimed device is intentional, not a
+    // bug — e.g. handing a shared/loaner device to a new student — and the
+    // server is the one source of truth for whether a given code may still
+    // be consumed (an already-used code is rejected there, not silently
+    // reused here). This must stay a straight pass-through for that reason.
     if (!this.opts.api) throw new Error("setupDevice requires DdilGatewayOptions.api");
     const body = (await this.opts.api.post(
       "/v1/setup",
@@ -808,7 +814,6 @@ export class DdilLearningGateway implements OfflineLearningGateway {
     )) as { device_token: string; learner: { learner_id: string; learner_code: string; username: string; cohort_name: string } };
 
     this.deviceToken = body.device_token;
-    await setMeta(db, "device_token", this.deviceToken);
     this.opts.onTokenChange?.(this.deviceToken);
     this.currentLearnerId = body.learner.learner_id;
 
@@ -819,7 +824,9 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       learnerCode: body.learner.learner_code,
       cohortName: body.learner.cohort_name,
     };
-    await setMeta(db, "learner_profile", profile);
+    // One transaction: callers must never see a device_token without the
+    // matching learner_profile, or vice versa.
+    await setMetaMany(db, [["device_token", this.deviceToken], ["learner_profile", profile]]);
     return profile;
   }
 

@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SetupProfile } from "../../services/setup/LearnerSetupGateway";
-import { useOptionalOfflineLearningGateway } from "./GatewayProvider";
+import { useOfflineLearningGatewayOptional, useOfflineLearningGatewayReadyOptional } from "./GatewayProvider";
 
 export interface LearnerProfile {
   learnerId: string;
@@ -53,14 +53,17 @@ function readStoredProfile(): LearnerProfile | null {
 }
 
 export function LearnerProfileProvider({ children }: { children: React.ReactNode }) {
-  const gateway = useOptionalOfflineLearningGateway();
+  const gateway = useOfflineLearningGatewayOptional();
+  const live = Boolean(useOfflineLearningGatewayReadyOptional());
   const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
-  const [recovering, setRecovering] = useState(Boolean(gateway?.getLearnerProfile));
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const [recovering, setRecovering] = useState(Boolean(live && gateway?.getLearnerProfile));
   const [recoveryError, setRecoveryError] = useState(false);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    if (!gateway?.getLearnerProfile) return;
+    if (!live || !gateway?.getLearnerProfile) return;
     let cancelled = false;
     setRecovering(true);
     setRecoveryError(false);
@@ -82,15 +85,28 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
       setRecovering(false);
     }).catch(() => { if (!cancelled) { setRecoveryError(true); setRecovering(false); } });
     return () => { cancelled = true; };
-  }, [gateway, retry]);
+  }, [gateway, live, retry]);
 
   const updateProfile = (nextProfile: LearnerProfile) => {
     // Live enrollment is already committed in DDIL. Optional presentation-cache
     // failure must never send a student back through a consumed one-time code.
     try { window.localStorage.setItem(storageKey, JSON.stringify(nextProfile)); }
-    catch (error) { if (!gateway?.getLearnerProfile) throw error; }
+    catch { /* Presentation storage is best effort; enrollment stays with the gateway. */ }
+    profileRef.current = nextProfile;
     setProfile(nextProfile);
   };
+
+  // Preserve main's mock-gateway recovery as well. Live identity is authoritative
+  // above; demo recovery must not replace a profile already present or just set up.
+  useEffect(() => {
+    if (live || profileRef.current || !gateway?.getLearnerProfile) return;
+    let active = true;
+    void gateway.getLearnerProfile().then((stored) => {
+      if (!active || !stored || profileRef.current) return;
+      updateProfile({ ...stored, displayName: stored.username, spanishAssist: false, highContrast: false, reducedMotion: false, colorTheme: "dark" });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [gateway, live]);
 
   const value = useMemo<LearnerProfileContextValue>(() => ({
     profile,
