@@ -47,7 +47,7 @@ async function gateway(over: { online?: boolean; api?: DeviceApi } = {}) {
 /** A module with a sector over q1/q2 and a mission badge over all three, for award tests. */
 function progressModule(): TetherlessModule {
   return {
-    schema_version: "1.0",
+    schema_version: "tetherless.module.v1",
     module_id: "m1",
     content_version: 1,
     level: "foundation",

@@ -22,6 +22,7 @@ import { withDeviceSeqLock } from "../engine/lease.ts";
 import type { SyncTransport } from "../transport/transport.ts";
 import { summarize } from "./status-map.ts";
 import { gamificationAwards } from "../../utils/gamification.ts";
+import { requireModulePackage } from "../../content/requireModulePackage.ts";
 import type {
   AnswerRecord,
   AttemptKind,
@@ -888,14 +889,14 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   /** From the local cache; fetches and caches it first if not already downloaded. */
   async getModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
     const cached = await getMeta<TetherlessModule>(this.require(), this.moduleKey(moduleId, contentVersion));
-    if (cached) return cached;
+    if (cached) return requireModulePackage(cached, moduleId, contentVersion);
     return this.fetchAndCacheModule(moduleId, contentVersion);
   }
 
   private async fetchAndCacheModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
     const db = this.require();
     if (!this.opts.api) throw new Error("getModule requires DdilGatewayOptions.api");
-    const module = (await this.opts.api.get(`/v1/content/modules/${encodeURIComponent(moduleId)}/versions/${contentVersion}`)) as TetherlessModule;
+    const module = requireModulePackage(await this.opts.api.get(`/v1/content/modules/${encodeURIComponent(moduleId)}/versions/${contentVersion}`), moduleId, contentVersion);
     // Module packages live in a removable store, separate from learner records (§8.3) —
     // same meta table, distinctly namespaced keys, so eviction can tell them apart later.
     await setMeta(db, this.moduleKey(moduleId, contentVersion), module);
