@@ -41,7 +41,9 @@ Confirmed checks:
 - Full Playwright suite: **96 passed, 4 existing intentional skips**, across five Chromium viewport profiles. No visual baselines were changed.
 - Bundle/performance budgets passed: total production bundle **696.7 KB** against the 1 MB guardrail; JavaScript **152.7 KB gzip**, CSS **9.1 KB gzip**. Vite retains its advisory about a JavaScript chunk exceeding 500 KB.
 
-One local API/browser run timed out waiting for the synced heading while the full browser suite and unit suite ran concurrently. The isolated rerun passed, including the unchanged acknowledgement condition. This is recorded rather than treated as evidence of physical-device reliability.
+The first GitHub quality run failed at the API/browser synced-state assertion after the frontend tests, DDIL tests, and build passed. Investigation identified a test lifecycle race: after reconnecting, the test started a separate offline reload before the reconnect batch's local acknowledgements had committed. Server reporting can already show completion while that local batch still holds live 60-second leases; a page reload can interrupt the client before it records receipt.
+
+The correction holds a real API response behind an explicit gate and proves that distinction: the server report reaches 100% while local records are still inflight. After releasing the response, the test requires every local delivery to become acknowledged before starting the independent reload scenario. The corrected local run passed and observed 21 inflight records at the controlled boundary. It retains the offline close/reopen, same-attempt, server-score, and 401-recovery assertions. Production sync behavior, lease durations, and the failing heading's five-second timeout were not changed. GitHub CI must pass on the correction before this PR is considered ready for review completion.
 
 ## Boundaries and remaining acceptance work
 

@@ -94,6 +94,18 @@ test("assigned-module refresh, same-attempt offline recovery, and synced report"
         };
       }));
     }
+    async function deliveryRecords() {
+      return page.evaluate(() => new Promise((resolve, reject) => {
+        const open = indexedDB.open("tetherless-ddil", 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const request = db.transaction(["delivery"], "readonly").objectStore("delivery").getAll();
+          request.onerror = () => { db.close(); reject(request.error); };
+          request.onsuccess = () => { db.close(); resolve(request.result); };
+        };
+      }));
+    }
     const originalAttempts = await localAttempts();
     assert.equal(originalAttempts.length, 1);
     await page.evaluate(() => navigator.serviceWorker.ready);
@@ -122,8 +134,45 @@ test("assigned-module refresh, same-attempt offline recovery, and synced report"
     await expect(page.getByText("Initial score", { exact: true }).locator("..")).toContainText("100%");
     await expect(page.getByText("Your mission debrief is not ready yet.")).not.toBeVisible();
     assert.deepEqual(await localAttempts(), originalAttempts);
-    await context.setOffline(false);
     t.diagnostic("The same attempt and saved first answer survived offline close/reopen without localStorage identity; completion passed.");
+
+    // Prove server receipt is not a local-acknowledgement barrier. Holding the
+    // response deterministically exposes the race that used to be intermittent:
+    // the report is already updated, but closing the page now strands inflight
+    // leases until the normal 60-second crash-recovery deadline.
+    let received;
+    let release;
+    const serverReceived = new Promise(resolve => { received = resolve; });
+    const responseGate = new Promise(resolve => { release = resolve; });
+    const holdAcknowledgement = async route => {
+      const response = await route.fetch();
+      received();
+      await responseGate;
+      await route.fulfill({ response });
+    };
+    await context.route(`${base}/v1/sync/events`, holdAcknowledgement);
+    try {
+      await context.setOffline(false);
+      await page.evaluate(() => { location.hash = "/learner/sync"; });
+      const firstSync = page.getByRole("button", { name: /Sync now|Retry sync/ });
+      await expect(firstSync).toBeVisible();
+      if (await firstSync.isEnabled()) await firstSync.click();
+      await Promise.race([serverReceived, new Promise((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("The first reconnect batch did not reach the API")), 15_000);
+        serverReceived.then(() => clearTimeout(timer));
+      })]);
+      const report = await api(`/v1/staff/learners/${learner.learner_id}/report`, token);
+      assert.equal(report.modules.find(m => m.module_id === "phishing-basics")?.initial?.pct, 100);
+      const inflight = (await deliveryRecords()).filter(record => record.status === "inflight");
+      assert.ok(inflight.length > 0, "server receipt can coexist with unacknowledged local deliveries");
+      assert.ok(inflight.every(record => record.lease_expires_at > Date.now()), "closing here would leave live leases");
+      t.diagnostic(`Server report reached 100% while ${inflight.length} local deliveries still awaited the held response.`);
+    } finally { release(); }
+    // Finish this sync scenario before beginning the independent offline reload.
+    await expect.poll(async () => (await deliveryRecords()).filter(record => record.status !== "acknowledged").length,
+      { timeout: 15_000, message: "Reconnect deliveries must commit their local acknowledgements before reload" }).toBe(0);
+    await expect(page.getByRole("heading", { name: "Your Student record is synced with RCO." })).toBeVisible();
+    await context.unroute(`${base}/v1/sync/events`, holdAcknowledgement);
 
     // The production app shell and actual module package must survive a reload.
     await page.evaluate(() => navigator.serviceWorker.ready);
