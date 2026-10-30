@@ -3,40 +3,29 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { AnswerCard } from "../../components/learner/AnswerCard";
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { ReturnLink } from "../../components/common/ReturnLink";
-import { useModule } from "../missions/useModules";
+import { useInitialAttempt } from "../missions/useInitialAttempt";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
-import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
-import type { LearnerModuleRecord } from "../../types/learning";
 import { EmptyState, LoadingState } from "../../components/common/PageState";
 
 export function MissionReviewScreen() {
   const { moduleId } = useParams();
   const [searchParams] = useSearchParams();
   const { profile, setSpanishAssist } = useLearnerProfile();
-  const offlineLearningGateway = useOfflineLearningGateway();
-  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
+  const { attempt: firstAttempt, module, loading: isLoading, error: recordError } = useInitialAttempt(moduleId, profile?.learnerId);
   const scope = searchParams.get("scope") === "correct" || searchParams.get("scope") === "missed" ? searchParams.get("scope") : "all";
-  const [record, setRecord] = useState<LearnerModuleRecord | null>(null);
   const [index, setIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!profile || !module) return;
-    void offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id).then(setRecord).finally(() => setIsLoading(false));
-  }, [module, profile]);
-  const firstAttempt = record?.attempts.find((attempt) => attempt.kind === "full" && attempt.status === "completed");
+  useEffect(() => { setIndex(0); }, [moduleId, scope, firstAttempt?.id]);
   const questions = useMemo(() => (module ? module.questions.filter((question) => {
     const answer = firstAttempt?.answers.find((candidate) => candidate.questionId === question.id);
-    return scope === "correct" ? answer?.isCorrect : scope === "missed" ? !answer?.isCorrect : true;
+    return Boolean(answer && (scope === "correct" ? answer.isCorrect : scope === "missed" ? !answer.isCorrect : true));
   }) : []), [firstAttempt, module, scope]);
 
   if (!profile) return <section className="rounded-3xl border border-white/10 bg-panel p-8"><Link to="/learner">Set up Student profile →</Link></section>;
-  if (moduleLoading) return <LoadingState label="Loading mission content…" />;
-  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (isLoading) return <LoadingState label="Loading saved mission record…" />;
-  if (!firstAttempt) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${module.module_id}/play`} detail="Complete a full mission attempt before opening a read-only review." title="No saved attempt is available." />;
+  if (recordError) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="Your saved record or its original content could not be loaded. Your answers have not been changed. Try again when the content is available." title="Saved mission review unavailable." />;
+  if (!firstAttempt || !module) return <EmptyState actionLabel="Return to mission" actionTo={`/learner/missions/${moduleId}/play`} detail="Complete a full mission attempt before opening a read-only review." title="No saved attempt is available." />;
   if (!questions.length) return <EmptyState actionLabel="Return to debrief" actionTo={`/learner/missions/${module.module_id}/results`} detail="No questions match this review filter." title="Nothing matches this review." />;
-  const question = questions[index];
+  const question = questions[Math.min(index, questions.length - 1)];
   const selected = firstAttempt.answers.find((answer) => answer.questionId === question.id)?.selectedChoiceId;
   const heading = scope === "correct" ? "Review correct answers" : scope === "missed" ? "Review initially missed answers" : "Review all answers";
 

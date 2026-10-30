@@ -75,7 +75,7 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
     await page.getByRole("link", { name: "Start mission", exact: true }).click();
     await expect(page.locator("article h2")).toHaveText(module.questions[0].prompt.en);
     await page.getByRole("button", { name: `${module.questions[0].choices[0].en}.`, exact: true }).click();
-    await expect(page.locator("article [aria-live='polite']")).toBeVisible();
+    await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
     await page.getByRole("button", { name: "Exit mission", exact: true }).click();
     await page.getByRole("button", { name: "Exit to mission details", exact: true }).click();
     await page.getByRole("link", { name: "Start mission", exact: true }).click();
@@ -84,7 +84,7 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
       await expect(page.locator("article h2")).toHaveText(question.prompt.en);
       const correct = question.choices.find(choice => choice.id === question.correct_choice);
       await page.getByRole("button", { name: `${correct.en}.`, exact: true }).click();
-      await expect(page.locator("article [aria-live='polite']")).toBeVisible();
+      await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
       await page.getByRole("button", { name: index === module.questions.length - 1 ? "View mission debrief" : /Next question/ }).click();
     }
     await expect(page.getByRole("heading", { name: "Recruit Mission Debrief" })).toBeVisible();
