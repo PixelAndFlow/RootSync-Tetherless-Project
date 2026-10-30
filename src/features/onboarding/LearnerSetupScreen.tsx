@@ -19,6 +19,7 @@ export function LearnerSetupScreen() {
   const { profile, acceptDemoSetup } = useLearnerProfile();
   const gateway = useOfflineLearningGateway();
   const gatewayReady = useOfflineLearningGatewayReady();
+  const live = Boolean(gatewayReady);
   const [setupCode, setSetupCode] = useState("");
   const [username, setUsername] = useState(profile?.username ?? "");
   const [busy, setBusy] = useState(false);
@@ -54,8 +55,8 @@ export function LearnerSetupScreen() {
         <p className="text-xs font-bold tracking-[0.2em] text-cyan-300">WELCOME, RECRUIT</p>
         <h1 className="mt-3 text-3xl font-bold">Your offline cyber mission companion.</h1>
         <p className="mt-4 leading-7 text-slate-300">Enter the setup code from your Trainer and choose a username. Real Student setup requires an internet connection.</p>
-        <p className="mt-4 text-sm">Demo preview: use <strong>DEMO-2026</strong>. This repeatable code does not register a real Student. Mission progress is simulated in memory and resets on reload.</p>
-        {profile ? <div className="mt-8 grid gap-4"><p>This demo Student profile is already set up.</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View Student profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
+        {!live && <p className="mt-4 text-sm">Demo preview: use <strong>DEMO-2026</strong>. This repeatable code does not register a real Student. Mission progress is simulated in memory and resets on reload.</p>}
+        {profile ? <div className="mt-8 grid gap-4"><p>{live ? "This student profile is already set up on this device." : "This demo Student profile is already set up."}</p><Link className="ui-action" to="/learner/missions">Continue to missions</Link><Link className="ui-action-secondary" to="/learner/settings">View Student profile and settings</Link></div> : <form aria-busy={busy} className="mt-8 grid gap-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
           <label className="grid gap-2 text-sm font-semibold" htmlFor="setup-code">Setup code</label>
           <input id="setup-code" autoComplete="off" spellCheck={false} disabled={busy} aria-invalid={Boolean(fieldErrors.setupCode)} aria-describedby={fieldErrors.setupCode ? "setup-code-error" : undefined} className="integration-input" onChange={(event) => setSetupCode(event.target.value)} placeholder="Enter your setup code" value={setupCode} />
           {fieldErrors.setupCode && <p id="setup-code-error" role="alert">{fieldErrors.setupCode}</p>}
@@ -72,7 +73,7 @@ export function LearnerSetupScreen() {
         <div className="mission-ready-icon"><MissionReadyIcon /></div>
         <p className="mt-6 text-xs font-bold tracking-[0.18em]">MISSION READY</p>
         <h2 className="mt-2 text-xl font-bold">Learning that travels with you.</h2>
-        <p className="mt-3 text-sm leading-6">Designed for learning on your device and syncing when service returns. This preview does not yet provide real offline storage or synchronization.</p>
+        <p className="mt-3 text-sm leading-6">{live ? "Download assigned missions while connected. Answers are saved locally on this device and can synchronize when service returns. Keep this app's browser data to preserve unsynced work." : "Designed for learning on your device and syncing when service returns. This preview does not yet provide real offline storage or synchronization."}</p>
         <ol aria-label="Your mission path" className="mission-ready-path mt-7 grid gap-4">
           <li><span>1</span><div><h3>Create profile</h3><p>Use your setup code and choose a username.</p></div></li>
           <li><span>2</span><div><h3>Study offline</h3><p>Complete mission checks at your pace.</p></div></li>
