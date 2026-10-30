@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:ddil": "node --test \"tests/sync/*.test.ts\"",
     "test:student-api": "node --test tests/browser/student-api.test.mjs",
+    "test:ddil-browser": "node --test tests/browser/ddil-native.test.mjs",
     "validate:content": "vitest run src/content",
     "check:shared-content": "node scripts/check-shared-content.mjs",
     "report:spanish-coverage": "node scripts/report-spanish-coverage.mjs",

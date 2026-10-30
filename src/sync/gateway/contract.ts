@@ -21,6 +21,7 @@ export type SyncStatus =
   | "pending"
   | "syncing"
   | "synced"
+  | "blocked_auth"
   | "retryable_error"
   | "rejected";
 
@@ -91,6 +92,7 @@ export interface SyncSummary {
   pendingEventCount: number;
   lastSyncedAt?: string;
   failureReason?: string;
+  authorizationReason?: "invalid_credential" | "revoked_device" | "unknown";
 }
 
 export interface StartSessionInput {
@@ -144,6 +146,7 @@ export interface StartRemediationInput {
 }
 
 export interface OfflineLearningGateway {
+  recoverAuth?(): Promise<number>;
   startSession(input: StartSessionInput): Promise<SessionRecord>;
   startAttempt(input: StartAttemptInput): Promise<AttemptRecord>;
   saveAnswer(input: SaveAnswerInput): Promise<void>;

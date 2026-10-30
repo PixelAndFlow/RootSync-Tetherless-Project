@@ -115,6 +115,48 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
       const report = await api(`/v1/staff/learners/${learner.learner_id}/report`, token);
       return report.modules.find(m => m.module_id === "phishing-basics")?.initial?.pct;
     }, { timeout: 15_000 }).toBe(100);
+
+    // Explicit recovery is an application flow, not a learning-session start.
+    await expect(page.getByRole("heading", { name: "Your Student record is synced with RCO." })).toBeVisible();
+    const unauthorized = { status: 401, contentType: "application/json", body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Device authorization is unavailable" } }) };
+    await context.route(`${base}/v1/sync/events`, route => route.fulfill(unauthorized));
+    await page.getByRole("link", { name: "Return to missions", exact: true }).click();
+    await page.getByRole("link", { name: /Start mission/ }).click();
+    await page.getByRole("link", { name: "Start mission", exact: true }).click();
+    await expect(page.locator("article h2")).toHaveText(module.questions[0].prompt.en);
+    await page.getByRole("button", { name: `${module.questions[0].choices[0].en}.`, exact: true }).click();
+    await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
+    await page.getByRole("button", { name: "Exit mission", exact: true }).click();
+    await page.getByRole("button", { name: "Exit to mission details", exact: true }).click();
+    await page.evaluate(() => { location.hash = "/learner/sync"; });
+    const pausedSync = page.getByRole("button", { name: /Sync now|Retry sync/ });
+    if (await pausedSync.isEnabled()) await pausedSync.click();
+    await expect(page.getByRole("heading", { name: /Sync paused/ })).toBeVisible();
+    async function queuedIds() {
+      return page.evaluate(() => new Promise((resolve, reject) => {
+        const open = indexedDB.open("tetherless-ddil", 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const get = db.transaction(["delivery"], "readonly").objectStore("delivery").getAll();
+          get.onerror = () => { db.close(); reject(get.error); };
+          get.onsuccess = () => { db.close(); resolve(get.result.filter(r => r.status === "blocked_auth").map(r => r.event_id)); };
+        };
+      }));
+    }
+    const pausedIds = await queuedIds();
+    assert.ok(pausedIds.length > 0);
+    await context.route(`${base}/v1/me/modules`, route => route.fulfill(unauthorized));
+    await page.getByRole("button", { name: "Check authorization", exact: true }).click();
+    await expect(page.getByText(/Authorization could not be confirmed/)).toBeVisible();
+    assert.deepEqual(await queuedIds(), pausedIds, "failed recovery keeps the same blocked events");
+    await expect(pausedSync).toBeDisabled();
+    await context.unroute(`${base}/v1/me/modules`);
+    await context.unroute(`${base}/v1/sync/events`);
+    await page.getByRole("button", { name: "Check authorization", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Your Student record is synced with RCO." })).toBeVisible();
+    assert.equal((await queuedIds()).length, 0);
+    t.diagnostic("A saved answer survived 401, failed recovery stayed paused, and protected API verification resumed acknowledged delivery.");
   } finally {
     await browser?.close();
     if (frontend) await new Promise(resolve => frontend.httpServer.close(resolve));

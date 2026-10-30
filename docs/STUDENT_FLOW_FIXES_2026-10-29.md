@@ -2,6 +2,8 @@
 
 This update preserves Marc's five commits through `484756a` and corrects the four integration findings from the October 29 review. It implements fixes; the earlier draft PR #19 recorded the problems.
 
+PR #20 now also incorporates Naquan's PR #18 through merge commit `7fcc32c`, with additional atomic lease and explicit authorization-recovery corrections. The current combined DDIL implementation and test evidence are documented in [DDIL integration verification](DDIL_TEST_RESULTS_AND_FIXES.md). The dated frontend verification below is retained as history.
+
 ## Behavior
 
 | Trigger | Corrected result |
@@ -57,7 +59,7 @@ These results cover the isolated fix branch locally. GitHub checks and team revi
 
 - This does not approve unanswered scope changes in the Decision Register.
 - In-progress attempt restoration remains separate work. Historical first-attempt results/review are included in the October 30 corrections above.
-- PR #18's existing lease-safety finding and application credential-recovery wiring are separate work; these frontend fixes do not resolve them or merge #18.
+- The subsequent combined DDIL integration addresses the reproduced lease races and wires explicit authorization checks; see its separate verification report for the precise coverage and limits.
 - No deployed API, real PostgreSQL or physical-device acceptance is claimed by the local browser test.
 - Contract tests have a pre-existing Windows CRLF-sensitive YAML parser problem, reproduced on main during review; this PR does not change that parser or the contract.
 - Merge through the normal team review process before updating the shared presentation build.
