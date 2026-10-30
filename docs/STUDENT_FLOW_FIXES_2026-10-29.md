@@ -10,6 +10,9 @@ This update preserves Marc's five commits through `484756a` and corrects the fou
 | A trainer assigns content after the student opened an empty library | Re-entering the library, reconnecting, or returning to a visible tab refreshes assignments. Concurrent requests remain deduplicated. |
 | Leave an unfinished full attempt and later finish a new one | Initial score, completion time and initial misses come from the first valid completed full attempt. Unfinished and abandoned history is preserved. |
 | A new module version retires old questions | Current mastery and answered counts use the applicable current question set. Historical attempts retain their answers and content versions. |
+| A historical attempt is opened after a different module version is assigned | Initial correct counts and read-only review load the first completed attempt's original package. Current mastery remains based on the current package. |
+| The original package or saved record is unavailable | Results/review show an unavailable state, rather than silently substituting the assigned version or leaving a rejected promise unhandled. |
+| Retired missed questions are no longer in the assigned package | Practice sends only question IDs present in that package, and the debrief does not offer practice when none of the original misses are eligible. |
 
 Catalog fallback is scoped to the saved student and device. It permits offline/network/server-outage access but does not hide authentication, permission, malformed-response or other client errors. A valid saved empty list is distinct from never having loaded assignments. Download states are recalculated from the cached packages.
 
@@ -30,7 +33,17 @@ npx playwright test --workers=2
 
 Frontend PR CI now runs the DDIL suite and this local browser/API regression as well as the existing checks.
 
-## Local verification
+## October 30 review corrections
+
+The combined PR #18/#20 review found that the results screen could show `-1/1` correct when an older two-question attempt was compared with a newer one-question package. The review screen could label newly added questions as initial misses. `useInitialAttempt` now loads the original record first, selects its first completed full attempt, and loads that attempt's explicit content version. Live records without a version and mismatched downloads are rejected honestly; legacy fixture-only records remain supported.
+
+Read-only correct/missed/all filters require an original answer. Filter changes reset the question index. Practice continues to use the assigned version and excludes retired IDs from its payload. No scores or historic events are rewritten.
+
+The browser feedback waits now target the feedback `div`, avoiding the temporary saving `p` with the same `aria-live` attribute. The same correction is included in the existing e2e helpers.
+
+Twelve new regression tests cover historical counts, original content/answer keys and all filters, filter navigation, unavailable/missing/mismatched versions, record read failures, legacy mock compatibility, and the practice question list.
+
+## Original verification (October 29)
 
 - Frontend: 171 tests passed across 40 files; the final affected-file rerun passed 11 tests.
 - DDIL: 89 tests passed, including five attempt/progress regressions.
@@ -43,7 +56,8 @@ These results cover the isolated fix branch locally. GitHub checks and team revi
 ## Boundaries
 
 - This does not approve unanswered scope changes in the Decision Register.
-- Attempt restoration and broader historical-version review UI remain separate work in the frontend plan.
+- In-progress attempt restoration remains separate work. Historical first-attempt results/review are included in the October 30 corrections above.
+- PR #18's existing lease-safety finding and application credential-recovery wiring are separate work; these frontend fixes do not resolve them or merge #18.
 - No deployed API, real PostgreSQL or physical-device acceptance is claimed by the local browser test.
 - Contract tests have a pre-existing Windows CRLF-sensitive YAML parser problem, reproduced on main during review; this PR does not change that parser or the contract.
 - Merge through the normal team review process before updating the shared presentation build.

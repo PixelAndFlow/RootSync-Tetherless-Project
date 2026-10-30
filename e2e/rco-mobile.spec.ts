@@ -12,7 +12,7 @@ async function answerMission(page: Page, choiceIndexes: number[]) {
   for (const [questionIndex, choiceIndex] of choiceIndexes.entries()) {
     const answers = page.locator("article").first().getByRole("button");
     await answers.nth(choiceIndex).click();
-    await expect(page.locator("article [aria-live='polite']")).toBeVisible();
+    await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
     if (questionIndex < choiceIndexes.length - 1) {
       await page.getByRole("button", { name: /Next question/ }).click();
     }
@@ -41,7 +41,7 @@ test.describe("RCO representative mobile profiles", () => {
     expect(box?.height, "answer controls must meet the 44px mobile touch target").toBeGreaterThanOrEqual(44);
     await redTeam.focus();
     await page.keyboard.press("Enter");
-    const feedback = page.locator("article [aria-live='polite']").filter({ hasText: /Correct.*mission insight saved locally/ });
+    const feedback = page.locator("article div[aria-live='polite']").filter({ hasText: /Correct.*mission insight saved locally/ });
     await expect(feedback).toBeFocused();
     await page.getByRole("button", { name: /Next question/ }).click();
     await expect(page.locator("article h2")).toBeFocused();
@@ -182,7 +182,7 @@ test.describe("RCO representative mobile profiles", () => {
     await expect(redTeam).toHaveAttribute("aria-pressed", "false");
     await redTeam.click();
     await expect(page.getByRole("button", { name: /Red Team\. Correct answer/ })).toBeDisabled();
-    await expect(page.locator("article [aria-live='polite']")).toContainText("Correct");
+    await expect(page.locator("article div[aria-live='polite']")).toContainText("Correct");
   });
 
   test("moves from the skip link to the main landmark by keyboard", async ({ page }) => {
