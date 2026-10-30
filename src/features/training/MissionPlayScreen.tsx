@@ -7,7 +7,7 @@ import { allocateAnswerCardColours } from "../../components/learner/answerCardPa
 import { SpanishAssistToggle } from "../../components/learner/SpanishAssistToggle";
 import { EngagementStrip } from "../../components/gamification/EngagementStrip";
 import { SectorMap } from "../../components/gamification/SectorMap";
-import { useModule } from "../missions/useModules";
+import { useResumableModule } from "../missions/useResumableModule";
 import { useLearnerProfile } from "../../app/providers/LearnerProfileProvider";
 import { useOfflineLearningGateway } from "../../app/providers/GatewayProvider";
 import type { AttemptRecord, EngagementSummary } from "../../types/learning";
@@ -15,6 +15,7 @@ import { gamificationAwards } from "../../utils/gamification";
 import { useSyncStatus } from "../../app/providers/SyncStatusProvider";
 import { EmptyState, LoadingState } from "../../components/common/PageState";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
+import type { TetherlessModule } from "../../types/content";
 
 const presentationCopy: Record<string, string> = {
   kahoot_cards: "Quick check",
@@ -29,20 +30,31 @@ const presentationCopy: Record<string, string> = {
 
 export function MissionPlayScreen() {
   const { moduleId } = useParams();
+  return <MissionPlayContent key={moduleId} />;
+}
+
+function MissionPlayContent() {
+  const { moduleId } = useParams();
   const navigate = useNavigate();
   const { profile, setSpanishAssist } = useLearnerProfile();
   const offlineLearningGateway = useOfflineLearningGateway();
-  const { data: module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
+  const [startRetry, setStartRetry] = useState(0);
+  const { data: assignedModule, record: savedRecord, activeAttempt, loading: moduleLoading, error: moduleError } = useResumableModule(moduleId, profile?.learnerId, "full", startRetry);
+  const [attemptModule, setAttemptModule] = useState<TetherlessModule | null>(null);
+  const module = attemptModule ?? assignedModule;
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [attempt, setAttempt] = useState<AttemptRecord | null>(null);
   const [startError, setStartError] = useState(false);
-  const [startRetry, setStartRetry] = useState(0);
   const [engagement, setEngagement] = useState<EngagementSummary>({ xp: 0, currentStreak: 0, bestStreak: 0, xpAwardedQuestionIds: [], completedSectorIds: [], earnedBadgeIds: [] });
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [progressWarning, setProgressWarning] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState(false);
+  const mutation = useRef(false);
   const [exitOpen, setExitOpen] = useState(false);
   const exitRef = useRef<HTMLButtonElement | null>(null);
   const startedFor = useRef<string | null>(null);
@@ -52,17 +64,26 @@ export function MissionPlayScreen() {
   const { summary: syncSummary } = useSyncStatus();
 
   useEffect(() => {
-    if (!module || !profile) return;
-    const attemptKey = `${profile.learnerId}:${module.module_id}`;
+    if (!assignedModule || !profile) return;
+    const attemptKey = `${profile.learnerId}:${assignedModule.module_id}`;
     if (startedFor.current === attemptKey) return;
     startedFor.current = attemptKey;
     setStartError(false);
     void (async () => {
       await offlineLearningGateway.startSession({ learnerId: profile.learnerId, deviceId: profile.deviceId });
-      const createdAttempt = await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: module.module_id, contentVersion: module.content_version, kind: "full" });
+      const record = savedRecord;
+      const content = assignedModule;
+      const createdAttempt = activeAttempt ?? await offlineLearningGateway.startAttempt({ learnerId: profile.learnerId, moduleId: content.module_id, contentVersion: content.content_version, kind: "full" });
+      const savedAnswers = Object.fromEntries(createdAttempt.answers.map((answer) => [answer.questionId, answer.selectedChoiceId]));
+      setAnswers(savedAnswers);
+      setRevealed(Object.fromEntries(createdAttempt.answers.map((answer) => [answer.questionId, true])));
+      const next = content.questions.findIndex((question) => !savedAnswers[question.id]);
+      setIndex(next < 0 ? content.questions.length - 1 : next);
+      setAttemptModule(content);
+      if (record) setEngagement(record.engagement);
       setAttempt(createdAttempt);
     })().catch(() => { startedFor.current = null; setStartError(true); });
-  }, [module, profile, offlineLearningGateway, startRetry]);
+  }, [assignedModule, savedRecord, activeAttempt, profile, offlineLearningGateway, startRetry]);
 
   useEffect(() => {
     const currentQuestion = module?.questions[index];
@@ -84,8 +105,8 @@ export function MissionPlayScreen() {
 
   if (!profile) return <Navigate replace to="/learner" />;
   if (moduleLoading) return <LoadingState label="Loading mission content…" />;
-  if (moduleError || !module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
-  if (startError) return <section role="alert"><p>Unable to prepare a local mission record. Check device storage and try again.</p><button className="ui-action mt-4" onClick={() => setStartRetry((value) => value + 1)} type="button">Try again</button></section>;
+  if (startError || moduleError) return <section role="alert"><p>Unable to prepare a local mission record or its content. Check device storage and your downloaded content, then try again. Saved answers have not been cleared.</p><button className="ui-action mt-4" onClick={() => { startedFor.current = null; setStartError(false); setStartRetry((value) => value + 1); }} type="button">Try again</button></section>;
+  if (!module) return <EmptyState actionLabel="Mission library" actionTo="/learner/missions" detail="This mission could not be loaded. Check your connection and try again." title="Mission unavailable." />;
   if (!attempt) return <LoadingState label="Preparing your local mission record…" />;
 
   const question = module.questions[index];
@@ -98,7 +119,8 @@ export function MissionPlayScreen() {
   const answerCardColours = allocateAnswerCardColours(question.choices);
 
   const chooseAnswer = async (choiceId: string) => {
-    if (revealed[question.id] || savingQuestionId || !attempt) return;
+    if (revealed[question.id] || mutation.current || !attempt) return;
+    mutation.current = true;
     const isCorrect = choiceId === question.correct_choice;
     setSavingQuestionId(question.id);
     setSaveError(null);
@@ -112,23 +134,30 @@ export function MissionPlayScreen() {
       });
       setAnswers((current) => ({ ...current, [question.id]: choiceId }));
       setRevealed((current) => ({ ...current, [question.id]: true }));
-      const updatedRecord = await offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id);
-      if (updatedRecord) setEngagement(updatedRecord.engagement);
+      try {
+        const updatedRecord = await offlineLearningGateway.getLearnerModuleRecord(profile.learnerId, module.module_id);
+        if (updatedRecord) setEngagement(updatedRecord.engagement);
+        setProgressWarning(false);
+      } catch { setProgressWarning(true); }
     } catch {
       setSaveError("Your answer was not saved. Please choose an answer again.");
     } finally {
       setSavingQuestionId(null);
+      mutation.current = false;
     }
   };
 
   const move = (nextIndex: number) => setIndex(Math.max(0, Math.min(module.questions.length - 1, nextIndex)));
 
   const finishAttempt = async () => {
-    if (!attempt) return;
+    if (!attempt || mutation.current) return;
+    mutation.current = true;
+    setFinishing(true);
+    setFinishError(false);
     const correctQuestionIds = module.questions
       .filter((candidate) => answers[candidate.id] === candidate.correct_choice)
       .map((candidate) => candidate.id);
-    await offlineLearningGateway.completeAttempt({
+    try { await offlineLearningGateway.completeAttempt({
       learnerId: profile.learnerId,
       moduleId: module.module_id,
       attemptId: attempt.id,
@@ -138,13 +167,16 @@ export function MissionPlayScreen() {
       missionMasteryAward: awards.missionAward,
     });
     navigate(`/learner/missions/${module.module_id}/results`);
+    } catch { setFinishError(true); }
+    finally { mutation.current = false; setFinishing(false); }
   };
 
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]" ref={missionRef}>
+      <fieldset disabled={finishing} className="contents" aria-busy={finishing}>
       <div className="overflow-hidden rounded-3xl border border-white/10 bg-panel shadow-2xl shadow-black/25">
         <header className="border-b border-white/10 px-5 py-5 sm:px-7">
-          <button className="ui-action-secondary mb-3" disabled={Boolean(savingQuestionId)} onClick={() => setExitOpen(true)} ref={exitRef} type="button">Exit mission</button>
+          <button className="ui-action-secondary mb-3" disabled={Boolean(savingQuestionId) || finishing} onClick={() => setExitOpen(true)} ref={exitRef} type="button">Exit mission</button>
           <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.18em] text-cyan-300">RECRUIT MISSION · {question.topic.replaceAll("_", " ")}</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">{module.title.en}</h1><p className="mt-1 text-sm text-slate-400">{module.subtitle?.en}</p></div><div className="flex gap-2"><SpanishAssistToggle enabled={profile.spanishAssist} onChange={setSpanishAssist} /><div className="hidden sm:block"><StatusChip status={syncSummary.status} /></div></div></div>
           <div className="mt-5 max-w-sm"><EngagementStrip engagement={engagement} /></div>
           <div className="mt-6"><ProgressBar label={`Question ${index + 1} of ${module.questions.length}`} value={completionPercent} /></div>
@@ -162,13 +194,16 @@ export function MissionPlayScreen() {
             <div className="mt-6 grid gap-3">{question.choices.map((choice, choiceIndex) => <AnswerCard choice={choice} colour={answerCardColours[choiceIndex]} disabled={Boolean(savingQuestionId)} index={choiceIndex} isCorrect={choice.id === question.correct_choice} key={choice.id} onChoose={() => void chooseAnswer(choice.id)} revealed={Boolean(revealed[question.id])} selected={selectedChoice === choice.id} spanishAssist={profile.spanishAssist} />)}</div>
             {isSavingAnswer && <p aria-live="polite" className="mt-4 text-sm text-cyan-100">Saving your answer locally...</p>}
             {saveError && <p aria-live="assertive" className="mt-4 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm text-rose-100">{saveError}</p>}
+            {progressWarning && <p role="status">Your answer is saved locally. The progress display could not refresh; it will refresh when you reopen the mission.</p>}
+            {finishError && <p role="alert">Completion could not be saved locally. Your saved answers are still available. Try View mission debrief again.</p>}
             {revealed[question.id] && <div aria-live="polite" className={`mt-5 rounded-xl border p-4 text-sm leading-6 ${answerIsCorrect ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-50" : "border-rose-300/30 bg-rose-300/10 text-rose-50"}`}><p className="font-bold">{answerIsCorrect ? "Correct — mission insight saved locally." : "Not quite — review the mission insight."}</p><p className="mt-1">{question.feedback.en}</p>{profile.spanishAssist && question.feedback.es && <p className="mt-2 text-current/75">{question.feedback.es}</p>}</div>}
           </article>
           <div className="mt-6 flex items-center justify-between gap-3"><button className="rounded-xl border border-white/15 px-4 py-3 text-sm font-bold text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30" disabled={index === 0} onClick={() => move(index - 1)} type="button">← Previous</button>{index === module.questions.length - 1 ? <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={checkedCount !== module.questions.length || !attempt} onClick={() => void finishAttempt()} type="button">View mission debrief</button> : <button className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40" disabled={!revealed[question.id]} onClick={() => move(index + 1)} type="button">Next question →</button>}</div>
         </div>
       </div>
       <aside className="rounded-3xl border border-white/10 bg-panel p-5 lg:sticky lg:top-24 lg:h-fit"><div className="flex items-center justify-between"><div><h2 className="font-bold">Mission navigation</h2><p className="mt-1 text-xs leading-5 text-slate-400">Jump between checked questions.</p></div><span className="text-xs font-bold text-cyan-200">{checkedCount}/{module.questions.length}</span></div><div className="mt-5 grid grid-cols-5 gap-2">{module.questions.map((candidate, candidateIndex) => <button aria-current={candidateIndex === index ? "step" : undefined} aria-label={`Question ${candidateIndex + 1}`} className={`relative h-11 rounded-lg border text-xs font-bold transition ${candidateIndex === index ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : revealed[candidate.id] ? "border-violet-300/40 bg-violet-300/10 text-violet-100" : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/25"}`} key={candidate.id} onClick={() => move(candidateIndex)} type="button">{candidateIndex + 1}{flagged[candidate.id] && <span aria-hidden="true" className="absolute right-1 top-0.5 text-amber-200">•</span>}</button>)}</div><div className="mt-5 border-t border-white/10 pt-5"><p className="mb-3 text-xs font-bold tracking-[0.14em] text-slate-400">SECTOR CHECKPOINTS</p><SectorMap answeredQuestionIds={Object.keys(answers)} completedSectorIds={engagement.completedSectorIds} sectors={module.gamification?.sectors ?? []} /></div><div className="mt-5 border-t border-white/10 pt-5"><StatusChip status={syncSummary.status} /><p className="mt-3 text-xs leading-5 text-slate-400">XP rewards engagement only. They never change your score or mastery.</p></div></aside>
-      {exitOpen && <ConfirmationDialog title="Exit this mission?" detail="Saved answers may remain in the current learning record, but this unfinished attempt cannot be resumed here. Starting again begins a new attempt; unsaved answers may be lost. In demo mode, progress resets on reload." confirmLabel="Exit to mission details" onCancel={() => setExitOpen(false)} onConfirm={() => navigate(`/learner/missions/${module.module_id}`)} returnFocusTo={exitRef.current} />}
+      {exitOpen && <ConfirmationDialog title="Exit this mission?" detail="Your saved answers remain in this unfinished attempt. Return to the mission to continue. In demo mode, progress resets on reload." confirmLabel="Exit to mission details" onCancel={() => setExitOpen(false)} onConfirm={() => navigate(`/learner/missions/${module.module_id}`)} returnFocusTo={exitRef.current} />}
+      </fieldset>
     </section>
   );
 }
