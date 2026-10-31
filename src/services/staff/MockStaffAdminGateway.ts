@@ -61,5 +61,10 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     accounts.push(account);
     return { account, temporaryPassword: crypto.randomUUID().replace(/-/g, "").slice(0, 16), shownOnce: true };
   }
+  async resetStaffAccountPassword(staffId: string): Promise<StaffAccountReveal> {
+    const account = accounts.find((candidate) => candidate.staffId === staffId);
+    if (!account) throw new ApiError("NOT_FOUND", 404);
+    return { account, temporaryPassword: crypto.randomUUID().replace(/-/g, "").slice(0, 16), shownOnce: true };
+  }
   canManage(role: StaffRole, action: "staff" | "system"): boolean { return action === "staff" ? role !== "trainer" : role === "superadmin"; }
 }
