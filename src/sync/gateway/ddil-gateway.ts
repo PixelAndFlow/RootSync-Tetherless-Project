@@ -22,6 +22,8 @@ import { withDeviceSeqLock } from "../engine/lease.ts";
 import type { SyncTransport } from "../transport/transport.ts";
 import { summarize } from "./status-map.ts";
 import { gamificationAwards } from "../../utils/gamification.ts";
+import { requireModulePackage } from "../../content/requireModulePackage.ts";
+import { score } from "../../../packages/analytics/src/scoring.ts";
 import type {
   AnswerRecord,
   AttemptKind,
@@ -284,7 +286,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       initialCorrectCount: input.correctQuestionIds.length,
       initialScorePercent:
         input.questionsTotal > 0
-          ? Math.round((input.correctQuestionIds.length / input.questionsTotal) * 100)
+          ? score(input.correctQuestionIds.length, input.questionsTotal).pct
           : undefined,
     };
   }
@@ -455,7 +457,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
         completedAt: isCompleted ? completed?.occurred_at : undefined,
         answers,
         initialCorrectCount: kind === "full" && isCompleted ? correctCount : undefined,
-        initialScorePercent: kind === "full" && isCompleted && total ? Math.round((correctCount / total) * 100) : undefined,
+        initialScorePercent: kind === "full" && isCompleted && total ? score(correctCount, total).pct : undefined,
         questionIds: kind === "remediation" ? (started?.payload.question_ids as string[] | undefined) : undefined,
       });
 
@@ -537,7 +539,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       masteredOrAnsweredCount: answeredQuestionIds.size,
       masteredQuestionIds,
       initialMissedQuestionIds,
-      currentMasteryPercent: questionsTotal > 0 ? Math.round((masteredQuestionIds.size / questionsTotal) * 100) : 0,
+      currentMasteryPercent: score(masteredQuestionIds.size, questionsTotal).pct,
       stillUnmasteredCount: Math.max(0, questionsTotal - masteredQuestionIds.size),
       completionStatus,
       initialScorePercent: firstCompleted?.initialScorePercent,
@@ -895,14 +897,14 @@ export class DdilLearningGateway implements OfflineLearningGateway {
   /** From the local cache; fetches and caches it first if not already downloaded. */
   async getModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
     const cached = await getMeta<TetherlessModule>(this.require(), this.moduleKey(moduleId, contentVersion));
-    if (cached) return cached;
+    if (cached) return requireModulePackage(cached, moduleId, contentVersion);
     return this.fetchAndCacheModule(moduleId, contentVersion);
   }
 
   private async fetchAndCacheModule(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
     const db = this.require();
     if (!this.opts.api) throw new Error("getModule requires DdilGatewayOptions.api");
-    const module = (await this.opts.api.get(`/v1/content/modules/${encodeURIComponent(moduleId)}/versions/${contentVersion}`)) as TetherlessModule;
+    const module = requireModulePackage(await this.opts.api.get(`/v1/content/modules/${encodeURIComponent(moduleId)}/versions/${contentVersion}`), moduleId, contentVersion);
     // Module packages live in a removable store, separate from learner records (§8.3) —
     // same meta table, distinctly namespaced keys, so eviction can tell them apart later.
     await setMeta(db, this.moduleKey(moduleId, contentVersion), module);

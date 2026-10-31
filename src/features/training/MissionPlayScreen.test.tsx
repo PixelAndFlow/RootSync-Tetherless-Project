@@ -8,6 +8,7 @@ import { SyncStatusProvider } from "../../app/providers/SyncStatusProvider";
 import { MockOfflineLearningGateway } from "../../services/offline/MockOfflineLearningGateway";
 import { MockTrainerDataGateway } from "../../services/trainer/MockTrainerDataGateway";
 import type { SaveAnswerInput } from "../../types/learning";
+import { moduleLibrary } from "../../content/modules";
 import { MissionPlayScreen } from "./MissionPlayScreen";
 
 class DeferredSaveGateway extends MockOfflineLearningGateway {
@@ -56,6 +57,64 @@ function renderMission(offlineLearning: MockOfflineLearningGateway) {
 afterEach(() => window.localStorage.clear());
 
 describe("MissionPlayScreen local-save feedback", () => {
+  it("resumes its pinned cached package without fetching a newer assignment offline", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const module = moduleLibrary[0]!;
+    await gateway.startAttempt({ learnerId: "learner-1", moduleId: module.module_id, contentVersion: 1, kind: "full" });
+    const record = (await gateway.getLearnerModuleRecord("learner-1", module.module_id))!;
+    record.attempts[0].contentVersion = 1;
+    vi.spyOn(gateway, "getLearnerModuleRecord").mockResolvedValue(record);
+    const getModule = vi.fn(async (_id: string, version: number) => { if (version !== 1) throw new Error("new version not downloaded"); return { ...module, content_version: 1 }; });
+    const listAssignedModules = vi.fn().mockRejectedValue(new Error("offline"));
+    Object.assign(gateway, { getModule, listAssignedModules });
+    const start = vi.spyOn(gateway, "startAttempt");
+    renderMission(gateway);
+    expect(await screen.findByRole("heading", { name: module.questions[0].prompt.en })).toBeVisible();
+    expect(getModule).toHaveBeenCalledWith(module.module_id, 1);
+    expect(listAssignedModules).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  });
+  it("resumes saved answers without allocating another attempt", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const module = moduleLibrary[0]!;
+    const attempt = await gateway.startAttempt({ learnerId: "learner-1", moduleId: module.module_id, contentVersion: module.content_version, kind: "full" });
+    await gateway.saveAnswer({ learnerId: "learner-1", moduleId: module.module_id, attemptId: attempt.id, xpAward: 0, answer: { questionId: module.questions[0].id, selectedChoiceId: module.questions[0].correct_choice, isCorrect: true, answeredAt: new Date().toISOString() } });
+    const start = vi.spyOn(gateway, "startAttempt");
+    renderMission(gateway);
+    expect(await screen.findByRole("heading", { name: module.questions[1].prompt.en })).toBeVisible();
+    expect(start).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Question 1" }));
+    expect(screen.getByText(/mission insight saved locally/i)).toBeVisible();
+  });
+
+  it("keeps saved feedback when only the progress refresh fails", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    renderMission(gateway);
+    const answer = await screen.findByRole("button", { name: /Red Team/i });
+    vi.spyOn(gateway, "getLearnerModuleRecord").mockRejectedValue(new Error("read unavailable"));
+    await userEvent.click(answer);
+    expect(await screen.findByText(/progress display could not refresh/)).toBeVisible();
+    expect(screen.getByText(/mission insight saved locally/i)).toBeVisible();
+    expect(screen.queryByText(/Your answer was not saved/)).not.toBeInTheDocument();
+  });
+
+  it("retains answers after completion fails and prevents overlapping completion requests", async () => {
+    const gateway = new MockOfflineLearningGateway();
+    const module = moduleLibrary[0]!;
+    const attempt = await gateway.startAttempt({ learnerId: "learner-1", moduleId: module.module_id, contentVersion: module.content_version, kind: "full" });
+    for (const question of module.questions) await gateway.saveAnswer({ learnerId: "learner-1", moduleId: module.module_id, attemptId: attempt.id, xpAward: 0, answer: { questionId: question.id, selectedChoiceId: question.correct_choice, isCorrect: true, answeredAt: new Date().toISOString() } });
+    let reject!: (reason: Error) => void;
+    const complete = vi.spyOn(gateway, "completeAttempt").mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+    renderMission(gateway);
+    const finish = await screen.findByRole("button", { name: "View mission debrief" });
+    await userEvent.dblClick(finish);
+    expect(complete).toHaveBeenCalledOnce();
+    expect(finish).toBeDisabled();
+    await act(async () => { reject(new Error("storage full")); });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your saved answers are still available");
+    expect(finish).toBeEnabled();
+    expect((await gateway.getLearnerModuleRecord("learner-1", module.module_id))?.attempts[0].answers).toHaveLength(module.questions.length);
+  });
   it("waits for the session to be saved before starting an attempt", async () => {
     const gateway = new MockOfflineLearningGateway();
     let release!: () => void;
@@ -110,7 +169,7 @@ describe("MissionPlayScreen local-save feedback", () => {
     const user = userEvent.setup();
     renderMission(new MockOfflineLearningGateway());
     await user.click(await screen.findByRole("button", { name: "Exit mission" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("cannot be resumed");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Return to the mission to continue");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Exit mission" }));

@@ -6,6 +6,11 @@ import type { StaffAdminGateway } from "../../services/staff/StaffAdminGateway";
 
 const GatewayContext = createContext<AppGateways | null>(null);
 
+/** Profile providers may also mount outside GatewayProvider in isolated tests. */
+export function useOfflineLearningGatewayReadyOptional(): Promise<void> | undefined {
+  return useContext(GatewayContext)?.offlineLearningReady;
+}
+
 interface GatewayProviderProps {
   children: React.ReactNode;
   gateways?: AppGateways;
