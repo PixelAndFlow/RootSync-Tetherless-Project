@@ -1,5 +1,7 @@
 # Frontend happy-path fixes — 2026-10-30
 
+> Historical record of the initial PR21 implementation. PR20 has now merged. PR21 integrates team main `2437533` and targets `main` as a draft. See [the updated main-based report](FRONTEND_HAPPY_PATH_MAIN_UPDATE_2026-10-30.md) for current behavior, test counts and integration instructions; the original dependency instructions below describe the earlier state.
+
 ## Branch and review dependency
 
 - Team repository: https://github.com/PixelAndFlow/RootSync-Tetherless-Project
