@@ -519,6 +519,32 @@ test("disabling an account ends its sessions; enabling restores sign-in", async 
   assert.ok(s.trainer);
 });
 
+test("resetting a password needs the same permission as creating that role, ends sessions, and forces a change", async () => {
+  const accounts = (await call("GET", "/v1/staff/accounts", undefined, s.admin)).body.accounts;
+  const maria = accounts.find((a: { username: string }) => a.username === "trainer.maria");
+  const nick = accounts.find((a: { username: string }) => a.username === "nick");
+
+  assert.equal((await call("POST", "/v1/staff/accounts/00000000-0000-4000-8000-000000000000/reset-password", { temporary_password: "a-new-temporary-pass" }, s.marc)).status, 404);
+  assert.equal((await call("POST", `/v1/staff/accounts/${maria.staff_id}/reset-password`, { temporary_password: "a-new-temporary-pass" }, s.trainer)).status, 403, "a Trainer can't reset anyone");
+  assert.equal((await call("POST", `/v1/staff/accounts/${nick.staff_id}/reset-password`, { temporary_password: "a-new-temporary-pass" }, s.admin)).status, 403, "an Admin can't reset another Admin");
+  assert.equal((await call("POST", `/v1/staff/accounts/${maria.staff_id}/reset-password`, { temporary_password: "short" }, s.admin)).body.error.code, "PASSWORD_TOO_SHORT");
+
+  const reset = await call("POST", `/v1/staff/accounts/${maria.staff_id}/reset-password`, { temporary_password: "a-new-temporary-pass" }, s.admin);
+  assert.equal(reset.status, 200);
+  assert.equal(reset.body.account.must_change_password, true);
+  assert.equal((await call("GET", "/v1/staff/cohorts", undefined, s.trainer)).status, 401, "maria's old session ended");
+  assert.equal((await call("POST", "/v1/staff/login", { username: "trainer.maria", password: "maria's own password" })).status, 401, "her old password no longer works");
+  const relogin = await call("POST", "/v1/staff/login", { username: "trainer.maria", password: "a-new-temporary-pass" });
+  assert.equal((await call("GET", "/v1/staff/cohorts", undefined, relogin.body.token)).body.error.code, "PASSWORD_CHANGE_REQUIRED");
+  await call("POST", "/v1/staff/me/password", { current_password: "a-new-temporary-pass", new_password: "maria's own password" }, relogin.body.token);
+  s.trainer = relogin.body.token;
+
+  assert.equal((await call("POST", `/v1/staff/accounts/${nick.staff_id}/reset-password`, { temporary_password: "nicks-new-temp-pass" }, s.marc)).status, 200, "a Superadmin can reset an Admin");
+  const nickRelogin = await call("POST", "/v1/staff/login", { username: "nick", password: "nicks-new-temp-pass" });
+  await call("POST", "/v1/staff/me/password", { current_password: "nicks-new-temp-pass", new_password: "nick's own password" }, nickRelogin.body.token);
+  s.admin = nickRelogin.body.token;
+});
+
 test("thresholds are server settings: read by staff, changed only by the Superadmin", async () => {
   assert.deepEqual((await call("GET", "/v1/staff/settings/thresholds", undefined, s.trainer)).body, { pass_pct: 70, struggling_pct: 50, weak_topic_pct: 60, weak_topic_min_answers: 2 });
   assert.equal((await call("PUT", "/v1/staff/settings/thresholds", { pass_pct: 75 }, s.trainer)).status, 403);

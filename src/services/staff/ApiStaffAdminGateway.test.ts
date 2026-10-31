@@ -10,6 +10,7 @@ const staff = {
   display_name: "Test Admin",
   role: "admin",
   must_change_password: true,
+  permissions: ["results.view", "staff.create_trainer"],
 };
 
 describe("ApiStaffAdminGateway", () => {
@@ -21,7 +22,7 @@ describe("ApiStaffAdminGateway", () => {
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
 
     await expect(gateway.signIn({ username: "test-admin", password: "temporary-password" })).resolves.toEqual({
-      staffId: staff.staff_id, username: "test-admin", displayName: "Test Admin", role: "admin", passwordChangeRequired: true,
+      staffId: staff.staff_id, username: "test-admin", displayName: "Test Admin", role: "admin", permissions: staff.permissions, passwordChangeRequired: true,
     });
     await expect(gateway.changePassword({ currentPassword: "temporary-password", newPassword: "replacement-password" })).resolves.toMatchObject({ passwordChangeRequired: false });
 
@@ -93,6 +94,20 @@ describe("ApiStaffAdminGateway", () => {
     expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ username: "new-trainer", display_name: "New Trainer", temporary_password: reveal.temporaryPassword });
     await expect(gateway.createStaffAccount({ role: "trainer", username: "!", displayName: "Test" })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("resets a staff account's password with a fresh one-time password, calling the right route", async () => {
+    const account = { staff_id: "staff-1", username: "trainer.maria", display_name: "Maria", role: "trainer", disabled: false, created_at: "2026-01-01" };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ account })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+    const reveal = await gateway.resetStaffAccountPassword("staff-1");
+    expect(reveal.temporaryPassword).toHaveLength(16);
+    expect(reveal.account).toMatchObject({ username: "trainer.maria", role: "trainer" });
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/accounts/staff-1/reset-password");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ temporary_password: reveal.temporaryPassword });
   });
 
   it("rejects malformed account lists", async () => {

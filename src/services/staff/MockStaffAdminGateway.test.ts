@@ -16,4 +16,14 @@ describe("MockStaffAdminGateway", () => {
     expect(gateway.canManage("trainer", "staff")).toBe(false);
     await expect(gateway.createLearner({ cohortId: "cohort-demo-001", firstName: "Taylor", lastName: "King" })).resolves.toMatchObject({ shownOnce: true, setupCode: expect.stringMatching(/^DEMO-/) });
   });
+
+  it("resets a demo account's password to a fresh one-time value, and rejects an unknown account", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const accounts = await gateway.listStaffAccounts();
+    const trainer = accounts.find((account) => account.role === "trainer")!;
+    const reveal = await gateway.resetStaffAccountPassword(trainer.staffId);
+    expect(reveal.account).toEqual(trainer);
+    expect(reveal.temporaryPassword).toHaveLength(16);
+    await expect(gateway.resetStaffAccountPassword("not-a-real-id")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
 });

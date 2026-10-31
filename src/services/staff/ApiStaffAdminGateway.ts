@@ -42,11 +42,14 @@ function mapSession(value: unknown): StaffSession {
   const staff = record(value);
   const role = text(staff.role);
   if (!(["superadmin", "admin", "trainer"] as const).includes(role as StaffRole)) invalid();
+  // Only sent on /v1/staff/login and /v1/staff/me; both are this gateway's only callers of mapSession.
+  const permissions = list(staff.permissions).map(text);
   return {
     staffId: text(staff.staff_id),
     username: text(staff.username),
     displayName: text(staff.display_name),
     role: role as StaffRole,
+    permissions: permissions as StaffSession["permissions"],
     passwordChangeRequired: bool(staff.must_change_password),
   };
 }
@@ -106,6 +109,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     if (!STAFF_USERNAME_PATTERN.test(username) || !input.displayName.trim()) throw new ApiError("INVALID_INPUT", 422);
     const temporaryPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const body = record(await this.api.post("/v1/staff/accounts", { role: input.role, username, display_name: input.displayName.trim(), temporary_password: temporaryPassword }));
+    return { account: mapAccount(body.account), temporaryPassword, shownOnce: true };
+  }
+  async resetStaffAccountPassword(staffId: string): Promise<StaffAccountReveal> {
+    const temporaryPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    const body = record(await this.api.post(`/v1/staff/accounts/${encodeURIComponent(staffId)}/reset-password`, { temporary_password: temporaryPassword }));
     return { account: mapAccount(body.account), temporaryPassword, shownOnce: true };
   }
   canManage(role: StaffRole, action: "staff" | "system"): boolean {
