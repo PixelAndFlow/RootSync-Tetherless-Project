@@ -23,6 +23,7 @@ import type { SyncTransport } from "../transport/transport.ts";
 import { summarize } from "./status-map.ts";
 import { gamificationAwards } from "../../utils/gamification.ts";
 import { requireModulePackage } from "../../content/requireModulePackage.ts";
+import { score } from "../../../packages/analytics/src/scoring.ts";
 import type {
   AnswerRecord,
   AttemptKind,
@@ -285,7 +286,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       initialCorrectCount: input.correctQuestionIds.length,
       initialScorePercent:
         input.questionsTotal > 0
-          ? Math.round((input.correctQuestionIds.length / input.questionsTotal) * 100)
+          ? score(input.correctQuestionIds.length, input.questionsTotal).pct
           : undefined,
     };
   }
@@ -456,7 +457,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
         completedAt: isCompleted ? completed?.occurred_at : undefined,
         answers,
         initialCorrectCount: kind === "full" && isCompleted ? correctCount : undefined,
-        initialScorePercent: kind === "full" && isCompleted && total ? Math.round((correctCount / total) * 100) : undefined,
+        initialScorePercent: kind === "full" && isCompleted && total ? score(correctCount, total).pct : undefined,
         questionIds: kind === "remediation" ? (started?.payload.question_ids as string[] | undefined) : undefined,
       });
 
@@ -538,7 +539,7 @@ export class DdilLearningGateway implements OfflineLearningGateway {
       masteredOrAnsweredCount: answeredQuestionIds.size,
       masteredQuestionIds,
       initialMissedQuestionIds,
-      currentMasteryPercent: questionsTotal > 0 ? Math.round((masteredQuestionIds.size / questionsTotal) * 100) : 0,
+      currentMasteryPercent: score(masteredQuestionIds.size, questionsTotal).pct,
       stillUnmasteredCount: Math.max(0, questionsTotal - masteredQuestionIds.size),
       completionStatus,
       initialScorePercent: firstCompleted?.initialScorePercent,
