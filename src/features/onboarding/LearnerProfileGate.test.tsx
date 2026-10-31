@@ -46,4 +46,10 @@ describe("LearnerProfileGate", () => {
     expect(screen.queryByText("Setup screen")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Protected content")).toBeInTheDocument());
   });
+
+  it("does not redirect a staff/QA ?scenario= preview, even with no profile (e2e/staff-mock.spec.ts)", () => {
+    renderGated(createMockGateways(), "/learner/missions?scenario=no-assigned-modules");
+    expect(screen.getByText("Protected content")).toBeInTheDocument();
+    expect(screen.queryByText("Setup screen")).not.toBeInTheDocument();
+  });
 });

@@ -17,7 +17,7 @@ import { ContentRegistry } from "../../packages/server/src/content.ts";
 import { MemoryStore } from "../../packages/server/src/memory-store.ts";
 import { createStaffAccount } from "../../packages/server/src/admin.ts";
 
-test("assigned-module refresh, restarted attempt, offline relaunch, and synced report", { timeout: 180_000 }, async (t) => {
+test("assigned-module refresh, same-attempt offline recovery, and synced report", { timeout: 180_000 }, async (t) => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const outDir = "node_modules/.cache/student-api-dist";
   const store = new MemoryStore();
@@ -57,7 +57,7 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
     t.diagnostic("Disposable API and production frontend are ready.");
     browser = await chromium.launch({ channel: "chrome", headless: true });
     const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
-    const page = await context.newPage();
+    let page = await context.newPage();
     await page.goto(`${origin}/#/learner`);
     await page.getByLabel("Setup code").fill(setup_code);
     await page.getByLabel("Username", { exact: true }).fill("Synthetic Student");
@@ -74,13 +74,56 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
     await page.getByRole("link", { name: /Start mission/ }).click();
     await page.getByRole("link", { name: "Start mission", exact: true }).click();
     await expect(page.locator("article h2")).toHaveText(module.questions[0].prompt.en);
-    await page.getByRole("button", { name: `${module.questions[0].choices[0].en}.`, exact: true }).click();
+    const firstCorrect = module.questions[0].choices.find(choice => choice.id === module.questions[0].correct_choice);
+    await page.getByRole("button", { name: `${firstCorrect.en}.`, exact: true }).click();
     await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
     await page.getByRole("button", { name: "Exit mission", exact: true }).click();
     await page.getByRole("button", { name: "Exit to mission details", exact: true }).click();
     await page.getByRole("link", { name: "Start mission", exact: true }).click();
+    await expect(page.locator("article h2")).toHaveText(module.questions[1].prompt.en);
+
+    async function localAttempts() {
+      return page.evaluate(() => new Promise((resolve, reject) => {
+        const open = indexedDB.open("tetherless-ddil", 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const request = db.transaction(["events"], "readonly").objectStore("events").getAll();
+          request.onerror = () => { db.close(); reject(request.error); };
+          request.onsuccess = () => { db.close(); resolve(request.result.filter(event => event.event_type === "attempt_started").map(event => event.attempt_id)); };
+        };
+      }));
+    }
+    async function deliveryRecords() {
+      return page.evaluate(() => new Promise((resolve, reject) => {
+        const open = indexedDB.open("tetherless-ddil", 1);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const request = db.transaction(["delivery"], "readonly").objectStore("delivery").getAll();
+          request.onerror = () => { db.close(); reject(request.error); };
+          request.onsuccess = () => { db.close(); resolve(request.result); };
+        };
+      }));
+    }
+    const originalAttempts = await localAttempts();
+    assert.equal(originalAttempts.length, 1);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    // Enrollment must recover from DDIL even without the presentation-only cache.
+    await page.evaluate(() => localStorage.removeItem("tetherless.learner-profile.v1"));
+    await context.setOffline(true);
+    await page.close();
+    page = await context.newPage();
+    await page.goto(`${origin}/#/learner/missions/phishing-basics/play`);
+    await expect(page.locator("article h2")).toHaveText(module.questions[1].prompt.en);
+    assert.deepEqual(await localAttempts(), originalAttempts, "reopening resumes the same attempt");
+    await page.getByRole("button", { name: "Question 1", exact: true }).click();
+    await expect(page.locator("article div[aria-live='polite']")).toBeVisible();
+    await page.getByRole("button", { name: /Next question/ }).click();
 
     for (const [index, question] of module.questions.entries()) {
+      if (index === 0) continue; // This answer was already durably saved before closing.
       await expect(page.locator("article h2")).toHaveText(question.prompt.en);
       const correct = question.choices.find(choice => choice.id === question.correct_choice);
       await page.getByRole("button", { name: `${correct.en}.`, exact: true }).click();
@@ -90,7 +133,46 @@ test("assigned-module refresh, restarted attempt, offline relaunch, and synced r
     await expect(page.getByRole("heading", { name: "Recruit Mission Debrief" })).toBeVisible();
     await expect(page.getByText("Initial score", { exact: true }).locator("..")).toContainText("100%");
     await expect(page.getByText("Your mission debrief is not ready yet.")).not.toBeVisible();
-    t.diagnostic("New assignment and completed result after restart passed.");
+    assert.deepEqual(await localAttempts(), originalAttempts);
+    t.diagnostic("The same attempt and saved first answer survived offline close/reopen without localStorage identity; completion passed.");
+
+    // Prove server receipt is not a local-acknowledgement barrier. Holding the
+    // response deterministically exposes the race that used to be intermittent:
+    // the report is already updated, but closing the page now strands inflight
+    // leases until the normal 60-second crash-recovery deadline.
+    let received;
+    let release;
+    const serverReceived = new Promise(resolve => { received = resolve; });
+    const responseGate = new Promise(resolve => { release = resolve; });
+    const holdAcknowledgement = async route => {
+      const response = await route.fetch();
+      received();
+      await responseGate;
+      await route.fulfill({ response });
+    };
+    await context.route(`${base}/v1/sync/events`, holdAcknowledgement);
+    try {
+      await context.setOffline(false);
+      await page.evaluate(() => { location.hash = "/learner/sync"; });
+      const firstSync = page.getByRole("button", { name: /Sync now|Retry sync/ });
+      await expect(firstSync).toBeVisible();
+      if (await firstSync.isEnabled()) await firstSync.click();
+      await Promise.race([serverReceived, new Promise((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("The first reconnect batch did not reach the API")), 15_000);
+        serverReceived.then(() => clearTimeout(timer));
+      })]);
+      const report = await api(`/v1/staff/learners/${learner.learner_id}/report`, token);
+      assert.equal(report.modules.find(m => m.module_id === "phishing-basics")?.initial?.pct, 100);
+      const inflight = (await deliveryRecords()).filter(record => record.status === "inflight");
+      assert.ok(inflight.length > 0, "server receipt can coexist with unacknowledged local deliveries");
+      assert.ok(inflight.every(record => record.lease_expires_at > Date.now()), "closing here would leave live leases");
+      t.diagnostic(`Server report reached 100% while ${inflight.length} local deliveries still awaited the held response.`);
+    } finally { release(); }
+    // Finish this sync scenario before beginning the independent offline reload.
+    await expect.poll(async () => (await deliveryRecords()).filter(record => record.status !== "acknowledged").length,
+      { timeout: 15_000, message: "Reconnect deliveries must commit their local acknowledgements before reload" }).toBe(0);
+    await expect(page.getByRole("heading", { name: "Your Student record is synced with RCO." })).toBeVisible();
+    await context.unroute(`${base}/v1/sync/events`, holdAcknowledgement);
 
     // The production app shell and actual module package must survive a reload.
     await page.evaluate(() => navigator.serviceWorker.ready);

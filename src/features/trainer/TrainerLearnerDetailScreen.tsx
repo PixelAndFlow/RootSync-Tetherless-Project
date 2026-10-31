@@ -23,22 +23,23 @@ export function TrainerLearnerDetailScreen() {
   const trainerData = useTrainerDataGateway();
   const { learnerId } = useParams();
   const [params] = useSearchParams();
-  const moduleId = params.get("module") ?? moduleLibrary[0].module_id;
+  const moduleId = params.get("module")?.trim() || (live ? null : moduleLibrary[0].module_id);
   const [detail, setDetail] = useState<TrainerModuleDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const signedIn = !live || Boolean(session);
 
   useEffect(() => {
-    if (!signedIn || !learnerId) return;
+    if (!signedIn || !learnerId || !moduleId) return;
     let cancelled = false;
     setDetail(null); setError(null);
     void trainerData.getLearnerModuleDetail(learnerId, moduleId).then((next) => { if (!cancelled) setDetail(next); }).catch((reason: unknown) => { if (!cancelled) setError(reason); });
     return () => { cancelled = true; };
   }, [trainerData, signedIn, learnerId, moduleId, retry]);
 
-  if (!signedIn) return <Navigate replace to="/staff/sign-in" />;
+  if (!signedIn) return <Navigate replace to="/staff/sign-in?next=/trainer" />;
   const back = <Link className="text-sm font-bold app-wordmark" to="/trainer">← Student results</Link>;
+  if (!moduleId) return <section>{back}<h1 className="mt-6 text-2xl font-bold">Select a student module</h1><p>Open a module result from the trainer dashboard. No module has been selected for this link.</p></section>;
   if (error) return <section>{back}<ReportError error={error} retry={() => setRetry((n) => n + 1)} /></section>;
   if (!detail) return <section>{back}<p className="mt-6" role="status">Loading Student detail…</p></section>;
 

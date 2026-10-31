@@ -10,9 +10,12 @@ import { FakeIDBFactory } from "../../../tests/sync/fakes/fake-idb";
 import { FakeTransport } from "../../../tests/sync/fakes/fake-transport";
 import type { OfflineLearningGateway, ModuleSummary } from "../../services/offline/OfflineLearningGateway";
 import type { TetherlessModule } from "../../types/content";
+import { fromCanonical } from "../../../packages/content/src/tetherless-module";
+import type { ContentModule } from "../../../packages/content/src/schema";
+import phishing from "../../../content/modules/phishing-basics/phishing-basics.v1.json";
 
 const summary: ModuleSummary = { moduleId: "review-module", contentVersion: 2, title: { en: "Review module" }, level: "beginner", activityType: "multiple_choice", downloadState: "available_offline" };
-const module = { schema_version: "tetherless.module.v1", module_id: summary.moduleId, content_version: 2, title: summary.title } as TetherlessModule;
+const module = { ...fromCanonical(phishing as ContentModule), module_id: summary.moduleId, content_version: 2, title: summary.title } as TetherlessModule;
 
 it("a downloaded assigned module opens after app restart while offline", async () => {
   let offline = false;
