@@ -111,6 +111,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const body = record(await this.api.post("/v1/staff/accounts", { role: input.role, username, display_name: input.displayName.trim(), temporary_password: temporaryPassword }));
     return { account: mapAccount(body.account), temporaryPassword, shownOnce: true };
   }
+  async resetStaffAccountPassword(staffId: string): Promise<StaffAccountReveal> {
+    const temporaryPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    const body = record(await this.api.post(`/v1/staff/accounts/${encodeURIComponent(staffId)}/reset-password`, { temporary_password: temporaryPassword }));
+    return { account: mapAccount(body.account), temporaryPassword, shownOnce: true };
+  }
   canManage(role: StaffRole, action: "staff" | "system"): boolean {
     return action === "staff" ? role !== "trainer" : role === "superadmin";
   }

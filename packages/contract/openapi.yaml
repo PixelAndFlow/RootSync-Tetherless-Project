@@ -390,6 +390,12 @@ paths:
     post: { summary: "Disable and sign out (same permission as creating that role). Can't disable yourself or the last Superadmin.", security: [{ staffSession: [] }], responses: { "200": { description: "{ account }" }, "409": { description: LOCKOUT_PREVENTED } } }
   /v1/staff/accounts/{staff_id}/enable:
     post: { security: [{ staffSession: [] }], responses: { "200": { description: "{ account }" } } }
+  /v1/staff/accounts/{staff_id}/reset-password:
+    post:
+      summary: "Reset to a caller-supplied one-time password and sign the account out everywhere (same permission as creating that role). Only self-service recovery otherwise: /v1/staff/me/password, which needs the current password."
+      security: [{ staffSession: [] }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [temporary_password], properties: { temporary_password: { type: string, minLength: 12 } } } } } }
+      responses: { "200": { description: "{ account }" }, "404": { description: NOT_FOUND }, "422": { description: PASSWORD_TOO_SHORT } }
   /v1/staff/roles:
     get: { summary: "Each role's permissions and the full permission list (permissions.manage)", security: [{ staffSession: [] }], responses: { "200": { description: "{ roles, permissions }" } } }
   /v1/staff/roles/{role}/permissions:
