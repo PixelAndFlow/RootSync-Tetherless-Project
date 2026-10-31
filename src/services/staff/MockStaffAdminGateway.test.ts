@@ -26,4 +26,35 @@ describe("MockStaffAdminGateway", () => {
     expect(reveal.temporaryPassword).toHaveLength(16);
     await expect(gateway.resetStaffAccountPassword("not-a-real-id")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
+
+  it("checks, publishes and assigns a new module, end to end", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const invalid = await gateway.checkModule({ module_id: "x" });
+    expect(invalid.valid).toBe(false);
+    expect(invalid.willBe).toBe("blocked");
+
+    const draft = { module_id: "new-module", title: { en: "New Module" }, activity_type: "multiple_choice", content_version: 1, questions: [{ id: "q1" }] };
+    const check = await gateway.checkModule(draft);
+    expect(check).toMatchObject({ valid: true, willBe: "new_module", summary: { moduleId: "new-module", moduleName: "New Module", questionCount: 1 } });
+
+    const published = await gateway.createModule(draft);
+    expect(published).toMatchObject({ moduleId: "new-module", contentVersion: 1 });
+    expect((await gateway.listModules()).some((m) => m.moduleId === "new-module")).toBe(true);
+
+    const cohortId = (await gateway.listCohorts())[0].cohortId;
+    const assignment = await gateway.createAssignment({ moduleId: "new-module", cohortId });
+    expect(assignment).toMatchObject({ moduleId: "new-module", cohortId, target: "cohort" });
+    await expect(gateway.createAssignment({ moduleId: "new-module", cohortId })).rejects.toMatchObject({ code: "ALREADY_ASSIGNED" });
+    await expect(gateway.createAssignment({ moduleId: "does-not-exist", cohortId })).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    expect(await gateway.listAssignments(cohortId)).toEqual([assignment]);
+    await gateway.removeAssignment(assignment.assignmentId);
+    expect(await gateway.listAssignments(cohortId)).toEqual([]);
+    await expect(gateway.removeAssignment(assignment.assignmentId)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("rejects publishing a module that fails its own check", async () => {
+    const gateway = new MockStaffAdminGateway();
+    await expect(gateway.createModule({ module_id: "" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
 });
