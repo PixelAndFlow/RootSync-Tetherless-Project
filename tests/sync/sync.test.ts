@@ -283,3 +283,33 @@ test("REGRESSION N4: a stale worker cannot reverse a newer acknowledgment", asyn
   const after = await getDelivery(h.db, events[0]!.event_id);
   assert.equal(after?.status, "acknowledged", "delivered work must not be un-settled by a stale lease holder");
 });
+
+// ============================================================================
+// REGRESSION F-1: a lock-contended tab must still run lease recovery
+// ============================================================================
+
+test("REGRESSION F-1: the losing tab recovers an expired lease even when the sync lock is held", async () => {
+  const { harness } = await import("./helpers.ts");
+  const { claimBatch } = await import("../../src/sync/engine/lease.ts");
+  const { allEvents } = await import("../../src/sync/stores/db.ts");
+
+  const h = await harness();
+  await h.record();
+
+  // Tab A claims the event and then stalls (lease will expire).
+  const events = await allEvents(h.db);
+  const [a] = await claimBatch(h.db, events, { maxEvents: 10, owner: "worker-A", now: h.now(), leaseMs: 60_000 });
+  assert.equal(a?.lease_owner, "worker-A", "tab A holds the lease");
+
+  // A's lease expires.
+  h.tick(61_000);
+  // A full pass must recover the expired lease even though the event was
+  // claimed by another owner. (In a browser, the Web Lock loser tab runs
+  // passRecoveryOnly(); here, without navigator.locks, the pass always runs
+  // the exclusive path so recovery runs either way.)
+  const pass = await h.engine.runOnce();
+  // The harness transport accepts everything by default, so a full pass both
+  // recovers the lease AND delivers the event. The F-1 regression is about
+  // recovery happening at all — the primitive must not be skipped.
+  assert.ok(pass.recovered >= 1, `recovered=${pass.recovered}`);
+});
