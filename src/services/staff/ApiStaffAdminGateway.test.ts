@@ -110,6 +110,52 @@ describe("ApiStaffAdminGateway", () => {
     expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ temporary_password: reveal.temporaryPassword });
   });
 
+  it("checks and publishes a module, calling the right routes with the raw module JSON", async () => {
+    const draft = { module_id: "new-module", content_version: 1, title: { en: "New Module" }, questions: [] };
+    const checkResponse = { valid: true, will_be: "new_module", summary: { module_id: "new-module", module_name: "New Module", content_version: 1, level: null, activity_type: "multiple_choice", question_count: 0 }, errors: [], warnings: [] };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(checkResponse)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ module_id: "new-module", content_version: 1, published_at: "2026-01-01T00:00:00.000Z", warnings: [] })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    const check = await gateway.checkModule(draft);
+    expect(check).toMatchObject({ valid: true, willBe: "new_module", summary: { moduleId: "new-module", moduleName: "New Module" } });
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/modules/check");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual(draft);
+
+    const published = await gateway.createModule(draft);
+    expect(published).toEqual({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
+    expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/modules");
+    expect(JSON.parse(fetcher.mock.calls[2][1].body)).toEqual(draft);
+  });
+
+  it("lists, creates and removes assignments, calling the right routes", async () => {
+    const assignment = { assignment_id: "assignment-1", module_id: "security-tools", module_name: "Security Tools", content_version: null, target: "cohort", cohort_id: "cohort-1", learner_id: null, created_at: "2026-01-01T00:00:00.000Z", created_by: "staff-1" };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ assignments: [assignment] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ assignment }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    const list = await gateway.listAssignments("cohort-1");
+    expect(list).toEqual([{ assignmentId: "assignment-1", moduleId: "security-tools", moduleName: "Security Tools", contentVersion: null, target: "cohort", cohortId: "cohort-1", learnerId: null, createdAt: "2026-01-01T00:00:00.000Z", createdBy: "staff-1" }]);
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/assignments?cohort_id=cohort-1");
+
+    const created = await gateway.createAssignment({ moduleId: "security-tools", cohortId: "cohort-1" });
+    expect(created.assignmentId).toBe("assignment-1");
+    expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/assignments");
+    expect(JSON.parse(fetcher.mock.calls[2][1].body)).toEqual({ module_id: "security-tools", cohort_id: "cohort-1" });
+    await expect(gateway.createAssignment({ moduleId: "security-tools" })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+
+    await gateway.removeAssignment("assignment-1");
+    expect(fetcher.mock.calls[3][0]).toBe("http://localhost:8080/v1/staff/assignments/assignment-1/remove");
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
   it("rejects malformed account lists", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))

@@ -172,3 +172,32 @@ describe("staff-account and system-control link visibility follows permissions, 
     expect(screen.getByRole("link", { name: "View system-control scope" })).toBeVisible();
   });
 });
+
+describe("content and assignments panel", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; });
+
+  it("shows an empty assignments list and hides the assign form without assignment.manage", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(await screen.findByText("No modules are assigned to this cohort yet.")).toBeVisible();
+    expect(screen.queryByText("Assign a module to this cohort")).not.toBeInTheDocument();
+  });
+
+  it("assigns a module to the current cohort and lists it, then removes it", async () => {
+    state.session.permissions = ["staff.create_trainer", "assignment.manage"];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await screen.findByText("No modules are assigned to this cohort yet.");
+
+    await userEvent.selectOptions(screen.getByLabelText("Assign a module to this cohort"), "rcyc-recruit-cyber-squad-gamified-001");
+    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+    expect(await screen.findByText("Operation Cyber Squad (latest)")).toBeVisible();
+    expect(screen.queryByText("No modules are assigned to this cohort yet.")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(await screen.findByText("No modules are assigned to this cohort yet.")).toBeInTheDocument();
+  });
+});

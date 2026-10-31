@@ -112,6 +112,30 @@ export interface ModuleListing {
   created_at: string;
 }
 
+/** POST /v1/staff/modules/check. */
+export interface ModuleCheck {
+  valid: boolean;
+  will_be: "new_module" | "new_version" | "blocked";
+  summary: {
+    module_id: string | null;
+    module_name: string | null;
+    content_version: number | null;
+    level: string | null;
+    activity_type: string;
+    question_count: number;
+  };
+  errors: StaffErrorDetail[];
+  warnings: StaffErrorDetail[];
+}
+
+/** POST /v1/staff/modules success response. */
+export interface ModulePublishResult {
+  module_id: string;
+  content_version: number;
+  published_at: string;
+  warnings: StaffErrorDetail[];
+}
+
 // ---------------------------------------------------------------- assignments
 
 /** GET/POST /v1/staff/assignments and the export. */
