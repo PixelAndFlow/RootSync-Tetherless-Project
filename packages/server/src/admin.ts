@@ -1,9 +1,12 @@
 /**
  * Administration from the server's command line. Use it once, to create the
  * first Superadmin; after that, staff accounts are made in the app
- * (POST /v1/staff/accounts), and nobody can sign themselves up.
+ * (POST /v1/staff/accounts), and nobody can sign themselves up. An account
+ * locked out of its own password (forgotten, never recorded, or simply lost)
+ * has no self-service recovery -- reset-password is the only way back in.
  *
  *   echo 'a-long-password' | node src/admin.ts create-staff --role superadmin --username marc --name "Marc"
+ *   node src/admin.ts reset-password --username marc
  *   node src/admin.ts list-cohorts
  *
  * Uses DATABASE_URL like the server.
@@ -45,6 +48,23 @@ export async function createStaffAccount(
   return staff_id;
 }
 
+function generatePassword(): string {
+  return randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
+/** Resets an existing account to a freshly generated one-time password, the
+ * same "must change on next sign-in" state a brand-new account starts in.
+ * There is no other way to recover an account whose password is unknown --
+ * self-service change requires the current password, which this bypasses. */
+export async function resetStaffPassword(store: Store, username: string): Promise<{ password: string }> {
+  const staff = await store.getStaffByUsername(username.toLowerCase());
+  if (!staff) throw new Error(`No staff account named ${username}.`);
+  const password = generatePassword();
+  const ok = await store.updateStaff(staff.staff_id, { password_hash: await hashPassword(password), must_change_password: true });
+  if (!ok) throw new Error(`Could not reset ${username}'s password.`);
+  return { password };
+}
+
 /** Demo only (in-memory store): Superadmin "demo" with the given password. */
 export async function seedDemoStaff(store: Store, password: string): Promise<void> {
   await createStaffAccount(store, { username: "demo", displayName: "Demo Superadmin", role: "superadmin", password });
@@ -72,11 +92,18 @@ async function main() {
         console.log(`${role} ${values.username} created.`);
         break;
       }
+      case "reset-password": {
+        if (!values.username) throw new Error("Give --username.");
+        const { password } = await resetStaffPassword(store, values.username);
+        console.log(`${values.username}'s password has been reset. One-time temporary password (shown once, not stored anywhere): ${password}`);
+        console.log("The account must change it on next sign-in.");
+        break;
+      }
       case "list-cohorts":
         for (const c of await store.listCohorts(true)) console.log(`${c.cohort_id}  ${c.name}  (${c.learners} learners)${c.archived_at ? "  [archived]" : ""}`);
         break;
       default:
-        console.log("Commands: create-staff --role <superadmin|admin|trainer> --username <u> --name <n>  (password on stdin) | list-cohorts");
+        console.log("Commands: create-staff --role <superadmin|admin|trainer> --username <u> --name <n>  (password on stdin) | reset-password --username <u> | list-cohorts");
     }
   } finally {
     await store.close();
