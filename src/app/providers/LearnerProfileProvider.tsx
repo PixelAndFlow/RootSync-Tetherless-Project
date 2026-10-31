@@ -64,7 +64,11 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
   const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
   const profileRef = useRef(profile);
   profileRef.current = profile;
-  const [recovering, setRecovering] = useState(() => Boolean(!profile && gateway?.getLearnerProfile));
+  // Live mode never trusts a cached profile enough to skip waiting on DDIL
+  // (it is the authoritative source and may say "no enrollment" despite a
+  // stale local cache); mock mode only needs to wait when there is nothing
+  // local yet, matching main's original issue #24 behavior.
+  const [recovering, setRecovering] = useState(() => (live ? Boolean(gateway?.getLearnerProfile) : Boolean(!profile && gateway?.getLearnerProfile)));
   const [recoveryError, setRecoveryError] = useState(false);
   const [retry, setRetry] = useState(0);
 
@@ -168,7 +172,12 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
     },
   }), [profile, recovering, gateway]);
 
-  if (recovering) return <p role="status">Restoring your saved student profile...</p>;
+  // Only the live recovery path blocks rendering here: it must finish before
+  // any screen sees a profile, including a stale or incomplete one. Mock-mode
+  // recovery stays non-blocking (matching main's original behavior) and
+  // instead exposes `recovering` on the context for a route guard to use
+  // (issue #24) without holding up every screen while it resolves.
+  if (live && recovering) return <p role="status">Restoring your saved student profile...</p>;
   if (recoveryError) return <section role="alert"><p>Your saved student profile could not be read. Your data has not been cleared. Check browser storage and try again.</p><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></section>;
   return <LearnerProfileContext.Provider value={value}>{children}</LearnerProfileContext.Provider>;
 }
