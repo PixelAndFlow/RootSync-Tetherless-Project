@@ -42,11 +42,14 @@ function mapSession(value: unknown): StaffSession {
   const staff = record(value);
   const role = text(staff.role);
   if (!(["superadmin", "admin", "trainer"] as const).includes(role as StaffRole)) invalid();
+  // Only sent on /v1/staff/login and /v1/staff/me; both are this gateway's only callers of mapSession.
+  const permissions = list(staff.permissions).map(text);
   return {
     staffId: text(staff.staff_id),
     username: text(staff.username),
     displayName: text(staff.display_name),
     role: role as StaffRole,
+    permissions: permissions as StaffSession["permissions"],
     passwordChangeRequired: bool(staff.must_change_password),
   };
 }

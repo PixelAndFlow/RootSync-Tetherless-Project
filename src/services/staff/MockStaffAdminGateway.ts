@@ -1,5 +1,5 @@
 import { ApiError } from "../api/ApiError";
-import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
+import { DEFAULT_ROLE_PERMISSIONS, type Cohort, type LearnerRecord, type ModuleListing, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffRole, type StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
@@ -35,13 +35,13 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     return {
       staffId: `${role}-demo-001`, username: input.username.trim(),
       displayName: role === "superadmin" ? "Demo SuperAdmin" : role === "admin" ? "Demo Admin" : "Demo Trainer",
-      role, passwordChangeRequired: input.username.trim().toLowerCase() === "admin",
+      role, permissions: DEFAULT_ROLE_PERMISSIONS[role], passwordChangeRequired: input.username.trim().toLowerCase() === "admin",
     };
   }
 
   async changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession> {
     if (input.currentPassword !== "demo-password-123" || input.newPassword.length < 12) throw new ApiError("INVALID_INPUT", 422);
-    return { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", passwordChangeRequired: false };
+    return { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", permissions: DEFAULT_ROLE_PERMISSIONS.admin, passwordChangeRequired: false };
   }
   async listCohorts(): Promise<Cohort[]> { return structuredClone(cohorts); }
   async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {

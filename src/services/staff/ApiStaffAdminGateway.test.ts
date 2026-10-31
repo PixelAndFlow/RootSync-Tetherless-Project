@@ -10,6 +10,7 @@ const staff = {
   display_name: "Test Admin",
   role: "admin",
   must_change_password: true,
+  permissions: ["results.view", "staff.create_trainer"],
 };
 
 describe("ApiStaffAdminGateway", () => {
@@ -21,7 +22,7 @@ describe("ApiStaffAdminGateway", () => {
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
 
     await expect(gateway.signIn({ username: "test-admin", password: "temporary-password" })).resolves.toEqual({
-      staffId: staff.staff_id, username: "test-admin", displayName: "Test Admin", role: "admin", passwordChangeRequired: true,
+      staffId: staff.staff_id, username: "test-admin", displayName: "Test Admin", role: "admin", permissions: staff.permissions, passwordChangeRequired: true,
     });
     await expect(gateway.changePassword({ currentPassword: "temporary-password", newPassword: "replacement-password" })).resolves.toMatchObject({ passwordChangeRequired: false });
 
