@@ -11,5 +11,6 @@ export interface StaffAdminGateway {
   listModules(): Promise<ModuleListing[]>;
   listStaffAccounts(): Promise<StaffAccountSummary[]>;
   createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal>;
+  resetStaffAccountPassword(staffId: string): Promise<StaffAccountReveal>;
   canManage(role: StaffRole, action: "staff" | "system"): boolean;
 }

@@ -67,11 +67,63 @@ export interface ModuleListing {
 export const STAFF_ROLES = ["superadmin", "admin", "trainer"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 
+/**
+ * Mirrors packages/server/src/permissions.ts PERMISSIONS/DEFAULT_ROLE_PERMISSIONS.
+ * Duplicated rather than imported (server code is not in the frontend's build),
+ * same pattern as STAFF_ROLES above and the contract wire types. The server
+ * checks one of these on every request; the UI should decide what to show the
+ * same way, from the signed-in staff member's own `permissions` (sign-in and
+ * GET /v1/staff/me both send it), not from `role` (issue #10).
+ */
+export const STAFF_PERMISSIONS = [
+  "results.view",
+  "results.export",
+  "cohort.create",
+  "cohort.edit",
+  "cohort.archive",
+  "learner.create",
+  "learner.import",
+  "learner.edit",
+  "learner.archive",
+  "learner.setup_code",
+  "device.revoke",
+  "content.create",
+  "content.edit",
+  "content.archive",
+  "assignment.manage",
+  "staff.create_trainer",
+  "staff.create_admin",
+  "permissions.manage",
+  "settings.manage",
+  "data.purge",
+] as const;
+export type StaffPermissionKey = typeof STAFF_PERMISSIONS[number];
+
+const SHARED_PERMISSIONS: StaffPermissionKey[] = [
+  "results.view", "results.export", "cohort.create", "cohort.edit", "cohort.archive",
+  "learner.create", "learner.import", "learner.edit", "learner.archive", "learner.setup_code",
+  "device.revoke", "content.create", "content.edit", "content.archive", "assignment.manage",
+];
+
+/** Mock-mode-only: the server computes this for real sessions. Mirrors the server's Demo Day defaults. */
+export const DEFAULT_ROLE_PERMISSIONS: Record<StaffRole, StaffPermissionKey[]> = {
+  superadmin: [...STAFF_PERMISSIONS],
+  admin: [...SHARED_PERMISSIONS, "staff.create_trainer"],
+  trainer: [...SHARED_PERMISSIONS],
+};
+
+/** Permission needed to create, disable or enable an account with this role. Mirrors permissionToManage on the server. */
+export function permissionToManage(role: StaffRole): StaffPermissionKey {
+  return role === "trainer" ? "staff.create_trainer" : "staff.create_admin";
+}
+
 export interface StaffSession {
   staffId: string;
   username: string;
   displayName: string;
   role: StaffRole;
+  /** From the server (sign-in and GET /v1/staff/me); decide access by this, not by `role`. */
+  permissions: StaffPermissionKey[];
   passwordChangeRequired: boolean;
 }
 
@@ -96,11 +148,9 @@ export interface StaffAccountReveal {
   shownOnce: true;
 }
 
-/** Demo Day defaults (spec v1.10 §4): which roles a signed-in role may create. Server-enforced; this is UX only. */
-export function creatableRoles(signedInRole: StaffRole): StaffRole[] {
-  if (signedInRole === "superadmin") return ["trainer", "admin", "superadmin"];
-  if (signedInRole === "admin") return ["trainer"];
-  return [];
+/** Which roles the signed-in staff member may create, from their own permissions (server-enforced; this is UX only). Least-privileged first, matching the form's previous default. */
+export function creatableRoles(permissions: StaffPermissionKey[]): StaffRole[] {
+  return (["trainer", "admin", "superadmin"] as const).filter((role) => permissions.includes(permissionToManage(role)));
 }
 
 export interface StaffPermission {

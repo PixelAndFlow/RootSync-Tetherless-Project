@@ -16,7 +16,7 @@
  *   GET /v1/staff/cohorts/:id/report        GET /v1/staff/learners/:id/report
  *   GET /v1/staff/cohorts/:id/modules/:moduleId/summary
  *   GET /v1/staff/cohorts/:id/export
- *   GET|POST /v1/staff/accounts             POST /v1/staff/accounts/:id/disable | /enable
+ *   GET|POST /v1/staff/accounts             POST /v1/staff/accounts/:id/disable | /enable | /reset-password
  *   GET /v1/staff/roles                     PUT /v1/staff/roles/:role/permissions
  *   GET|PUT /v1/staff/settings/thresholds
  */
@@ -665,6 +665,21 @@ export function registerStaffRoutes(env: Env): void {
       return { account: staffView((await store.getStaff(target.staff_id))!) };
     });
   }
+
+  /** Same recovery the admin CLI's reset-password offers, reachable from the app for anyone with the permission to manage that account's role. Unlike admin.ts, the caller supplies the one-time password (same pattern as account creation) rather than the server generating one. */
+  router.add("POST", "/v1/staff/accounts/:id/reset-password", async (ctx) => {
+    const id = ctx.params.id ?? "";
+    const target = isUuid(id) ? await store.getStaff(id) : undefined;
+    if (!target) throw new HttpError(404, "NOT_FOUND", "Account not found.");
+    const { staff } = await requireStaff(ctx, permissionToManage(target.role));
+    const body = await bodyObject(ctx);
+    const password = typeof body.temporary_password === "string" ? body.temporary_password : "";
+    if (password.length < MIN_PASSWORD_LENGTH) throw new HttpError(422, "PASSWORD_TOO_SHORT", `Use at least ${MIN_PASSWORD_LENGTH} characters.`);
+    await store.updateStaff(target.staff_id, { password_hash: await hashPassword(password), must_change_password: true });
+    await store.deleteStaffSessions(target.staff_id);
+    await store.addAudit({ staff_id: staff.staff_id, action: "staff.reset_password", target: target.staff_id, detail: null, at: ctx.now });
+    return { account: staffView((await store.getStaff(target.staff_id))!) };
+  });
 
   // ------------------------------------------------------------ roles and permissions
 

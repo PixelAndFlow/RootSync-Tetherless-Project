@@ -7,7 +7,7 @@ import { MockStaffAdminGateway } from "../../services/staff/MockStaffAdminGatewa
 import { StaffOperationsScreen } from "./StaffOperationsScreen";
 import { StaffDashboardScreen } from "./StaffDashboardScreen";
 
-const state = vi.hoisted(() => ({ gateway: null as unknown, session: { role: "admin", displayName: "Tester" } }));
+const state = vi.hoisted(() => ({ gateway: null as unknown, session: { role: "admin", displayName: "Tester", permissions: ["staff.create_trainer"] } }));
 vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => ({ session: state.session, signOut: vi.fn() }) }));
 vi.mock("../../app/providers/GatewayProvider", () => ({ useStaffAdminGateway: () => state.gateway }));
 vi.mock("../../services/integration/runtimeConfig", () => ({ readFrontendRuntimeConfig: () => ({ mode: "integration" }) }));
@@ -121,5 +121,54 @@ describe("live staff operations", () => {
     expect(await screen.findByRole("alertdialog")).toHaveTextContent("Wait for the result");
     finish({ learnerId: "student", setupCode: "ONCE-123", shownOnce: true });
     await waitFor(() => expect(screen.getByRole("dialog")).toHaveTextContent("setup code"));
+  });
+});
+
+describe("staff-account and system-control link visibility follows permissions, not role", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; });
+
+  it("hides both links on the dashboard with no staff/system permissions", async () => {
+    state.session.permissions = [];
+    show(<StaffDashboardScreen />);
+    await screen.findByText("Cohorts");
+    expect(screen.queryByRole("link", { name: "Staff accounts" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "System controls" })).not.toBeInTheDocument();
+  });
+
+  it("shows Staff accounts but not System controls on the dashboard with staff.create_trainer only", async () => {
+    state.session.permissions = ["staff.create_trainer"];
+    show(<StaffDashboardScreen />);
+    await screen.findByText("Cohorts");
+    expect(screen.getByRole("link", { name: "Staff accounts" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "System controls" })).not.toBeInTheDocument();
+  });
+
+  it("shows System controls on the dashboard with settings.manage", async () => {
+    state.session.permissions = ["settings.manage"];
+    show(<StaffDashboardScreen />);
+    await screen.findByText("Cohorts");
+    expect(screen.getByRole("link", { name: "System controls" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Staff accounts" })).not.toBeInTheDocument();
+  });
+
+  it("hides the Staff accounts panel on the operations screen with no staff/system permissions", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByRole("heading", { name: "Staff accounts" })).not.toBeInTheDocument();
+  });
+
+  it("shows the Staff accounts panel, with the system-control scope link gated separately, on the operations screen", async () => {
+    state.session.permissions = ["staff.create_trainer"];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.getByRole("heading", { name: "Staff accounts" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "View system-control scope" })).not.toBeInTheDocument();
+    state.session.permissions = ["staff.create_trainer", "settings.manage"];
+    show(<StaffOperationsScreen />);
+    await screen.findAllByText("Alex Rivera");
+    expect(screen.getByRole("link", { name: "View system-control scope" })).toBeVisible();
   });
 });
