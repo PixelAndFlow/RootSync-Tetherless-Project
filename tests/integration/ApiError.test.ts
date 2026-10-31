@@ -1,8 +1,9 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ApiError, parseApiError } from "./ApiError";
+import { ApiError, parseApiError } from "../../src/services/api/ApiError";
 
 /**
  * Regression for issue #23: a server error code with no frontend message
@@ -11,9 +12,13 @@ import { ApiError, parseApiError } from "./ApiError";
  * server can actually send (`HttpError(status, "CODE", ...)`) and fails if
  * any of them has no entry in ApiError's messages map, so a new server-side
  * error code can't go unmapped again.
+ *
+ * Lives here, not under src/, because it reads the server's source with
+ * node:fs -- src is a browser-only TypeScript project (tsconfig.app.json)
+ * with no Node types, and `npm run build`'s `tsc -b` type-checks it strictly.
  */
 function serverErrorCodes(): string[] {
-  const dir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../packages/server/src");
+  const dir = resolve(dirname(fileURLToPath(import.meta.url)), "../../packages/server/src");
   const codes = new Set<string>();
   for (const file of readdirSync(dir)) {
     if (!file.endsWith(".ts")) continue;

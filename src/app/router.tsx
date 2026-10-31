@@ -1,6 +1,7 @@
-import { createHashRouter, Navigate, type LoaderFunctionArgs } from "react-router-dom";
+import { createHashRouter, Navigate, Outlet, type LoaderFunctionArgs } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { LearnerSetupScreen } from "../features/onboarding/LearnerSetupScreen";
+import { LearnerProfileGate } from "../features/onboarding/LearnerProfileGate";
 import { MissionDetailScreen } from "../features/missions/MissionDetailScreen";
 import { MissionLibraryScreen } from "../features/missions/MissionLibraryScreen";
 import { TrainerDashboardScreen } from "../features/trainer/TrainerDashboardScreen";
@@ -46,14 +47,24 @@ export const router = createHashRouter([
     errorElement: <RouteErrorScreen />,
     children: [
       { path: "/learner", element: <LearnerSetupScreen /> },
-      { path: "/learner/missions", element: <MissionLibraryScreen /> },
-      { path: "/learner/missions/:moduleId", element: <MissionDetailScreen />, loader: requireKnownModule },
-      { path: "/learner/missions/:moduleId/play", element: <MissionPlayScreen />, loader: requireKnownModule },
-      { path: "/learner/missions/:moduleId/results", element: <MissionResultsScreen />, loader: requireKnownModule },
-      { path: "/learner/missions/:moduleId/practice", element: <RemediationScreen />, loader: requireKnownModule },
-      { path: "/learner/missions/:moduleId/review", element: <MissionReviewScreen />, loader: requireKnownModule },
+      {
+        // A Student who has never completed setup must not see a page that
+        // assumes a profile exists, however they got here (issue #24).
+        // /learner/sync is deliberately NOT included here: it reports
+        // device-level offline/sync state (SyncStatusScreen never reads the
+        // learner profile), and is meant to work even before setup.
+        element: <LearnerProfileGate><Outlet /></LearnerProfileGate>,
+        children: [
+          { path: "/learner/missions", element: <MissionLibraryScreen /> },
+          { path: "/learner/missions/:moduleId", element: <MissionDetailScreen />, loader: requireKnownModule },
+          { path: "/learner/missions/:moduleId/play", element: <MissionPlayScreen />, loader: requireKnownModule },
+          { path: "/learner/missions/:moduleId/results", element: <MissionResultsScreen />, loader: requireKnownModule },
+          { path: "/learner/missions/:moduleId/practice", element: <RemediationScreen />, loader: requireKnownModule },
+          { path: "/learner/missions/:moduleId/review", element: <MissionReviewScreen />, loader: requireKnownModule },
+          { path: "/learner/settings", element: <LearnerSettingsScreen /> },
+        ],
+      },
       { path: "/learner/sync", element: <SyncStatusScreen /> },
-      { path: "/learner/settings", element: <LearnerSettingsScreen /> },
       { path: "/trainer", element: <TrainerDashboardScreen /> },
       { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
       { path: "/staff/sign-in", element: <StaffSignInScreen /> },
