@@ -17,6 +17,10 @@ export interface LearnerProfile {
 
 interface LearnerProfileContextValue {
   profile: LearnerProfile | null;
+  /** True only while the gateway-recovery effect below is still in flight for a
+   * device that might turn out to already be set up. A route guard must wait
+   * for this to settle before deciding there is no profile (issue #24). */
+  recovering: boolean;
   saveProfile: (input: Pick<LearnerProfile, "displayName" | "username">) => void;
   acceptDemoSetup: (input: SetupProfile) => void;
   setSpanishAssist: (enabled: boolean) => void;
@@ -57,6 +61,7 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
   const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  const [recovering, setRecovering] = useState(() => Boolean(!profile && gateway?.getLearnerProfile));
 
   const updateProfile = (nextProfile: LearnerProfile) => {
     try { window.localStorage.setItem(storageKey, JSON.stringify(nextProfile)); }
@@ -94,17 +99,18 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
   // Runs once on mount; never overwrites a profile that appeared locally in
   // the meantime (checked via profileRef, not the closed-over `profile`).
   useEffect(() => {
-    if (profile || !gateway || !gateway.getLearnerProfile) return;
+    if (profile || !gateway || !gateway.getLearnerProfile) { setRecovering(false); return; }
     let active = true;
     gateway.getLearnerProfile().then((recovered) => {
       if (active && recovered && !profileRef.current) acceptDemoSetupRef.current(recovered);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => { if (active) setRecovering(false); });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gateway]);
 
   const value = useMemo<LearnerProfileContextValue>(() => ({
     profile,
+    recovering,
     // This provider persists DEMO presentation/profile data only. Real
     // credentials belong to Naquan's adapter, never to React/localStorage —
     // profile recovery now defers to the gateway above when local data is missing.
@@ -137,7 +143,7 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
       window.localStorage.removeItem(storageKey);
       setProfile(null);
     },
-  }), [profile]);
+  }), [profile, recovering]);
 
   return <LearnerProfileContext.Provider value={value}>{children}</LearnerProfileContext.Provider>;
 }
