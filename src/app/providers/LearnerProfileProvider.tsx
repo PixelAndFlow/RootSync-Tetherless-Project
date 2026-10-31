@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { SetupProfile } from "../../services/setup/LearnerSetupGateway";
-import { useOfflineLearningGatewayOptional } from "./GatewayProvider";
+import { useOfflineLearningGatewayOptional, useOfflineLearningGatewayReadyOptional } from "./GatewayProvider";
 
 export interface LearnerProfile {
   learnerId: string;
@@ -17,9 +17,11 @@ export interface LearnerProfile {
 
 interface LearnerProfileContextValue {
   profile: LearnerProfile | null;
-  /** True only while the gateway-recovery effect below is still in flight for a
-   * device that might turn out to already be set up. A route guard must wait
-   * for this to settle before deciding there is no profile (issue #24). */
+  /** True only while a recovery effect below is still in flight for a device
+   * that might turn out to already be set up. A route guard must wait for
+   * this to settle before deciding there is no profile (issue #24). In live
+   * mode this provider already blocks its own render until recovery settles
+   * (see below), so this stays true only for the mock-gateway case. */
   recovering: boolean;
   saveProfile: (input: Pick<LearnerProfile, "displayName" | "username">) => void;
   acceptDemoSetup: (input: SetupProfile) => void;
@@ -58,63 +60,84 @@ function readStoredProfile(): LearnerProfile | null {
 
 export function LearnerProfileProvider({ children }: { children: React.ReactNode }) {
   const gateway = useOfflineLearningGatewayOptional();
+  const live = Boolean(useOfflineLearningGatewayReadyOptional());
   const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
   const profileRef = useRef(profile);
   profileRef.current = profile;
   const [recovering, setRecovering] = useState(() => Boolean(!profile && gateway?.getLearnerProfile));
+  const [recoveryError, setRecoveryError] = useState(false);
+  const [retry, setRetry] = useState(0);
+
+  // Live identity is authoritative: recovers enrollment from DDIL's own
+  // durable store, validates it, and merges this device's presentation
+  // preferences back in only if they belong to the same student. Blocks
+  // render below until this settles, so no screen can act on a stale or
+  // incomplete profile while this is in flight.
+  useEffect(() => {
+    if (!live || !gateway?.getLearnerProfile) return;
+    let cancelled = false;
+    setRecovering(true);
+    setRecoveryError(false);
+    void gateway.getLearnerProfile().then((stored) => {
+      if (cancelled) return;
+      if (stored && [stored.learnerId, stored.deviceId, stored.username].some((field) => typeof field !== "string" || !field.trim())) throw new Error("Saved enrollment is incomplete");
+      // IndexedDB owns enrollment. A stale presentation cache cannot establish identity.
+      const preferences = readStoredProfile();
+      const sameStudent = preferences?.learnerId === stored?.learnerId && preferences?.deviceId === stored?.deviceId;
+      setProfile(stored ? {
+        learnerId: stored.learnerId, deviceId: stored.deviceId, username: stored.username,
+        displayName: sameStudent ? preferences!.displayName : stored.username,
+        learnerCode: stored.learnerCode, cohortName: stored.cohortName,
+        spanishAssist: sameStudent ? preferences!.spanishAssist : false,
+        highContrast: sameStudent ? preferences!.highContrast : false,
+        reducedMotion: sameStudent ? preferences!.reducedMotion : false,
+        colorTheme: sameStudent ? preferences!.colorTheme : "dark",
+      } : null);
+      setRecovering(false);
+    }).catch(() => { if (!cancelled) { setRecoveryError(true); setRecovering(false); } });
+    return () => { cancelled = true; };
+  }, [gateway, live, retry]);
 
   const updateProfile = (nextProfile: LearnerProfile) => {
+    // Live enrollment is already committed in DDIL. Optional presentation-cache
+    // failure must never send a student back through a consumed one-time code.
     try { window.localStorage.setItem(storageKey, JSON.stringify(nextProfile)); }
-    catch {
-      // Best effort. A learner whose gateway-side setup already succeeded
-      // must not get stuck here just because this browser's storage is full
-      // or unavailable — only persistence across reload is lost, not the
-      // current session, and the gateway reconciliation effect below can
-      // recover identity from its own durable store on the next mount.
-    }
+    catch { /* Presentation storage is best effort; enrollment stays with the gateway. */ }
+    profileRef.current = nextProfile;
     setProfile(nextProfile);
   };
 
-  const acceptDemoSetup = (input: SetupProfile) => updateProfile({
-    learnerId: input.learnerId,
-    deviceId: input.deviceId,
-    username: input.username,
-    learnerCode: input.learnerCode,
-    cohortName: input.cohortName,
-    displayName: input.username,
-    spanishAssist: profile?.spanishAssist ?? false,
-    highContrast: profile?.highContrast ?? false,
-    reducedMotion: profile?.reducedMotion ?? false,
-    colorTheme: profile?.colorTheme ?? "dark",
-  });
-  const acceptDemoSetupRef = useRef(acceptDemoSetup);
-  acceptDemoSetupRef.current = acceptDemoSetup;
-
-  // Recovers identity from the gateway's own durable store (IndexedDB, in live
-  // mode) when localStorage has nothing to show — cleared, never written, or
-  // corrupted — but the device already completed setup there. Without this,
-  // a learner who clears/loses localStorage (or whose earlier setup write to
-  // it failed) is shown the setup screen again for a device the backend
-  // already considers claimed, with no way to recover the original identity.
-  // Runs once on mount; never overwrites a profile that appeared locally in
-  // the meantime (checked via profileRef, not the closed-over `profile`).
+  // Preserve main's mock-gateway recovery as well. Live identity is authoritative
+  // above (and owns `recovering` there); demo recovery must not replace a profile
+  // already present or just set up, and must still hold `recovering` for a route
+  // guard (issue #24) until it knows whether a demo profile exists.
   useEffect(() => {
-    if (profile || !gateway || !gateway.getLearnerProfile) { setRecovering(false); return; }
+    if (live) return;
+    if (profileRef.current || !gateway?.getLearnerProfile) { setRecovering(false); return; }
     let active = true;
-    gateway.getLearnerProfile().then((recovered) => {
-      if (active && recovered && !profileRef.current) acceptDemoSetupRef.current(recovered);
+    void gateway.getLearnerProfile().then((stored) => {
+      if (!active || !stored || profileRef.current) return;
+      updateProfile({ ...stored, displayName: stored.username, spanishAssist: false, highContrast: false, reducedMotion: false, colorTheme: "dark" });
     }).catch(() => {}).finally(() => { if (active) setRecovering(false); });
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gateway]);
+  }, [gateway, live]);
 
   const value = useMemo<LearnerProfileContextValue>(() => ({
     profile,
     recovering,
-    // This provider persists DEMO presentation/profile data only. Real
-    // credentials belong to Naquan's adapter, never to React/localStorage —
-    // profile recovery now defers to the gateway above when local data is missing.
-    acceptDemoSetup,
+    // Presentation fields only; credentials remain exclusively in DDIL.
+    acceptDemoSetup: (input) => updateProfile({
+      learnerId: input.learnerId,
+      deviceId: input.deviceId,
+      username: input.username,
+      learnerCode: input.learnerCode,
+      cohortName: input.cohortName,
+      displayName: input.username,
+      spanishAssist: profile?.spanishAssist ?? false,
+      highContrast: profile?.highContrast ?? false,
+      reducedMotion: profile?.reducedMotion ?? false,
+      colorTheme: profile?.colorTheme ?? "dark",
+    }),
     saveProfile: ({ displayName, username }) => updateProfile({
       learnerId: profile?.learnerId ?? crypto.randomUUID(),
       deviceId: profile?.deviceId ?? crypto.randomUUID(),
@@ -143,8 +166,10 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
       window.localStorage.removeItem(storageKey);
       setProfile(null);
     },
-  }), [profile, recovering]);
+  }), [profile, recovering, gateway]);
 
+  if (recovering) return <p role="status">Restoring your saved student profile...</p>;
+  if (recoveryError) return <section role="alert"><p>Your saved student profile could not be read. Your data has not been cleared. Check browser storage and try again.</p><button type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button></section>;
   return <LearnerProfileContext.Provider value={value}>{children}</LearnerProfileContext.Provider>;
 }
 

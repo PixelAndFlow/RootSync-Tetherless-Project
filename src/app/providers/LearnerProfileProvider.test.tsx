@@ -1,15 +1,78 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, render, renderHook, screen, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LearnerProfileProvider, useLearnerProfile } from "./LearnerProfileProvider";
 import { GatewayProvider } from "./GatewayProvider";
 import { createMockGateways } from "../../services/gateways";
-import { LearnerProfileProvider, useLearnerProfile } from "./LearnerProfileProvider";
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return <LearnerProfileProvider>{children}</LearnerProfileProvider>;
 }
 
+describe("durable student identity recovery", () => {
+  const enrolled = { learnerId: "real-student", deviceId: "real-device", username: "Sam", learnerCode: "TEST-1", cohortName: "Test" };
+  function liveWrapper(read = vi.fn().mockResolvedValue(enrolled)) {
+    const gateways = createMockGateways();
+    gateways.offlineLearning.getLearnerProfile = read;
+    gateways.offlineLearningReady = Promise.resolve();
+    return ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+  }
+  beforeEach(() => window.localStorage.clear());
+  it("restores enrollment when the presentation cache is absent", async () => {
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper() });
+    await waitFor(() => expect(result.result.current?.profile).toMatchObject(enrolled));
+  });
+  it("does not trust stale local identity when DDIL has no enrolled student", async () => {
+    localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ ...enrolled, displayName: "Sam" }));
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper(vi.fn().mockResolvedValue(null)) });
+    await waitFor(() => expect(result.result.current).toBeTruthy());
+    expect(result.result.current.profile).toBeNull();
+  });
+  it("accepts committed live setup despite presentation-cache quota failure", async () => {
+    const result = renderHook(useLearnerProfile, { wrapper: liveWrapper(vi.fn().mockResolvedValue(null)) });
+    await waitFor(() => expect(result.result.current).toBeTruthy());
+    const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
+    try {
+      act(() => result.result.current.acceptDemoSetup(enrolled));
+      expect(result.result.current.profile).toMatchObject(enrolled);
+    } finally { write.mockRestore(); }
+  });
+  it("blocks fresh setup after a recovery read failure and offers a safe retry", async () => {
+    const read = vi.fn().mockRejectedValueOnce(new Error("storage unavailable")).mockResolvedValue(enrolled);
+    const Wrapper = liveWrapper(read);
+    function Child() { return <p>Student: {useLearnerProfile().profile?.username}</p>; }
+    render(<Wrapper><Child /></Wrapper>);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your data has not been cleared");
+    expect(screen.queryByText("Student:")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Student: Sam")).toBeVisible();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("LearnerProfileProvider", () => {
   beforeEach(() => window.localStorage.clear());
+
+  it("preserves main's recovery from a prepared mock gateway when presentation data is missing", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Jordan" });
+    const wrapperWithGateway = ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    const result = renderHook(useLearnerProfile, { wrapper: wrapperWithGateway });
+    expect(result.result.current.profile).toBeNull();
+    await waitFor(() => expect(result.result.current.profile).toMatchObject({ username: "Jordan", learnerCode: "DEMO-001" }));
+    expect(JSON.parse(localStorage.getItem("tetherless.learner-profile.v1")!)).toMatchObject({ username: "Jordan" });
+  });
+
+  it("does not replace an existing demo profile with the mock gateway's identity", async () => {
+    const gateways = createMockGateways();
+    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Gateway Student" });
+    localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({ learnerId: "local", deviceId: "local-device", displayName: "Local", username: "local" }));
+    const read = vi.spyOn(gateways.offlineLearning, "getLearnerProfile");
+    const wrapperWithGateway = ({ children }: { children: React.ReactNode }) => <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
+    const result = renderHook(useLearnerProfile, { wrapper: wrapperWithGateway });
+    await act(async () => {});
+    expect(result.result.current.profile?.username).toBe("local");
+    expect(read).not.toHaveBeenCalled();
+  });
 
   it("trims profile input and preserves the learner/device identity across updates and reloads", () => {
     const first = renderHook(() => useLearnerProfile(), { wrapper });
@@ -64,33 +127,5 @@ describe("LearnerProfileProvider", () => {
     act(() => result.result.current.resetProfile());
     expect(result.result.current.profile).toBeNull();
     expect(window.localStorage.getItem("tetherless.learner-profile.v1")).toBeNull();
-  });
-
-  it("recovers identity from the gateway when localStorage has nothing to show", async () => {
-    const gateways = createMockGateways();
-    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Jordan" });
-    function wrapperWithGateway({ children }: { children: React.ReactNode }) {
-      return <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
-    }
-    const result = renderHook(() => useLearnerProfile(), { wrapper: wrapperWithGateway });
-    expect(result.result.current.profile).toBeNull();
-    await waitFor(() => expect(result.result.current.profile).not.toBeNull());
-    expect(result.result.current.profile).toMatchObject({ username: "Jordan", learnerCode: "DEMO-001", cohortName: "Frontend demo cohort" });
-    expect(JSON.parse(window.localStorage.getItem("tetherless.learner-profile.v1")!)).toMatchObject({ username: "Jordan" });
-  });
-
-  it("never overrides a profile already found in localStorage with the gateway's", async () => {
-    const gateways = createMockGateways();
-    await gateways.offlineLearning.setupDevice!({ setupCode: "DEMO-2026", username: "Gateway Learner" });
-    window.localStorage.setItem("tetherless.learner-profile.v1", JSON.stringify({
-      learnerId: "local-learner", deviceId: "local-device", displayName: "Local Learner", username: "local",
-    }));
-    function wrapperWithGateway({ children }: { children: React.ReactNode }) {
-      return <GatewayProvider gateways={gateways}><LearnerProfileProvider>{children}</LearnerProfileProvider></GatewayProvider>;
-    }
-    const result = renderHook(() => useLearnerProfile(), { wrapper: wrapperWithGateway });
-    expect(result.result.current.profile).toMatchObject({ username: "local" });
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    expect(result.result.current.profile).toMatchObject({ username: "local" });
   });
 });

@@ -129,7 +129,9 @@ test.describe("RCO representative mobile profiles", () => {
 
     await page.getByRole("link", { name: /Start mission/ }).click();
     await expect(page.getByRole("heading", { name: "What you’ll learn" })).toBeVisible();
-    await expect(page.getByText("Four checkpoints. Complete them in order.")).toBeVisible();
+    await expect(page.getByText("4 checkpoints in this mission.")).toBeVisible();
+    await expect(page.getByText("1 of 4", { exact: true })).toBeVisible();
+    await expect(page.getByText("4 of 4", { exact: true })).toBeVisible();
     await expect(page.getByText("15 questions")).toHaveCSS("border-color", "rgb(133, 133, 133)");
     await expect(page.getByText("No timer")).toHaveCSS("border-color", "rgb(133, 133, 133)");
     await expect(page.getByRole("link", { name: "Start mission" })).toHaveCSS("color", "rgb(255, 255, 255)");

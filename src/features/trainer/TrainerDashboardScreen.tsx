@@ -70,7 +70,7 @@ export function TrainerDashboardScreen() {
     });
   }, [filter, rows, query, sort]);
 
-  if (!signedIn) return <Navigate replace to="/staff/sign-in" />;
+  if (!signedIn) return <Navigate replace to="/staff/sign-in?next=/trainer" />;
 
   const withModule = (rows ?? []).filter((learner) => !learner.noModuleResults);
   const studentCount = new Set((rows ?? []).map((learner) => learner.learnerId)).size;
