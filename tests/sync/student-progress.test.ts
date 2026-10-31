@@ -32,6 +32,25 @@ async function finish(gw: DdilLearningGateway, version: number, ids: string[]) {
   await gw.completeAttempt({ learnerId: "student", moduleId: "review-module", attemptId: attempt.id, questionsTotal: ids.length, correctQuestionIds: ids });
 }
 
+test("14 of 15 uses server precision for completion, replayed initial score and mastery after reopen", async () => {
+  const ids = Array.from({ length: 15 }, (_, index) => `q${index + 1}`);
+  const content = module(1, ids);
+  const opts = { idb: new FakeIDBFactory(), transport: new FakeTransport(Date.now), api: { get: async () => content, post: async () => { throw new Error("unused"); } } };
+  const gw = new DdilLearningGateway(opts);
+  await gw.init();
+  const attempt = await gw.startAttempt({ learnerId: "student", moduleId: content.module_id, contentVersion: 1, kind: "full" });
+  for (const [index, questionId] of ids.entries()) await gw.saveAnswer({ learnerId: "student", moduleId: content.module_id, attemptId: attempt.id, xpAward: 0,
+    answer: { questionId, selectedChoiceId: index === 0 ? "b" : "a", isCorrect: index !== 0, answeredAt: new Date().toISOString() } });
+  const completed = await gw.completeAttempt({ learnerId: "student", moduleId: content.module_id, attemptId: attempt.id, questionsTotal: 15, correctQuestionIds: ids.slice(1) });
+  assert.equal(completed.initialScorePercent, 93.3);
+  const reopened = new DdilLearningGateway(opts);
+  await reopened.init();
+  const record = await reopened.getLearnerModuleRecord("student", content.module_id);
+  assert.equal(record?.initialScorePercent, 93.3);
+  assert.equal(record?.currentMasteryPercent, 93.3);
+  assert.equal(record?.attempts[0]?.initialCorrectCount, 14);
+});
+
 test("restarting an incomplete first attempt still exposes the first completed score", async () => {
   const gw = await createGateway();
   const abandoned = await gw.startAttempt({ learnerId: "student", moduleId: "review-module", contentVersion: 1, kind: "full" });
