@@ -72,4 +72,11 @@ describe("mock-backed device setup", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("not connected");
     expect(screen.getByRole("button", { name: "Continue to missions" })).toBeDisabled();
   });
+  it("does not advertise the demo-only DEMO-2026 code in live mode (issue #22)", async () => {
+    const gateways = createMockGateways();
+    gateways.offlineLearningReady = Promise.resolve();
+    setup(gateways);
+    expect(await screen.findByText(/Download assigned missions while connected/)).toBeVisible();
+    expect(screen.queryByText(/DEMO-2026/)).not.toBeInTheDocument();
+  });
 });
