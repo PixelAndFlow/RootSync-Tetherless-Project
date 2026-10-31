@@ -46,6 +46,12 @@ beforeEach(() => {
 const dashboard = () => render(<MemoryRouter><Routes><Route path="/" element={<TrainerDashboardScreen />} /><Route path="/staff/sign-in" element={<p>sign-in page</p>} /></Routes></MemoryRouter>);
 const detailPage = (path = "/trainer/learners/learner-1?module=module-1") => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/trainer/learners/:learnerId" element={<TrainerLearnerDetailScreen />} /><Route path="/staff/sign-in" element={<p>sign-in page</p>} /></Routes></MemoryRouter>);
 
+it("does not request a demo module for a live detail link with no module selection", () => {
+  detailPage("/trainer/learners/learner-1");
+  expect(screen.getByRole("heading", { name: "Select a student module" })).toBeVisible();
+  expect(state.trainerData.getLearnerModuleDetail).not.toHaveBeenCalled();
+});
+
 describe("trainer dashboard (connected to the API)", () => {
   it("shows partial work and switches between cohorts without XP or a sync-state column", async () => {
     dashboard();

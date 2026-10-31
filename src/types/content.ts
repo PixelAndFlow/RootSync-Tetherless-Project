@@ -84,6 +84,7 @@ export interface TetherlessModule {
   mission_brief?: LocalizedText;
   settings: ModuleSettings;
   questions: Question[];
+  topics?: { topic_id: string; name: LocalizedText }[];
   brand?: Record<string, unknown>;
   tracking_policy?: Record<string, unknown>;
   gamification?: GamificationConfig;

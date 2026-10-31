@@ -47,7 +47,7 @@ async function gateway(over: { online?: boolean; api?: DeviceApi } = {}) {
 /** A module with a sector over q1/q2 and a mission badge over all three, for award tests. */
 function progressModule(): TetherlessModule {
   return {
-    schema_version: "1.0",
+    schema_version: "tetherless.module.v1",
     module_id: "m1",
     content_version: 1,
     level: "foundation",
@@ -437,7 +437,7 @@ test("getModuleProgress reflects answers against the real module size, not zero"
   const progress = await gw.getModuleProgress("l1", "m1");
   assert.equal(progress.questionsTotal, 3, "pulled from the cached module, not hardcoded");
   assert.equal(progress.questionsAnswered, 2);
-  assert.equal(progress.currentMasteryPercent, 33, "1 of 3 questions mastered");
+  assert.equal(progress.currentMasteryPercent, 33.3, "1 of 3 questions mastered, using server precision");
   assert.equal(progress.stillUnmasteredCount, 2);
   assert.equal(progress.completionStatus, "in_progress", "no attempt_completed yet");
 });
@@ -461,7 +461,7 @@ test("getLearnerModuleRecord tracks initial misses, mastery, and awards across a
   assert.equal(record!.engagement.completedSectorIds.length, 0);
   assert.equal(record!.attempts.length, 1);
   assert.equal(record!.attempts[0]!.kind, "full");
-  assert.equal(record!.attempts[0]!.initialScorePercent, 33);
+  assert.equal(record!.attempts[0]!.initialScorePercent, 33.3);
 
   const remediation = await gw.startRemediation({ learnerId: "l1", moduleId: "m1", contentVersion: 1, questionIds: ["q2", "q3"] });
   await gw.saveAnswer({ learnerId: "l1", moduleId: "m1", attemptId: remediation.id, answer: { questionId: "q2", selectedChoiceId: "a", isCorrect: true, answeredAt: "t4" }, xpAward: 5 });

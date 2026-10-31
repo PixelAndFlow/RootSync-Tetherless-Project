@@ -115,12 +115,30 @@ export class SyncEngine {
    * second concurrent call a no-op rather than a duplicate send.
    */
   async runOnce(): Promise<SyncPassResult> {
-    if (this.running) return { ...EMPTY, skipped: true };
+    // A concurrent call on this process is a re-entrancy guard, not a sync
+    // decision. The loser still must run the recovery pass — F-1: an expired
+    // lease is exactly what a second tab could rescue. Skipping before
+    // recovery strands the work.
+    if (this.running) return this.passRecoveryOnly();
     this.running = true;
     try {
       const result = await withSyncLock(SYNC_LOCK_NAME, () => this.pass());
-      return result ?? { ...EMPTY, skipped: true };
+      return result ?? this.passRecoveryOnly();
     } finally { this.running = false; }
+  }
+
+  /** Run only the recovery half of a pass (lease expiry + auth unblock). */
+  private async passRecoveryOnly(): Promise<SyncPassResult> {
+    const out: SyncPassResult = { ...EMPTY };
+    if (this.opts.unblockAuthOnStart) {
+      await this.unblockAuth(this.now());
+    }
+    const recovered = await recoverExpiredLeases(this.opts.db, this.now());
+    out.recovered = recovered.length;
+    for (const r of recovered) {
+      await this.log(r, "lease_expired", this.now(), null, null, "lease expired");
+    }
+    return out;
   }
 
   private async pass(): Promise<SyncPassResult> {
