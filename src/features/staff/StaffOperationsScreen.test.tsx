@@ -7,7 +7,7 @@ import { MockStaffAdminGateway } from "../../services/staff/MockStaffAdminGatewa
 import { StaffOperationsScreen } from "./StaffOperationsScreen";
 import { StaffDashboardScreen } from "./StaffDashboardScreen";
 
-const state = vi.hoisted(() => ({ gateway: null as unknown, session: { role: "admin", displayName: "Tester" } }));
+const state = vi.hoisted(() => ({ gateway: null as unknown, session: { role: "admin", displayName: "Tester", permissions: ["staff.create_trainer"] } }));
 vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => ({ session: state.session, signOut: vi.fn() }) }));
 vi.mock("../../app/providers/GatewayProvider", () => ({ useStaffAdminGateway: () => state.gateway }));
 vi.mock("../../services/integration/runtimeConfig", () => ({ readFrontendRuntimeConfig: () => ({ mode: "integration" }) }));

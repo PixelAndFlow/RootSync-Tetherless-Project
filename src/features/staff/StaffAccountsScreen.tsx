@@ -13,7 +13,7 @@ export function StaffAccountsScreen() {
   const { session } = useStaffSession();
   const gateway = useStaffAdminGateway();
   const integration = readFrontendRuntimeConfig().mode === "integration";
-  const roles = session ? creatableRoles(session.role) : [];
+  const roles = session ? creatableRoles(session.permissions) : [];
   const [accounts, setAccounts] = useState<StaffAccountSummary[]>([]);
   const [accountsError, setAccountsError] = useState<unknown>(null);
   const [accountsLoading, setAccountsLoading] = useState(true);
@@ -30,10 +30,11 @@ export function StaffAccountsScreen() {
     setAccountsLoading(true); setAccountsError(null);
     void gateway.listStaffAccounts().then(setAccounts).catch(setAccountsError).finally(() => setAccountsLoading(false));
   };
-  useEffect(() => { if (gateway && session && session.role !== "trainer") refreshAccounts(); }, [gateway, session]);
+  const canViewAccounts = !!session && (session.permissions.includes("staff.create_trainer") || session.permissions.includes("staff.create_admin"));
+  useEffect(() => { if (gateway && canViewAccounts) refreshAccounts(); }, [gateway, canViewAccounts]);
 
   if (!session) return <Navigate replace to="/staff/sign-in" />;
-  if (session.role === "trainer" || roles.length === 0) return <AccessDenied />;
+  if (!canViewAccounts || roles.length === 0) return <AccessDenied />;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -54,7 +55,7 @@ export function StaffAccountsScreen() {
   };
   const usernameInvalid = username.length > 0 && !STAFF_USERNAME_PATTERN.test(username.trim().toLowerCase());
 
-  return <section><ReturnLink to="/staff">Staff dashboard</ReturnLink><h1 className="mt-4 text-3xl font-bold">Staff accounts</h1><p className="mt-2 text-slate-300">{session.role === "superadmin" ? "Create a SuperAdmin, Admin or Trainer account." : "Create a Trainer account."} The new account signs in with a one-time temporary password and must change it on first sign-in.</p><p className="mt-3 text-sm" role="status">{integration ? "Live API mode: creating an account changes the server." : "Demo mode: account changes are mock-only and are not saved to the server."}</p>
+  return <section><ReturnLink to="/staff">Staff dashboard</ReturnLink><h1 className="mt-4 text-3xl font-bold">Staff accounts</h1><p className="mt-2 text-slate-300">{roles.includes("superadmin") ? "Create a SuperAdmin, Admin or Trainer account." : "Create a Trainer account."} The new account signs in with a one-time temporary password and must change it on first sign-in.</p><p className="mt-3 text-sm" role="status">{integration ? "Live API mode: creating an account changes the server." : "Demo mode: account changes are mock-only and are not saved to the server."}</p>
     <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"><article className="ui-panel p-5"><h2 className="text-xl font-bold">Existing accounts</h2>
       {accountsError !== null && <div className="mt-4"><ApiErrorNotice error={accountsError} /></div>}
       {accountsLoading && <p className="mt-4 text-sm" role="status">Loading accounts…</p>}
