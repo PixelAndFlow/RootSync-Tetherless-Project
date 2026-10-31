@@ -2,8 +2,12 @@ import type {
   Cohort as CohortWire,
   LearnerRecord as LearnerRecordWire,
   ModuleListing as ModuleListingWire,
+  ModuleCheck as ModuleCheckWire,
+  ModulePublishResult as ModulePublishResultWire,
+  Assignment as AssignmentWire,
+  StaffErrorDetail as StaffErrorDetailWire,
 } from "../../../packages/contract/src/staff-api";
-import type { Cohort, LearnerRecord, ModuleListing } from "../../types/staff";
+import type { Cohort, LearnerRecord, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment } from "../../types/staff";
 
 /**
  * Wire (snake_case, packages/contract) to app (camelCase) translation, in one place.
@@ -57,5 +61,44 @@ export function toModuleListing(wire: ModuleListingWire): ModuleListing {
     archived: wire.archived,
     createdBy: wire.created_by,
     createdAt: wire.created_at,
+  };
+}
+
+function toIssue(wire: StaffErrorDetailWire): ModuleCheckIssue {
+  return { ...(wire.row === undefined ? {} : { row: wire.row }), ...(wire.field === undefined ? {} : { field: wire.field }), code: wire.code, message: wire.message };
+}
+
+export function toModuleCheck(wire: ModuleCheckWire): ModuleCheckResult {
+  return {
+    valid: wire.valid,
+    willBe: wire.will_be,
+    summary: {
+      moduleId: wire.summary.module_id,
+      moduleName: wire.summary.module_name,
+      contentVersion: wire.summary.content_version,
+      level: wire.summary.level,
+      activityType: wire.summary.activity_type,
+      questionCount: wire.summary.question_count,
+    },
+    errors: wire.errors.map(toIssue),
+    warnings: wire.warnings.map(toIssue),
+  };
+}
+
+export function toModulePublishResult(wire: ModulePublishResultWire): ModulePublishResult {
+  return { moduleId: wire.module_id, contentVersion: wire.content_version, publishedAt: wire.published_at, warnings: wire.warnings.map(toIssue) };
+}
+
+export function toAssignment(wire: AssignmentWire): Assignment {
+  return {
+    assignmentId: wire.assignment_id,
+    moduleId: wire.module_id,
+    moduleName: wire.module_name,
+    contentVersion: wire.content_version,
+    target: wire.target,
+    cohortId: wire.cohort_id,
+    learnerId: wire.learner_id,
+    createdAt: wire.created_at,
+    createdBy: wire.created_by,
   };
 }

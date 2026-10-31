@@ -64,6 +64,49 @@ export interface ModuleListing {
   createdAt: string;
 }
 
+export interface ModuleCheckIssue {
+  row?: number;
+  field?: string;
+  code: string;
+  message: string;
+}
+
+/** POST /v1/staff/modules/check: does this module JSON validate, and is it a new module or a new version? */
+export interface ModuleCheckResult {
+  valid: boolean;
+  willBe: "new_module" | "new_version" | "blocked";
+  summary: {
+    moduleId: string | null;
+    moduleName: string | null;
+    contentVersion: number | null;
+    level: string | null;
+    activityType: string;
+    questionCount: number;
+  };
+  errors: ModuleCheckIssue[];
+  warnings: ModuleCheckIssue[];
+}
+
+export interface ModulePublishResult {
+  moduleId: string;
+  contentVersion: number;
+  publishedAt: string;
+  warnings: ModuleCheckIssue[];
+}
+
+export interface Assignment {
+  assignmentId: string;
+  moduleId: string;
+  moduleName: string;
+  /** null = always the latest published version. */
+  contentVersion: number | null;
+  target: "cohort" | "learner";
+  cohortId: string | null;
+  learnerId: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
 export const STAFF_ROLES = ["superadmin", "admin", "trainer"] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 
