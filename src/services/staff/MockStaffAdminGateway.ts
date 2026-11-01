@@ -1,7 +1,7 @@
 import { ApiError, isRecord } from "../api/ApiError";
 import type { Issue } from "../../../packages/content/src/issues";
 import { checkNewVersion, validateTetherlessModule, type TetherlessModule } from "../../../packages/content/src/tetherless-module";
-import { DEFAULT_ROLE_PERMISSIONS, type Assignment, type Cohort, type LearnerDevice, type LearnerFieldChanges, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffRole, type StaffSession } from "../../types/staff";
+import { DEFAULT_ROLE_PERMISSIONS, DEFAULT_THRESHOLDS, STAFF_PERMISSIONS, STAFF_ROLES, type Assignment, type Cohort, type LearnerDevice, type LearnerFieldChanges, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffPermissionKey, type StaffRole, type StaffSession, type Thresholds } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
@@ -68,6 +68,9 @@ const accounts: StaffAccountSummary[] = [
   { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
   { staffId: "trainer-demo-001", username: "trainer", displayName: "Demo Trainer", role: "trainer", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
 ];
+/** Issue #41: mutable so getRolePermissions/setRolePermissions have somewhere to read/write. */
+const rolePermissions: Record<StaffRole, StaffPermissionKey[]> = structuredClone(DEFAULT_ROLE_PERMISSIONS);
+let thresholds: Thresholds = { ...DEFAULT_THRESHOLDS };
 
 /**
  * Demo-only staff adapter. It never calls the API, issues real codes, or persists credentials.
@@ -77,8 +80,8 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
   /** No real token in demo mode — this is just enough state for me() to echo back whoever last signed in/changed their password. */
   private currentSession: StaffSession | null = null;
 
-  signOut(): void { this.currentSession = null; }
-  async signIn(input: { username: string; password: string }): Promise<StaffSession> {
+  logout(): void { this.currentSession = null; }
+  async login(input: { username: string; password: string }): Promise<StaffSession> {
     if (input.password !== "demo-password-123") throw new ApiError("UNAUTHORIZED", 401);
     const roleByUsername: Record<string, StaffRole> = { demo: "superadmin", admin: "admin", trainer: "trainer" };
     const role = roleByUsername[input.username.trim().toLowerCase()];
@@ -220,7 +223,7 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
       warnings: toIssues(issues.filter((i) => i.severity !== "error")),
     };
   }
-  async createModule(json: unknown): Promise<ModulePublishResult> {
+  async publishModule(json: unknown): Promise<ModulePublishResult> {
     const check = await this.checkModule(json);
     if (!check.valid) {
       if (check.errors.some((e) => e.code === "VERSION_NOT_HIGHER")) throw new ApiError("VERSION_EXISTS", 409);
@@ -263,7 +266,7 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     moduleBodies.delete(moduleId);
   }
   async listAssignments(cohortId: string): Promise<Assignment[]> { return structuredClone(assignments.filter((a) => a.cohortId === cohortId)); }
-  async createAssignment(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
+  async assign(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
     const hasCohort = !!input.cohortId, hasLearner = !!input.learnerId;
     if (hasCohort === hasLearner) throw new ApiError("INVALID_INPUT", 422);
     const mod = modules.find((candidate) => candidate.moduleId === input.moduleId);
@@ -287,13 +290,13 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     assignments.push(assignment);
     return structuredClone(assignment);
   }
-  async removeAssignment(assignmentId: string): Promise<void> {
+  async unassign(assignmentId: string): Promise<void> {
     const index = assignments.findIndex((a) => a.assignmentId === assignmentId);
     if (index === -1) throw new ApiError("NOT_FOUND", 404);
     assignments.splice(index, 1);
   }
-  async listStaffAccounts(): Promise<StaffAccountSummary[]> { return structuredClone(accounts); }
-  async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
+  async listStaff(): Promise<StaffAccountSummary[]> { return structuredClone(accounts); }
+  async createStaff(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
     const username = input.username.trim().toLowerCase();
     if (!STAFF_USERNAME_PATTERN.test(username) || !input.displayName.trim()) throw new ApiError("INVALID_INPUT", 422);
     if (accounts.some((account) => account.username === username)) throw new ApiError("USERNAME_TAKEN", 409);
@@ -306,5 +309,48 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     if (!account) throw new ApiError("NOT_FOUND", 404);
     return { account, temporaryPassword: crypto.randomUUID().replace(/-/g, "").slice(0, 16), shownOnce: true };
   }
-  canManage(role: StaffRole, action: "staff" | "system"): boolean { return action === "staff" ? role !== "trainer" : role === "superadmin"; }
+  /** Mirrors staff-routes.ts's disable/enable handler: no self-lockout, no disabling the last active Superadmin. */
+  async setStaffDisabled(staffId: string, disabled: boolean): Promise<void> {
+    const account = accounts.find((candidate) => candidate.staffId === staffId);
+    if (!account) throw new ApiError("NOT_FOUND", 404);
+    if (disabled) {
+      if (account.staffId === this.currentSession?.staffId) throw new ApiError("LOCKOUT_PREVENTED", 409);
+      if (account.role === "superadmin" && accounts.filter((candidate) => candidate.role === "superadmin" && !candidate.disabled).length <= 1) {
+        throw new ApiError("LOCKOUT_PREVENTED", 409);
+      }
+    }
+    account.disabled = disabled;
+  }
+  async getRolePermissions(): Promise<{ roles: Record<StaffRole, StaffPermissionKey[]>; permissions: StaffPermissionKey[] }> {
+    return structuredClone({ roles: rolePermissions, permissions: STAFF_PERMISSIONS as unknown as StaffPermissionKey[] });
+  }
+  /** Mirrors staff-routes.ts's PUT .../roles/:role/permissions handler. */
+  async setRolePermissions(role: StaffRole, permissions: StaffPermissionKey[]): Promise<void> {
+    if (!STAFF_ROLES.includes(role)) throw new ApiError("NOT_FOUND", 404);
+    const unknown = permissions.filter((p) => !(STAFF_PERMISSIONS as readonly string[]).includes(p));
+    if (unknown.length) throw new ApiError("UNKNOWN_PERMISSION", 422);
+    if (role === "superadmin" && !permissions.includes("permissions.manage")) throw new ApiError("LOCKOUT_PREVENTED", 409);
+    rolePermissions[role] = [...permissions];
+  }
+  async getThresholds(): Promise<Thresholds> { return { ...thresholds }; }
+  /** Mirrors staff-routes.ts's PUT .../settings/thresholds handler: whole numbers 0-100, struggling can't exceed passing. */
+  async setThresholds(t: Thresholds): Promise<Thresholds> {
+    const details: { field: string; message: string }[] = [];
+    for (const [field, value] of Object.entries({ passPct: t.passPct, strugglingPct: t.strugglingPct, weakTopicPct: t.weakTopicPct }) as [string, number][]) {
+      if (!Number.isInteger(value) || value < 0 || value > 100) details.push({ field, message: `${field} must be a whole number from 0 to 100.` });
+    }
+    if (!Number.isInteger(t.weakTopicMinAnswers) || t.weakTopicMinAnswers < 1) details.push({ field: "weakTopicMinAnswers", message: "weakTopicMinAnswers must be a whole number of 1 or more." });
+    if (!details.length && t.strugglingPct > t.passPct) details.push({ field: "strugglingPct", message: "The struggling threshold can't be above the passing threshold." });
+    if (details.length) throw new ApiError("VALIDATION_FAILED", 422, false, undefined, details);
+    thresholds = { ...t };
+    return { ...thresholds };
+  }
+  /** Demo-only: a plausible export shape, not the server's full export_version 2 body. */
+  async exportCohort(cohortId: string): Promise<Blob> {
+    const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
+    if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    const learners = students.filter((student) => student.cohortId === cohortId);
+    const body = { export_version: 2, cohort, generated_at: new Date().toISOString(), thresholds, learners };
+    return new Blob([JSON.stringify(body, null, 2)], { type: "application/json" });
+  }
 }

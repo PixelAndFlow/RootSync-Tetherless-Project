@@ -50,6 +50,8 @@ export function StaffOperationsScreen() {
   const [archiveCohortError, setArchiveCohortError] = useState<unknown>(null);
   const [cohortArchiveTarget, setCohortArchiveTarget] = useState<Cohort | null>(null);
   const cohortArchiveTriggerRef = useRef<HTMLElement | null>(null);
+  const [exportingCohortId, setExportingCohortId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<unknown>(null);
   const [viewingModuleId, setViewingModuleId] = useState<string | null>(null);
   const [viewedModuleBody, setViewedModuleBody] = useState<TetherlessModule | null>(null);
   const [viewModuleError, setViewModuleError] = useState<unknown>(null);
@@ -113,14 +115,14 @@ export function StaffOperationsScreen() {
     event.preventDefault();
     if (!gateway || assigning || !cohortId || !assignModuleId) return;
     setAssigning(true); setAssignError(null);
-    try { await gateway.createAssignment({ moduleId: assignModuleId, cohortId }); setAssignModuleId(""); setReloadAssignments((n) => n + 1); }
+    try { await gateway.assign({ moduleId: assignModuleId, cohortId }); setAssignModuleId(""); setReloadAssignments((n) => n + 1); }
     catch (err) { setAssignError(err); }
     finally { setAssigning(false); }
   };
   const removeAssignment = async (assignment: Assignment) => {
     if (!gateway || removingAssignmentId) return;
     setRemovingAssignmentId(assignment.assignmentId);
-    try { await gateway.removeAssignment(assignment.assignmentId); setReloadAssignments((n) => n + 1); }
+    try { await gateway.unassign(assignment.assignmentId); setReloadAssignments((n) => n + 1); }
     catch (err) { setAssignmentsError(err); }
     finally { setRemovingAssignmentId(null); }
   };
@@ -171,6 +173,18 @@ export function StaffOperationsScreen() {
     catch (err) { setArchiveCohortError(err); }
     finally { setArchivingCohortId(null); }
   };
+  const exportCohort = async (cohort: Cohort) => {
+    if (!gateway || exportingCohortId) return;
+    setExportingCohortId(cohort.cohortId); setExportError(null);
+    try {
+      const blob = await gateway.exportCohort(cohort.cohortId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = `tetherless-${cohort.cohortId}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { setExportError(err); } finally { setExportingCohortId(null); }
+  };
   const viewLatestVersion = async (module: ModuleListing) => {
     if (!gateway || module.latestVersion === null) return;
     setViewingModuleId((previous) => previous === module.moduleId ? null : module.moduleId);
@@ -214,10 +228,12 @@ export function StaffOperationsScreen() {
             </form>
           : <span className="font-semibold">{cohort.name}{cohort.archived ? " (archived)" : ""}</span>}
         {renamingCohortId !== cohort.cohortId && <div className="flex gap-2">
+          {session.permissions.includes("results.export") && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={exportingCohortId === cohort.cohortId} onClick={() => void exportCohort(cohort)} type="button">{exportingCohortId === cohort.cohortId ? "Exporting…" : "Export"}</button>}
           {session.permissions.includes("cohort.edit") && !cohort.archived && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" onClick={() => startRenameCohort(cohort)} type="button">Rename</button>}
           {session.permissions.includes("cohort.archive") && !cohort.archived && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={archivingCohortId === cohort.cohortId} onClick={(event) => { cohortArchiveTriggerRef.current = event.currentTarget; setCohortArchiveTarget(cohort); }} type="button">{archivingCohortId === cohort.cohortId ? "Archiving…" : "Archive"}</button>}
         </div>}
       </li>)}{cohorts.length === 0 && <li className="text-sm text-slate-400">No cohorts yet.</li>}</ul>
+      {exportError !== null && <div className="mt-3"><ApiErrorNotice error={exportError} /></div>}
       {renameError !== null && <div className="mt-3"><ApiErrorNotice error={renameError} /></div>}
       {archiveCohortError !== null && <div className="mt-3"><ApiErrorNotice error={archiveCohortError} /></div>}
       {session.permissions.includes("cohort.create") && <form className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void submitCreateCohort(event)}>
