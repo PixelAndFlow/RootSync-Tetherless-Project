@@ -126,9 +126,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     return session;
   }
 
+  async me(): Promise<StaffSession> { return mapSession(await this.api.get("/v1/staff/me")); }
+
   async changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession> {
     await this.api.post("/v1/staff/me/password", { current_password: input.currentPassword, new_password: input.newPassword });
-    return mapSession(await this.api.get("/v1/staff/me"));
+    return this.me();
   }
 
   async listCohorts(): Promise<Cohort[]> { return list(record(await this.api.get("/v1/staff/cohorts")).cohorts).map(parseCohort).map(toCohort); }

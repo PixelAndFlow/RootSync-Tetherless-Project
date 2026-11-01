@@ -33,6 +33,16 @@ describe("ApiStaffAdminGateway", () => {
     expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/me");
   });
 
+  it("re-reads the current session with me()", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...staff, must_change_password: false })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+    await expect(gateway.me()).resolves.toMatchObject({ username: "test-admin", passwordChangeRequired: false });
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/me");
+  });
+
   it("rejects malformed staff responses", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "session-token", staff: { ...staff, role: "unknown" } })));
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);

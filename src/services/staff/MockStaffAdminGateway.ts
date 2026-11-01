@@ -36,22 +36,34 @@ const accounts: StaffAccountSummary[] = [
  * Accounts: demo / demo-password-123 (SuperAdmin), admin / demo-password-123, trainer / demo-password-123.
  */
 export class MockStaffAdminGateway implements StaffAdminGateway {
-  signOut(): void { /* No session token in demo mode. */ }
+  /** No real token in demo mode — this is just enough state for me() to echo back whoever last signed in/changed their password. */
+  private currentSession: StaffSession | null = null;
+
+  signOut(): void { this.currentSession = null; }
   async signIn(input: { username: string; password: string }): Promise<StaffSession> {
     if (input.password !== "demo-password-123") throw new ApiError("UNAUTHORIZED", 401);
     const roleByUsername: Record<string, StaffRole> = { demo: "superadmin", admin: "admin", trainer: "trainer" };
     const role = roleByUsername[input.username.trim().toLowerCase()];
     if (!role) throw new ApiError("UNAUTHORIZED", 401);
-    return {
+    const session: StaffSession = {
       staffId: `${role}-demo-001`, username: input.username.trim(),
       displayName: role === "superadmin" ? "Demo SuperAdmin" : role === "admin" ? "Demo Admin" : "Demo Trainer",
       role, permissions: DEFAULT_ROLE_PERMISSIONS[role], passwordChangeRequired: input.username.trim().toLowerCase() === "admin",
     };
+    this.currentSession = session;
+    return session;
+  }
+
+  async me(): Promise<StaffSession> {
+    if (!this.currentSession) throw new ApiError("UNAUTHORIZED", 401);
+    return this.currentSession;
   }
 
   async changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession> {
     if (input.currentPassword !== "demo-password-123" || input.newPassword.length < 12) throw new ApiError("INVALID_INPUT", 422);
-    return { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", permissions: DEFAULT_ROLE_PERMISSIONS.admin, passwordChangeRequired: false };
+    const session: StaffSession = { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", permissions: DEFAULT_ROLE_PERMISSIONS.admin, passwordChangeRequired: false };
+    this.currentSession = session;
+    return session;
   }
   async listCohorts(): Promise<Cohort[]> { return structuredClone(cohorts); }
   async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {

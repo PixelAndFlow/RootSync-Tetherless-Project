@@ -4,6 +4,8 @@ import type { Assignment, Cohort, LearnerRecord, ModuleCheckResult, ModuleListin
 export interface StaffAdminGateway {
   signIn(input: { username: string; password: string }): Promise<StaffSession>;
   signOut(): void;
+  /** Re-reads the current session from the server (spec v1.30 §10's `me`). Useful after another tab or device changes something about this account. */
+  me(): Promise<StaffSession>;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession>;
   listCohorts(): Promise<Cohort[]>;
   listLearnerRecords(input: { cohortId?: string }): Promise<LearnerRecord[]>;

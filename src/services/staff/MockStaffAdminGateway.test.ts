@@ -9,6 +9,15 @@ describe("MockStaffAdminGateway", () => {
     await expect(gateway.signIn({ username: "trainer", password: "demo-password-123" })).resolves.toMatchObject({ role: "trainer", passwordChangeRequired: false });
   });
 
+  it("tracks the signed-in session for me(), and clears it on sign-out", async () => {
+    const gateway = new MockStaffAdminGateway();
+    await expect(gateway.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await gateway.signIn({ username: "trainer", password: "demo-password-123" });
+    await expect(gateway.me()).resolves.toMatchObject({ role: "trainer", username: "trainer" });
+    gateway.signOut();
+    await expect(gateway.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
   it("keeps system controls restricted to SuperAdmin and reveals a demo setup code once", async () => {
     const gateway = new MockStaffAdminGateway();
     expect(gateway.canManage("superadmin", "system")).toBe(true);
