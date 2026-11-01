@@ -1,7 +1,7 @@
 import { ApiError, isRecord } from "../api/ApiError";
 import type { Issue } from "../../../packages/content/src/issues";
 import { checkNewVersion, validateTetherlessModule, type TetherlessModule } from "../../../packages/content/src/tetherless-module";
-import { DEFAULT_ROLE_PERMISSIONS, type Assignment, type Cohort, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffRole, type StaffSession } from "../../types/staff";
+import { DEFAULT_ROLE_PERMISSIONS, type Assignment, type Cohort, type LearnerDevice, type LearnerFieldChanges, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffRole, type StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
@@ -23,8 +23,46 @@ const modules: ModuleListing[] = [
   { moduleId: "rcyc-recruit-cyber-squad-gamified-001", moduleName: "Operation Cyber Squad", title: { en: "Operation Cyber Squad" }, level: "beginner", note: null, activityType: "multiple_choice", latestVersion: 1, versions: [1], questionCount: 10, used: false, archived: false, createdBy: "superadmin-demo-001", createdAt: "2026-01-01T00:00:00.000Z" },
 ];
 const assignments: Assignment[] = [];
-/** Full body of each module's latest published version, for checkNewVersion() — ModuleListing only tracks summary fields. */
+/**
+ * Full body of each module's latest published version, for checkNewVersion()
+ * — ModuleListing only tracks summary fields. Unlike the real server (which
+ * keeps every version's body via content.body(id, version)), this mock keeps
+ * only the latest, so getModuleVersion() here can only serve the latest
+ * version — an accepted demo-mode gap, not a bug to fix.
+ */
 const moduleBodies = new Map<string, TetherlessModule>();
+/** Demo-only: a device per already-"active" demo student, so switchOffPhone has something to act on. */
+const learnerDevices = new Map<string, LearnerDevice[]>([
+  ["student-demo-001", [{ deviceId: "device-demo-001", setUpAt: "2026-01-02T00:00:00.000Z", switchedOffAt: null }]],
+  ["student-demo-002", [{ deviceId: "device-demo-002", setUpAt: "2026-01-02T00:00:00.000Z", switchedOffAt: null }]],
+]);
+
+/** Mirrors packages/server/src/learners.ts's checkLearnerFields rules, for updateLearner's VALIDATION_FAILED details. */
+const LEARNER_FIELD_LIMITS = { firstName: 80, lastName: 80, phone: 32, email: 254, trainingLevel: 40, note1: 1000, note2: 1000 } as const;
+const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const PHONE_PATTERN = /^[0-9+().\-\s]{3,32}$/;
+function validateLearnerChanges(changes: LearnerFieldChanges): { value: Partial<LearnerRecord>; details: { field: string; message: string }[] } {
+  const details: { field: string; message: string }[] = [];
+  const value: Partial<LearnerRecord> = {};
+  for (const field of Object.keys(changes) as (keyof LearnerFieldChanges)[]) {
+    const raw = changes[field];
+    if (raw === undefined) continue;
+    const required = field === "firstName" || field === "lastName";
+    if (raw === null) {
+      if (required) details.push({ field, message: `${field === "firstName" ? "First" : "Last"} name is missing.` });
+      else (value as Record<string, unknown>)[field] = null;
+      continue;
+    }
+    const s = raw.trim();
+    if (!s) { if (required) details.push({ field, message: `${field === "firstName" ? "First" : "Last"} name is missing.` }); else (value as Record<string, unknown>)[field] = null; continue; }
+    if (s.length > LEARNER_FIELD_LIMITS[field]) { details.push({ field, message: `${field} is longer than ${LEARNER_FIELD_LIMITS[field]} characters.` }); continue; }
+    if (/[<>]/.test(s) && field !== "note1" && field !== "note2") { details.push({ field, message: `${field} can't contain < or >.` }); continue; }
+    if (field === "email" && !EMAIL_PATTERN.test(s)) { details.push({ field, message: "This doesn't look like an email address." }); continue; }
+    if (field === "phone" && !PHONE_PATTERN.test(s)) { details.push({ field, message: "Phone numbers can contain digits, spaces and + ( ) . - only." }); continue; }
+    (value as Record<string, unknown>)[field] = s;
+  }
+  return { value, details };
+}
 const accounts: StaffAccountSummary[] = [
   { staffId: "superadmin-demo-001", username: "demo", displayName: "Demo SuperAdmin", role: "superadmin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
   { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
@@ -66,12 +104,84 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     return session;
   }
   async listCohorts(): Promise<Cohort[]> { return structuredClone(cohorts); }
+  async createCohort(name: string): Promise<Cohort> {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > 120) throw new ApiError("NAME_INVALID", 422);
+    if (cohorts.some((cohort) => cohort.name === trimmed)) throw new ApiError("COHORT_NAME_TAKEN", 409);
+    const cohort: Cohort = { cohortId: crypto.randomUUID(), name: trimmed, learnerCount: 0, createdAt: new Date().toISOString(), createdBy: "superadmin-demo-001", archived: false };
+    cohorts.push(cohort);
+    return structuredClone(cohort);
+  }
+  async renameCohort(cohortId: string, name: string): Promise<Cohort> {
+    const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
+    if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > 120) throw new ApiError("NAME_INVALID", 422);
+    if (cohorts.some((candidate) => candidate.name === trimmed && candidate.cohortId !== cohortId)) throw new ApiError("COHORT_NAME_TAKEN", 409);
+    cohort.name = trimmed;
+    return structuredClone(cohort);
+  }
+  async archiveCohort(cohortId: string): Promise<void> {
+    const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
+    if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    cohort.archived = true;
+  }
   async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {
     return structuredClone(input.cohortId ? students.filter((student) => student.cohortId === input.cohortId) : students);
   }
   async createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
     if (!cohorts.some((cohort) => cohort.cohortId === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
     return { learnerId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
+  }
+  async getLearnerRecord(learnerId: string): Promise<LearnerRecord> {
+    const student = students.find((candidate) => candidate.learnerId === learnerId);
+    if (!student) throw new ApiError("NOT_FOUND", 404);
+    const cohort = cohorts.find((candidate) => candidate.cohortId === student.cohortId);
+    return structuredClone({ ...student, cohortName: cohort?.name, devices: learnerDevices.get(learnerId) ?? [] });
+  }
+  async updateLearner(learnerId: string, changes: LearnerFieldChanges): Promise<LearnerRecord> {
+    const student = students.find((candidate) => candidate.learnerId === learnerId);
+    if (!student) throw new ApiError("NOT_FOUND", 404);
+    const { value, details } = validateLearnerChanges(changes);
+    if (details.length) throw new ApiError("VALIDATION_FAILED", 422, false, undefined, details);
+    Object.assign(student, value);
+    return structuredClone({ ...student, devices: learnerDevices.get(learnerId) ?? [] });
+  }
+  async archiveLearner(learnerId: string): Promise<void> {
+    const student = students.find((candidate) => candidate.learnerId === learnerId);
+    if (!student) throw new ApiError("NOT_FOUND", 404);
+    if (student.status !== "archived") {
+      student.status = "archived";
+      student.archivedAt = new Date().toISOString();
+      const devices = learnerDevices.get(learnerId) ?? [];
+      devices.forEach((device) => { if (!device.switchedOffAt) device.switchedOffAt = new Date().toISOString(); });
+    }
+  }
+  async issueSetupCode(learnerId: string, switchOffExistingPhones: boolean): Promise<{ setupCode: string; phonesSwitchedOff: number }> {
+    const student = students.find((candidate) => candidate.learnerId === learnerId);
+    if (!student) throw new ApiError("NOT_FOUND", 404);
+    if (student.status === "archived") throw new ApiError("LEARNER_ARCHIVED", 409);
+    let switchedOff = 0;
+    if (switchOffExistingPhones) {
+      const devices = learnerDevices.get(learnerId) ?? [];
+      for (const device of devices) { if (!device.switchedOffAt) { device.switchedOffAt = new Date().toISOString(); switchedOff++; } }
+    }
+    return { setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, phonesSwitchedOff: switchedOff };
+  }
+  async switchOffPhone(learnerId: string, deviceId: string): Promise<void> {
+    const student = students.find((candidate) => candidate.learnerId === learnerId);
+    if (!student) throw new ApiError("NOT_FOUND", 404);
+    const device = (learnerDevices.get(learnerId) ?? []).find((candidate) => candidate.deviceId === deviceId && !candidate.switchedOffAt);
+    if (!device) throw new ApiError("NOT_FOUND", 404);
+    device.switchedOffAt = new Date().toISOString();
+  }
+  async purgeLearner(learnerId: string, confirmLearnerCode: string): Promise<{ eventsDeleted: number }> {
+    const index = students.findIndex((candidate) => candidate.learnerId === learnerId);
+    if (index === -1) throw new ApiError("NOT_FOUND", 404);
+    if (confirmLearnerCode !== students[index].learnerCode) throw new ApiError("CONFIRMATION_REQUIRED", 422);
+    students.splice(index, 1);
+    learnerDevices.delete(learnerId);
+    return { eventsDeleted: 0 };
   }
   async listModules(): Promise<ModuleListing[]> { return structuredClone(modules); }
   /** Mirrors the server's own /v1/staff/modules/check handler (staff-routes.ts), reusing the same shared validator, so a module that passes here passes there too. */
@@ -134,6 +244,23 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
       });
     }
     return { moduleId, contentVersion, publishedAt: new Date().toISOString(), warnings: check.warnings };
+  }
+  async getModuleVersion(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
+    const body = moduleBodies.get(moduleId);
+    if (!body || body.content_version !== contentVersion) throw new ApiError("NOT_FOUND", 404);
+    return structuredClone(body);
+  }
+  async archiveModule(moduleId: string): Promise<void> {
+    const mod = modules.find((candidate) => candidate.moduleId === moduleId);
+    if (!mod) throw new ApiError("NOT_FOUND", 404);
+    mod.archived = true;
+  }
+  async purgeModule(moduleId: string): Promise<void> {
+    const index = modules.findIndex((candidate) => candidate.moduleId === moduleId);
+    if (index === -1) throw new ApiError("NOT_FOUND", 404);
+    if (modules[index].used || assignments.some((assignment) => assignment.moduleId === moduleId)) throw new ApiError("IN_USE", 409);
+    modules.splice(index, 1);
+    moduleBodies.delete(moduleId);
   }
   async listAssignments(cohortId: string): Promise<Assignment[]> { return structuredClone(assignments.filter((a) => a.cohortId === cohortId)); }
   async createAssignment(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {

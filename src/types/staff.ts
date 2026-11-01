@@ -24,6 +24,12 @@ export interface Cohort {
   archived: boolean;
 }
 
+export interface LearnerDevice {
+  deviceId: string;
+  setUpAt: string;
+  switchedOffAt: string | null;
+}
+
 export interface LearnerRecord {
   learnerId: string;
   learnerCode: string;
@@ -44,6 +50,19 @@ export interface LearnerRecord {
   archivedAt: string | null;
   /** Sent on the list. */
   lastSyncedAt?: string | null;
+  /** Sent on GET .../learners/:id, not on the list. */
+  devices?: LearnerDevice[];
+}
+
+/** PATCH /v1/staff/learners/:id body: every field editable by staff. cohortId/learnerCode/username are read-only server-side (issue #39). */
+export interface LearnerFieldChanges {
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  email?: string | null;
+  trainingLevel?: string | null;
+  note1?: string | null;
+  note2?: string | null;
 }
 
 /** No draft/published distinction: "published" means a version exists; archived is separate. */
