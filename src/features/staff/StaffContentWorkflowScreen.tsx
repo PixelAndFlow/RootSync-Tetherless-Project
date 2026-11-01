@@ -41,7 +41,10 @@ export function StaffContentWorkflowScreen() {
   const [assignError, setAssignError] = useState<unknown>(null);
 
   if (!session) return <Navigate replace to="/staff/sign-in" />;
-  const canUpload = session.permissions.includes("content.create") || session.permissions.includes("content.edit");
+  // content.edit alone can't reach this screen: /v1/staff/modules/check always requires
+  // content.create (no branch for "editing an existing module" like publish has), so an
+  // edit-only role would 403 on the very first step. Tracked separately as its own fix.
+  const canUpload = session.permissions.includes("content.create");
   if (!canUpload) return <AccessDenied />;
 
   const readFileText = (file: File): Promise<string> => new Promise((resolve, reject) => {
@@ -110,7 +113,7 @@ export function StaffContentWorkflowScreen() {
   };
 
   const publish = async () => {
-    if (!gateway || parsed === null || publishing || !checkResult?.valid) return;
+    if (!gateway || parsed === null || publishing || !checkResult?.valid || checkResult.summary.activityType !== "multiple_choice") return;
     const workflowId = workflowRef.current;
     setPublishing(true); setPublishError(null);
     try {
@@ -189,9 +192,9 @@ export function StaffContentWorkflowScreen() {
       </article>
       <article className="ui-panel p-5"><h2 className="text-xl font-bold">Validation result</h2>
         {!checkResult ? <div className="mt-4 rounded-xl border border-white/10 p-4"><p className="font-bold">Awaiting validation</p><p className="mt-2 text-sm text-slate-300">Validation details will appear here before preview or publication is available.</p></div>
-         : checkResult.valid ? <div className="mt-4 rounded-xl border border-white/10 p-4"><p className="font-bold">Looks good — {checkResult.willBe === "new_version" ? "this will be a new version" : "this will be a new module"}</p><dl className="mt-3 grid gap-1 text-sm text-slate-300"><div><dt className="inline font-semibold">Module: </dt><dd className="inline">{checkResult.summary.moduleName ?? checkResult.summary.moduleId}</dd></div><div><dt className="inline font-semibold">Questions: </dt><dd className="inline">{checkResult.summary.questionCount}</dd></div><div><dt className="inline font-semibold">Activity type: </dt><dd className="inline">{checkResult.summary.activityType}</dd></div></dl>{checkResult.warnings.length > 0 && <ul className="mt-3 list-inside list-disc text-sm leading-6 text-amber-300">{checkResult.warnings.map((w, i) => <li key={i}>{w.message}</li>)}</ul>}</div>
+         : checkResult.valid ? <div className="mt-4 rounded-xl border border-white/10 p-4"><p className="font-bold">Looks good — {checkResult.willBe === "new_version" ? "this will be a new version" : "this will be a new module"}</p><dl className="mt-3 grid gap-1 text-sm text-slate-300"><div><dt className="inline font-semibold">Module: </dt><dd className="inline">{checkResult.summary.moduleName ?? checkResult.summary.moduleId}</dd></div><div><dt className="inline font-semibold">Questions: </dt><dd className="inline">{checkResult.summary.questionCount}</dd></div><div><dt className="inline font-semibold">Activity type: </dt><dd className="inline">{checkResult.summary.activityType}</dd></div></dl>{checkResult.warnings.length > 0 && <ul className="mt-3 list-inside list-disc text-sm leading-6 text-amber-300">{checkResult.warnings.map((w, i) => <li key={i}>{w.message}</li>)}</ul>}{checkResult.summary.activityType !== "multiple_choice" && <p className="mt-3 rounded-xl border border-amber-300/30 p-3 text-sm text-amber-200" role="alert">The student app can only play "multiple_choice" modules today — this one can't be previewed, published or assigned yet.</p>}</div>
          : <div className="mt-4 rounded-xl border border-violet-300/30 p-4" role="alert"><p className="font-bold">This module has problems</p><ul className="mt-3 list-inside list-disc text-sm leading-6">{checkResult.errors.map((e, i) => <li key={i}>{e.message}</li>)}</ul></div>}
-        <button className="ui-action-secondary mt-5" disabled={!checkResult?.valid} onClick={() => setPreviewed(true)} type="button">Preview module</button>
+        <button className="ui-action-secondary mt-5" disabled={!checkResult?.valid || checkResult.summary.activityType !== "multiple_choice"} onClick={() => setPreviewed(true)} type="button">Preview module</button>
       </article>
     </div>
 

@@ -54,6 +54,24 @@ describe("staff content workflow screen", () => {
     expect(state.gateway.checkModule).not.toHaveBeenCalled();
   });
 
+  it("Chris's PR #35 review, point 5: content.edit alone can't reach this screen (the check route always requires content.create)", () => {
+    state.permissions = ["content.edit", "assignment.manage"];
+    render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);
+    expect(screen.getByText(/does not have access/)).toBeVisible();
+    expect(state.gateway.checkModule).not.toHaveBeenCalled();
+  });
+
+  it("Chris's PR #35 review, point 7: a module the student app can't play yet can be checked but not previewed, published or assigned", async () => {
+    state.gateway.checkModule.mockResolvedValue({ ...validCheck, summary: { ...validCheck.summary, activityType: "game:cyber-defense" } });
+    render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);
+    await userEvent.upload(screen.getByLabelText("JSON file"), uploadFile());
+    await userEvent.click(await screen.findByRole("button", { name: "Validate module" }));
+
+    expect(await screen.findByText(/can only play "multiple_choice" modules today/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Preview module" })).toBeDisabled();
+    expect(screen.queryByRole("heading", { name: "Preview" })).not.toBeInTheDocument(); // the Preview panel (and Publish within it) never opens
+  });
+
   it("walks a module from file selection through validation, preview, publish and assignment", async () => {
     state.gateway.checkModule.mockResolvedValue(validCheck);
     state.gateway.createModule.mockResolvedValue({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
