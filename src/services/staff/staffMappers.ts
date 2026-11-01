@@ -1,13 +1,14 @@
 import type {
   Cohort as CohortWire,
   LearnerRecord as LearnerRecordWire,
+  LearnerDevice as LearnerDeviceWire,
   ModuleListing as ModuleListingWire,
   ModuleCheck as ModuleCheckWire,
   ModulePublishResult as ModulePublishResultWire,
   Assignment as AssignmentWire,
   StaffErrorDetail as StaffErrorDetailWire,
 } from "../../../packages/contract/src/staff-api";
-import type { Cohort, LearnerRecord, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment } from "../../types/staff";
+import type { Cohort, LearnerRecord, LearnerDevice, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment } from "../../types/staff";
 
 /**
  * Wire (snake_case, packages/contract) to app (camelCase) translation, in one place.
@@ -23,6 +24,10 @@ export function toCohort(wire: CohortWire): Cohort {
     archived: wire.archived,
     ...(wire.learner_count === undefined ? {} : { learnerCount: wire.learner_count }),
   };
+}
+
+function toLearnerDevice(wire: LearnerDeviceWire): LearnerDevice {
+  return { deviceId: wire.device_id, setUpAt: wire.set_up_at, switchedOffAt: wire.switched_off_at };
 }
 
 export function toLearnerRecord(wire: LearnerRecordWire): LearnerRecord {
@@ -43,6 +48,7 @@ export function toLearnerRecord(wire: LearnerRecordWire): LearnerRecord {
     archivedAt: wire.archived_at,
     ...(wire.cohort_name === undefined ? {} : { cohortName: wire.cohort_name }),
     ...(wire.last_synced_at === undefined ? {} : { lastSyncedAt: wire.last_synced_at }),
+    ...(wire.devices === undefined ? {} : { devices: wire.devices.map(toLearnerDevice) }),
   };
 }
 

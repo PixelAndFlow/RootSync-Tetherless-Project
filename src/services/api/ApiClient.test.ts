@@ -37,6 +37,24 @@ describe("staff API boundary", () => {
     }));
     await expect(client.post("/v1/staff/me/password", {})).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
+  it("sends PATCH with a JSON body and requires a token (issues #38/#39)", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ cohort: { cohort_id: "c" } })));
+    const client = new ApiClient("http://localhost:8080", () => "test-only-token", fetcher);
+    await expect(client.patch("/v1/staff/cohorts/c", { name: "New name" })).resolves.toEqual({ cohort: { cohort_id: "c" } });
+    expect(fetcher).toHaveBeenCalledWith("http://localhost:8080/v1/staff/cohorts/c", expect.objectContaining({
+      method: "PATCH", body: JSON.stringify({ name: "New name" }), headers: { "content-type": "application/json", accept: "application/json", authorization: "Bearer test-only-token" },
+    }));
+    await expect(new ApiClient("http://localhost:8080", () => null, fetcher).patch("/v1/staff/cohorts/c", { name: "x" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+  it("sends DELETE with no body and requires a token (issue #40)", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    const client = new ApiClient("http://localhost:8080", () => "test-only-token", fetcher);
+    await expect(client.delete("/v1/staff/modules/m")).resolves.toEqual({ ok: true });
+    expect(fetcher).toHaveBeenCalledWith("http://localhost:8080/v1/staff/modules/m", expect.objectContaining({
+      method: "DELETE", headers: { accept: "application/json", authorization: "Bearer test-only-token" },
+    }));
+    await expect(new ApiClient("http://localhost:8080", () => null, fetcher).delete("/v1/staff/modules/m")).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
   it.each(["http://example.com", "https://user:secret@example.com", "https://example.com?token=secret"])("rejects unsafe base %s", (url) => {
     expect(() => new ApiClient(url, () => null)).toThrow();
   });

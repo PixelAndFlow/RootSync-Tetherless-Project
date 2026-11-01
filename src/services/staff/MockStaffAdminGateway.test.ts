@@ -89,6 +89,85 @@ describe("MockStaffAdminGateway", () => {
     await gateway.createModule(valid);
     await expect(gateway.createModule(valid)).rejects.toMatchObject({ code: "VERSION_EXISTS" });
   });
+
+  it("issue #38: creates, renames and archives cohorts, enforcing unique names", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const created = await gateway.createCohort("New Cohort");
+    expect(created).toMatchObject({ name: "New Cohort", archived: false, learnerCount: 0 });
+    await expect(gateway.createCohort("New Cohort")).rejects.toMatchObject({ code: "COHORT_NAME_TAKEN" });
+    await expect(gateway.createCohort("  ")).rejects.toMatchObject({ code: "NAME_INVALID" });
+
+    const renamed = await gateway.renameCohort(created.cohortId, "Renamed Cohort");
+    expect(renamed.name).toBe("Renamed Cohort");
+    await expect(gateway.renameCohort("not-a-real-id", "x")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(gateway.renameCohort(created.cohortId, "RCYC-PR-Bootcamp2026")).rejects.toMatchObject({ code: "COHORT_NAME_TAKEN" });
+
+    await gateway.archiveCohort(created.cohortId);
+    expect((await gateway.listCohorts()).find((c) => c.cohortId === created.cohortId)?.archived).toBe(true);
+    await expect(gateway.archiveCohort("not-a-real-id")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("issue #39: reads, edits, archives and reissues a setup code for a learner, rejecting bad fields and unknown IDs", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const record = await gateway.getLearnerRecord("student-demo-001");
+    expect(record).toMatchObject({ firstName: "Alex", lastName: "Rivera", cohortName: "RCYC-PR-Bootcamp2026" });
+    expect(record.devices).toHaveLength(1);
+    await expect(gateway.getLearnerRecord("not-a-real-id")).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    const updated = await gateway.updateLearner("student-demo-001", { phone: "555-123-4567", note1: "VIP" });
+    expect(updated).toMatchObject({ phone: "555-123-4567", note1: "VIP", firstName: "Alex" });
+    await expect(gateway.updateLearner("student-demo-001", { email: "not-an-email" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await expect(gateway.updateLearner("student-demo-001", { firstName: "   " })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await expect(gateway.updateLearner("not-a-real-id", { phone: "555-0000" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    const reveal = await gateway.issueSetupCode("student-demo-002", false);
+    expect(reveal).toMatchObject({ phonesSwitchedOff: 0 });
+    expect(reveal.setupCode).toMatch(/^DEMO-/);
+    const revealWithSwitchOff = await gateway.issueSetupCode("student-demo-002", true);
+    expect(revealWithSwitchOff.phonesSwitchedOff).toBe(1);
+
+    await gateway.switchOffPhone("student-demo-001", "device-demo-001");
+    await expect(gateway.switchOffPhone("student-demo-001", "device-demo-001")).rejects.toMatchObject({ code: "NOT_FOUND" }); // already off
+    await expect(gateway.switchOffPhone("student-demo-001", "not-a-real-device")).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    await gateway.archiveLearner("student-demo-003");
+    expect((await gateway.getLearnerRecord("student-demo-003")).status).toBe("archived");
+    await expect(gateway.issueSetupCode("student-demo-003", false)).rejects.toMatchObject({ code: "LEARNER_ARCHIVED" });
+  });
+
+  it("issue #39: purges a learner only with the matching confirmation code (Superadmin, destructive)", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const learner = await gateway.getLearnerRecord("student-demo-003");
+    await expect(gateway.purgeLearner("student-demo-003", "wrong-code")).rejects.toMatchObject({ code: "CONFIRMATION_REQUIRED" });
+    await expect(gateway.purgeLearner("not-a-real-id", learner.learnerCode)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(gateway.purgeLearner("student-demo-003", learner.learnerCode)).resolves.toMatchObject({ eventsDeleted: 0 });
+    await expect(gateway.getLearnerRecord("student-demo-003")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("issue #40: reads a published version, archives unconditionally, and blocks purging an in-use module", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const draft = genuinelyValidModule({ moduleId: "versioned-module" });
+    await gateway.createModule(draft);
+    await expect(gateway.getModuleVersion("versioned-module", 1)).resolves.toMatchObject({ module_id: "versioned-module", content_version: 1 });
+    await expect(gateway.getModuleVersion("versioned-module", 99)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(gateway.getModuleVersion("not-a-real-module", 1)).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    await gateway.archiveModule("versioned-module");
+    expect((await gateway.listModules()).find((m) => m.moduleId === "versioned-module")?.archived).toBe(true);
+    await expect(gateway.archiveModule("not-a-real-module")).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    const cohortId = (await gateway.listCohorts())[0].cohortId;
+    const unused = genuinelyValidModule({ moduleId: "unused-module" });
+    await gateway.createModule(unused);
+    const assigned = genuinelyValidModule({ moduleId: "assigned-module" });
+    await gateway.createModule(assigned);
+    await gateway.createAssignment({ moduleId: "assigned-module", cohortId });
+
+    await gateway.purgeModule("unused-module");
+    expect((await gateway.listModules()).some((m) => m.moduleId === "unused-module")).toBe(false);
+    await expect(gateway.purgeModule("assigned-module")).rejects.toMatchObject({ code: "IN_USE" });
+    await expect(gateway.purgeModule("not-a-real-module")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
 });
 
 /** A module that satisfies every rule in packages/content/src/tetherless-module.ts's validateTetherlessModule(), not just the mock's old simplified checks. */

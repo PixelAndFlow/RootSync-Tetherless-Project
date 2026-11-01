@@ -1,7 +1,8 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
-import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire } from "../../../packages/contract/src/staff-api";
-import type { Assignment, Cohort, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
+import type { TetherlessModule } from "../../../packages/content/src/tetherless-module";
+import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, LearnerDevice as LearnerDeviceWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire } from "../../../packages/contract/src/staff-api";
+import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import { toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult } from "./staffMappers";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
@@ -19,11 +20,15 @@ function parseCohort(value: unknown): CohortWire {
   const c = record(value);
   return { cohort_id: text(c.cohort_id), name: text(c.name), created_at: text(c.created_at), created_by: nullable(c.created_by), archived: bool(c.archived), ...(c.learner_count === undefined ? {} : { learner_count: number(c.learner_count) }) };
 }
+function parseDevice(value: unknown): LearnerDeviceWire {
+  const d = record(value);
+  return { device_id: text(d.device_id), set_up_at: text(d.set_up_at), switched_off_at: nullable(d.switched_off_at) };
+}
 function parseLearner(value: unknown): LearnerRecordWire {
   const l = record(value);
   const status = text(l.status);
   if (!["awaiting_setup", "active", "phone_switched_off", "archived"].includes(status)) invalid();
-  return { learner_id: text(l.learner_id), learner_code: text(l.learner_code), cohort_id: text(l.cohort_id), first_name: text(l.first_name), last_name: text(l.last_name), username: nullable(l.username), phone: nullable(l.phone), email: nullable(l.email), training_level: nullable(l.training_level), note_1: nullable(l.note_1), note_2: nullable(l.note_2), status: status as LearnerRecordWire["status"], created_at: text(l.created_at), archived_at: nullable(l.archived_at), ...(l.cohort_name === undefined ? {} : { cohort_name: text(l.cohort_name) }), ...(l.last_synced_at === undefined ? {} : { last_synced_at: nullable(l.last_synced_at) }) };
+  return { learner_id: text(l.learner_id), learner_code: text(l.learner_code), cohort_id: text(l.cohort_id), first_name: text(l.first_name), last_name: text(l.last_name), username: nullable(l.username), phone: nullable(l.phone), email: nullable(l.email), training_level: nullable(l.training_level), note_1: nullable(l.note_1), note_2: nullable(l.note_2), status: status as LearnerRecordWire["status"], created_at: text(l.created_at), archived_at: nullable(l.archived_at), ...(l.cohort_name === undefined ? {} : { cohort_name: text(l.cohort_name) }), ...(l.last_synced_at === undefined ? {} : { last_synced_at: nullable(l.last_synced_at) }), ...(l.devices === undefined ? {} : { devices: list(l.devices).map(parseDevice) }) };
 }
 function parseModule(value: unknown): ModuleListingWire {
   const m = record(value);
@@ -134,6 +139,18 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
   }
 
   async listCohorts(): Promise<Cohort[]> { return list(record(await this.api.get("/v1/staff/cohorts")).cohorts).map(parseCohort).map(toCohort); }
+  async createCohort(name: string): Promise<Cohort> {
+    if (!name.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return toCohort(parseCohort(record(await this.api.post("/v1/staff/cohorts", { name: name.trim() })).cohort));
+  }
+  async renameCohort(cohortId: string, name: string): Promise<Cohort> {
+    if (!cohortId.trim() || !name.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return toCohort(parseCohort(record(await this.api.patch(`/v1/staff/cohorts/${encodeURIComponent(cohortId)}`, { name: name.trim() })).cohort));
+  }
+  async archiveCohort(cohortId: string): Promise<void> {
+    if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/cohorts/${encodeURIComponent(cohortId)}/archive`, {});
+  }
   async listLearnerRecords(input: { cohortId?: string } = {}): Promise<LearnerRecord[]> {
     if (input.cohortId !== undefined) {
       if (!input.cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
@@ -148,6 +165,20 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
   }
   async createModule(json: unknown): Promise<ModulePublishResult> {
     return toModulePublishResult(parseModulePublishResult(await this.api.post("/v1/staff/modules", json)));
+  }
+  async getModuleVersion(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
+    if (!moduleId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    const body = await this.api.get(`/v1/staff/modules/${encodeURIComponent(moduleId)}/versions/${encodeURIComponent(String(contentVersion))}`);
+    if (!isRecord(body)) invalid();
+    return body as unknown as TetherlessModule;
+  }
+  async archiveModule(moduleId: string): Promise<void> {
+    if (!moduleId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/modules/${encodeURIComponent(moduleId)}/archive`, {});
+  }
+  async purgeModule(moduleId: string): Promise<void> {
+    if (!moduleId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.delete(`/v1/staff/modules/${encodeURIComponent(moduleId)}`);
   }
   async listAssignments(cohortId: string): Promise<Assignment[]> {
     if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
@@ -173,6 +204,40 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const learnerId = text(record(body.learner).learner_id);
     if (!setupCode || !learnerId) invalid();
     return { learnerId, setupCode, shownOnce: true };
+  }
+  async getLearnerRecord(learnerId: string): Promise<LearnerRecord> {
+    if (!learnerId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return toLearnerRecord(parseLearner(await this.api.get(`/v1/staff/learners/${encodeURIComponent(learnerId)}`)));
+  }
+  async updateLearner(learnerId: string, changes: LearnerFieldChanges): Promise<LearnerRecord> {
+    if (!learnerId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    const body: Record<string, unknown> = {};
+    if (changes.firstName !== undefined) body.first_name = changes.firstName;
+    if (changes.lastName !== undefined) body.last_name = changes.lastName;
+    if (changes.phone !== undefined) body.phone = changes.phone;
+    if (changes.email !== undefined) body.email = changes.email;
+    if (changes.trainingLevel !== undefined) body.training_level = changes.trainingLevel;
+    if (changes.note1 !== undefined) body.note_1 = changes.note1;
+    if (changes.note2 !== undefined) body.note_2 = changes.note2;
+    return toLearnerRecord(parseLearner(await this.api.patch(`/v1/staff/learners/${encodeURIComponent(learnerId)}`, body)));
+  }
+  async archiveLearner(learnerId: string): Promise<void> {
+    if (!learnerId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/archive`, {});
+  }
+  async issueSetupCode(learnerId: string, switchOffExistingPhones: boolean): Promise<{ setupCode: string; phonesSwitchedOff: number }> {
+    if (!learnerId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    const body = record(await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/setup-code`, { switch_off_existing_phones: switchOffExistingPhones }));
+    return { setupCode: text(body.setup_code), phonesSwitchedOff: number(body.phones_switched_off) };
+  }
+  async switchOffPhone(learnerId: string, deviceId: string): Promise<void> {
+    if (!learnerId.trim() || !deviceId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/devices/${encodeURIComponent(deviceId)}/switch-off`, {});
+  }
+  async purgeLearner(learnerId: string, confirmLearnerCode: string): Promise<{ eventsDeleted: number }> {
+    if (!learnerId.trim() || !confirmLearnerCode.trim()) throw new ApiError("INVALID_INPUT", 422);
+    const body = record(await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/purge`, { confirm: confirmLearnerCode }));
+    return { eventsDeleted: number(body.events_deleted) };
   }
   async listStaffAccounts(): Promise<StaffAccountSummary[]> {
     const body = record(await this.api.get("/v1/staff/accounts"));

@@ -189,6 +189,93 @@ describe("ApiStaffAdminGateway", () => {
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
+  it("issue #38: creates, renames and archives a cohort with the right verbs and routes", async () => {
+    const cohort = { cohort_id: "cohort-1", name: "New Cohort", created_at: "2026-01-01T00:00:00.000Z", created_by: "staff-1", archived: false, learner_count: 0 };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cohort })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cohort: { ...cohort, name: "Renamed" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    expect(await gateway.createCohort("New Cohort")).toMatchObject({ cohortId: "cohort-1", name: "New Cohort" });
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/cohorts");
+    expect(fetcher.mock.calls[1][1]).toMatchObject({ method: "POST" });
+
+    expect(await gateway.renameCohort("cohort-1", "Renamed")).toMatchObject({ name: "Renamed" });
+    expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/cohorts/cohort-1");
+    expect(fetcher.mock.calls[2][1]).toMatchObject({ method: "PATCH" });
+    expect(JSON.parse(fetcher.mock.calls[2][1].body)).toEqual({ name: "Renamed" });
+
+    await gateway.archiveCohort("cohort-1");
+    expect(fetcher.mock.calls[3][0]).toBe("http://localhost:8080/v1/staff/cohorts/cohort-1/archive");
+    await expect(gateway.createCohort(" ")).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
+  it("issue #39: reads, edits, archives, reissues a setup code, switches off a phone and purges a learner", async () => {
+    const learner = { learner_id: "learner-1", learner_code: "COHORT-0001", cohort_id: "cohort-1", first_name: "Alex", last_name: "Rivera", username: null, phone: null, email: null, training_level: null, note_1: null, note_2: null, status: "active", created_at: "2026-01-01T00:00:00.000Z", archived_at: null, devices: [{ device_id: "device-1", set_up_at: "2026-01-02T00:00:00.000Z", switched_off_at: null }] };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(learner)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...learner, phone: "555-0100" })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ setup_code: "NEW-CODE", phones_switched_off: 1 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, events_deleted: 3 })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    const got = await gateway.getLearnerRecord("learner-1");
+    expect(got.devices).toEqual([{ deviceId: "device-1", setUpAt: "2026-01-02T00:00:00.000Z", switchedOffAt: null }]);
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/learners/learner-1");
+
+    const updated = await gateway.updateLearner("learner-1", { phone: "555-0100" });
+    expect(updated.phone).toBe("555-0100");
+    expect(fetcher.mock.calls[2][1]).toMatchObject({ method: "PATCH" });
+    expect(JSON.parse(fetcher.mock.calls[2][1].body)).toEqual({ phone: "555-0100" });
+
+    await gateway.archiveLearner("learner-1");
+    expect(fetcher.mock.calls[3][0]).toBe("http://localhost:8080/v1/staff/learners/learner-1/archive");
+
+    const reveal = await gateway.issueSetupCode("learner-1", true);
+    expect(reveal).toEqual({ setupCode: "NEW-CODE", phonesSwitchedOff: 1 });
+    expect(JSON.parse(fetcher.mock.calls[4][1].body)).toEqual({ switch_off_existing_phones: true });
+
+    await gateway.switchOffPhone("learner-1", "device-1");
+    expect(fetcher.mock.calls[5][0]).toBe("http://localhost:8080/v1/staff/learners/learner-1/devices/device-1/switch-off");
+
+    const purged = await gateway.purgeLearner("learner-1", "COHORT-0001");
+    expect(purged).toEqual({ eventsDeleted: 3 });
+    expect(JSON.parse(fetcher.mock.calls[6][1].body)).toEqual({ confirm: "COHORT-0001" });
+    expect(fetcher.mock.calls[6][0]).toBe("http://localhost:8080/v1/staff/learners/learner-1/purge");
+
+    await expect(gateway.getLearnerRecord(" ")).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(gateway.purgeLearner("learner-1", " ")).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
+  it("issue #40: reads a module version, archives, and purges with DELETE", async () => {
+    const moduleBody = { schema_version: "tetherless.module.v1", module_id: "m1", content_version: 1, title: { en: "M1" }, questions: [] };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(moduleBody)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    expect(await gateway.getModuleVersion("m1", 1)).toEqual(moduleBody);
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/modules/m1/versions/1");
+
+    await gateway.archiveModule("m1");
+    expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/modules/m1/archive");
+
+    await gateway.purgeModule("m1");
+    expect(fetcher.mock.calls[3][0]).toBe("http://localhost:8080/v1/staff/modules/m1");
+    expect(fetcher.mock.calls[3][1]).toMatchObject({ method: "DELETE" });
+    await expect(gateway.getModuleVersion(" ", 1)).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
   it("rejects malformed account lists", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
