@@ -117,7 +117,7 @@ export function StaffContentWorkflowScreen() {
     const workflowId = workflowRef.current;
     setPublishing(true); setPublishError(null);
     try {
-      const result = await gateway.createModule(parsed);
+      const result = await gateway.publishModule(parsed);
       if (workflowRef.current !== workflowId) return;
       setPublishResult(result);
       void loadCohortsForAssign();
@@ -158,7 +158,7 @@ export function StaffContentWorkflowScreen() {
     const workflowId = workflowRef.current;
     setAssigning(true); setAssignError(null);
     try {
-      await gateway.createAssignment({ moduleId: publishResult.moduleId, contentVersion: publishResult.contentVersion, cohortId });
+      await gateway.assign({ moduleId: publishResult.moduleId, contentVersion: publishResult.contentVersion, cohortId });
       if (workflowRef.current !== workflowId) return;
       setAssignDone(true);
     } catch (err) {

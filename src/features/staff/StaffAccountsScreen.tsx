@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { ApiErrorNotice } from "../../components/common/ApiErrorNotice";
+import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { ReturnLink } from "../../components/common/ReturnLink";
 import { AccessDenied } from "../../components/common/AccessDenied";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
@@ -27,11 +28,15 @@ export function StaffAccountsScreen() {
   const [resetBusyId, setResetBusyId] = useState<string | null>(null);
   const [resetError, setResetError] = useState<unknown>(null);
   const [resetReveal, setResetReveal] = useState<StaffAccountReveal | null>(null);
+  const [disableBusyId, setDisableBusyId] = useState<string | null>(null);
+  const [disableError, setDisableError] = useState<unknown>(null);
+  const [disableTarget, setDisableTarget] = useState<StaffAccountSummary | null>(null);
+  const disableTriggerRef = useRef<HTMLElement | null>(null);
 
   const refreshAccounts = () => {
     if (!gateway) { setAccountsLoading(false); return; }
     setAccountsLoading(true); setAccountsError(null);
-    void gateway.listStaffAccounts().then(setAccounts).catch(setAccountsError).finally(() => setAccountsLoading(false));
+    void gateway.listStaff().then(setAccounts).catch(setAccountsError).finally(() => setAccountsLoading(false));
   };
   const canViewAccounts = !!session && (session.permissions.includes("staff.create_trainer") || session.permissions.includes("staff.create_admin"));
   useEffect(() => { if (gateway && canViewAccounts) refreshAccounts(); }, [gateway, canViewAccounts]);
@@ -44,7 +49,7 @@ export function StaffAccountsScreen() {
     if (!gateway || busy || !roles.includes(role)) return;
     setBusy(true); setError(null);
     try {
-      const next = await gateway.createStaffAccount({ role, username, displayName });
+      const next = await gateway.createStaff({ role, username, displayName });
       setReveal(next);
       setUsername(""); setDisplayName(""); setRole(roles[0] ?? "trainer");
       setMessage("Temporary password revealed. Copy it now and share it with the new account holder — it is shown once only.");
@@ -65,12 +70,29 @@ export function StaffAccountsScreen() {
     } catch (reason) { setResetError(reason); } finally { setResetBusyId(null); }
   };
   const usernameInvalid = username.length > 0 && !STAFF_USERNAME_PATTERN.test(username.trim().toLowerCase());
+  const enableAccount = async (account: StaffAccountSummary) => {
+    if (!gateway || disableBusyId) return;
+    setDisableBusyId(account.staffId); setDisableError(null);
+    try { await gateway.setStaffDisabled(account.staffId, false); refreshAccounts(); }
+    catch (reason) { setDisableError(reason); } finally { setDisableBusyId(null); }
+  };
+  const confirmDisableAccount = async () => {
+    if (!gateway || !disableTarget) return;
+    const target = disableTarget;
+    setDisableTarget(null);
+    setDisableBusyId(target.staffId); setDisableError(null);
+    try { await gateway.setStaffDisabled(target.staffId, true); refreshAccounts(); }
+    catch (reason) { setDisableError(reason); } finally { setDisableBusyId(null); }
+  };
 
   return <section><ReturnLink to="/staff">Staff dashboard</ReturnLink><h1 className="mt-4 text-3xl font-bold">Staff accounts</h1><p className="mt-2 text-slate-300">{roles.includes("superadmin") ? "Create a SuperAdmin, Admin or Trainer account." : "Create a Trainer account."} The new account signs in with a one-time temporary password and must change it on first sign-in.</p><p className="mt-3 text-sm" role="status">{integration ? "Live API mode: creating an account changes the server." : "Demo mode: account changes are mock-only and are not saved to the server."}</p>
     <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"><article className="ui-panel p-5"><h2 className="text-xl font-bold">Existing accounts</h2>
       {accountsError !== null && <div className="mt-4"><ApiErrorNotice error={accountsError} /></div>}
       {accountsLoading && <p className="mt-4 text-sm" role="status">Loading accounts…</p>}
-      <div className="mt-5 overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-white/10"><th className="p-3">Name</th><th className="p-3">Username</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{accounts.map((account) => <tr className="border-b border-white/10" key={account.staffId}><td className="p-3 font-semibold">{account.displayName}</td><td className="p-3">{account.username}</td><td className="p-3">{roleLabel(account.role)}</td><td className="p-3">{account.disabled ? "Disabled" : "Active"}</td><td className="p-3">{roles.includes(account.role) && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={resetBusyId === account.staffId} onClick={() => void resetPassword(account)} type="button">{resetBusyId === account.staffId ? "Resetting…" : "Reset password"}</button>}</td></tr>)}{accounts.length === 0 && accountsError === null && !accountsLoading && <tr><td className="p-4 text-slate-400" colSpan={5}>No accounts yet.</td></tr>}</tbody></table></div>
+      <div className="mt-5 overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-white/10"><th className="p-3">Name</th><th className="p-3">Username</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead><tbody>{accounts.map((account) => <tr className="border-b border-white/10" key={account.staffId}><td className="p-3 font-semibold">{account.displayName}</td><td className="p-3">{account.username}</td><td className="p-3">{roleLabel(account.role)}</td><td className="p-3">{account.disabled ? "Disabled" : "Active"}</td><td className="p-3"><div className="flex flex-wrap gap-2">{roles.includes(account.role) && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={resetBusyId === account.staffId} onClick={() => void resetPassword(account)} type="button">{resetBusyId === account.staffId ? "Resetting…" : "Reset password"}</button>}{roles.includes(account.role) && account.staffId !== session.staffId && (account.disabled
+        ? <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={disableBusyId === account.staffId} onClick={() => void enableAccount(account)} type="button">{disableBusyId === account.staffId ? "Enabling…" : "Enable"}</button>
+        : <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={disableBusyId === account.staffId} onClick={(event) => { disableTriggerRef.current = event.currentTarget; setDisableTarget(account); }} type="button">{disableBusyId === account.staffId ? "Disabling…" : "Disable"}</button>)}</div></td></tr>)}{accounts.length === 0 && accountsError === null && !accountsLoading && <tr><td className="p-4 text-slate-400" colSpan={5}>No accounts yet.</td></tr>}</tbody></table></div>
+      {disableError !== null && <div className="mt-4"><ApiErrorNotice error={disableError} /></div>}
       {resetError !== null && <div className="mt-4"><ApiErrorNotice error={resetError} /></div>}
       {resetReveal && <div className="mt-5 rounded-xl border border-dashed border-violet-300/40 p-4"><p className="font-bold">{resetReveal.account.displayName} ({roleLabel(resetReveal.account.role)}) — new one-time temporary password</p><code className="mt-2 block select-all break-all text-lg">{resetReveal.temporaryPassword}</code><p className="mt-2 text-xs text-slate-400">Username: {resetReveal.account.username}. Must be changed on next sign-in; their previous session has ended.</p><div className="mt-3 flex flex-wrap gap-2"><button className="ui-action-secondary" onClick={() => void copyPassword(resetReveal.temporaryPassword)} type="button">Copy password</button><button className="ui-action-secondary" onClick={() => setResetReveal(null)} type="button">Done</button></div></div>}
     </article>
@@ -87,5 +109,6 @@ export function StaffAccountsScreen() {
       {reveal && <div className="mt-5 rounded-xl border border-dashed border-violet-300/40 p-4"><p className="font-bold">{reveal.account.displayName} ({roleLabel(reveal.account.role)}) — one-time temporary password</p><code className="mt-2 block select-all break-all text-lg">{reveal.temporaryPassword}</code><p className="mt-2 text-xs text-slate-400">Username: {reveal.account.username}. Must be changed on first sign-in.</p><div className="mt-3 flex flex-wrap gap-2"><button className="ui-action-secondary" onClick={() => void copyPassword(reveal.temporaryPassword)} type="button">Copy password</button></div></div>}
       {message && <p className="mt-4 text-sm" role="status">{message}</p>}
     </article></div>
+    {disableTarget && <ConfirmationDialog confirmLabel="Disable account" detail={`Disabling ${disableTarget.displayName} immediately ends their active session and blocks sign-in until re-enabled.`} onCancel={() => setDisableTarget(null)} onConfirm={() => void confirmDisableAccount()} returnFocusTo={disableTriggerRef.current} title={`Disable ${disableTarget.displayName}?`} />}
   </section>;
 }

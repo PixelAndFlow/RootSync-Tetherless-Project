@@ -35,6 +35,64 @@ export class ApiClient {
 
   /** `auth: false` is reserved for endpoints called before a session exists, such as staff sign-in. */
   async post(path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
+    return this.sendWithBody("POST", path, payload, options);
+  }
+
+  /** Issues #38/#39: cohort rename and learner edit both use PATCH. */
+  async patch(path: string, payload: unknown): Promise<unknown> {
+    return this.sendWithBody("PATCH", path, payload);
+  }
+
+  /** Issue #41: role permissions and thresholds both use PUT (replace, not merge-by-field like PATCH). */
+  async put(path: string, payload: unknown): Promise<unknown> {
+    return this.sendWithBody("PUT", path, payload);
+  }
+
+  /** Issue #40: purgeModule is the only staff DELETE route today. */
+  async delete(path: string): Promise<unknown> {
+    if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
+    const token = this.token();
+    if (!token) throw new ApiError("UNAUTHORIZED", 401);
+    let response: Response;
+    try {
+      response = await this.transport(`${this.baseUrl}${path}`, {
+        method: "DELETE",
+        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        cache: "no-store", credentials: "omit", redirect: "error",
+      });
+    } catch { throw new ApiError("NETWORK_ERROR", 0, true); }
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw response.ok ? new ApiError("INVALID_RESPONSE", response.status) : parseApiError(null, response.status); }
+    if (!response.ok) throw parseApiError(body, response.status);
+    return body;
+  }
+
+  /** Issue #41: exportCohort returns the raw file (with content-disposition), not a JSON envelope. */
+  async getBlob(path: string): Promise<Blob> {
+    if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
+    const token = this.token();
+    if (!token) throw new ApiError("UNAUTHORIZED", 401);
+    let response: Response;
+    try {
+      response = await this.transport(`${this.baseUrl}${path}`, {
+        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        cache: "no-store", credentials: "omit", redirect: "error",
+      });
+    } catch { throw new ApiError("NETWORK_ERROR", 0, true); }
+    if (!response.ok) {
+      let body: unknown;
+      try { body = await response.json(); } catch { throw parseApiError(null, response.status); }
+      throw parseApiError(body, response.status);
+    }
+    // Not response.blob(): under Node's native fetch, the Blob it constructs isn't
+    // always `instanceof` the ambient Blob a test (or an older runtime) sees, since
+    // fetch and Blob can come from different realms. Building it from the raw bytes
+    // with the ambient Blob constructor keeps it real everywhere this runs.
+    return new Blob([await response.arrayBuffer()], { type: response.headers.get("content-type") ?? "application/octet-stream" });
+  }
+
+  private async sendWithBody(method: "POST" | "PATCH" | "PUT", path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
     if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
     const auth = options.auth ?? true;
     const token = auth ? this.token() : null;
@@ -42,7 +100,7 @@ export class ApiClient {
     let response: Response;
     try {
       response = await this.transport(`${this.baseUrl}${path}`, {
-        method: "POST",
+        method,
         headers: { "content-type": "application/json", accept: "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(payload),
         cache: "no-store", credentials: "omit", redirect: "error",

@@ -66,3 +66,50 @@ describe("staff role routes", () => {
     expect(await screen.findByRole("heading", { name: "System control center" })).toBeVisible();
   });
 });
+
+describe("issue #41: system control center", () => {
+  it("edits a role's permissions, protecting Superadmin's permissions.manage, and requires confirmation to save", async () => {
+    renderRoutes("/staff/sign-in");
+    await signIn("demo");
+    fireEvent.click(screen.getByRole("link", { name: "System" }));
+    await screen.findByText("Role permissions");
+
+    const superadminManage = await screen.findByLabelText("SuperAdmin: permissions.manage");
+    expect(superadminManage).toBeChecked();
+    expect(superadminManage).toBeDisabled();
+
+    const trainerPurge = screen.getByLabelText("Trainer: data.purge");
+    expect(trainerPurge).not.toBeChecked();
+    fireEvent.click(trainerPurge);
+    const saveTrainer = screen.getByRole("button", { name: "Save Trainer permissions" });
+    expect(saveTrainer).toBeEnabled();
+    fireEvent.click(saveTrainer);
+
+    expect(await screen.findByRole("heading", { name: "Save Trainer permissions?" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Save permissions" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save Trainer permissions" })).toBeDisabled());
+    expect(screen.getByLabelText("Trainer: data.purge")).toBeChecked();
+  });
+
+  it("edits score thresholds with a confirmation step, and rejects struggling above passing", async () => {
+    renderRoutes("/staff/sign-in");
+    await signIn("demo");
+    fireEvent.click(screen.getByRole("link", { name: "System" }));
+    await screen.findByText("Score thresholds");
+
+    const passing = await screen.findByLabelText("Passing score (%)");
+    expect(passing).toHaveValue(70);
+    fireEvent.change(passing, { target: { value: "80" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save thresholds" }));
+
+    expect(await screen.findByRole("heading", { name: "Save new thresholds?" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm new thresholds" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save thresholds" })).toBeDisabled());
+    expect(screen.getByLabelText("Passing score (%)")).toHaveValue(80);
+
+    fireEvent.change(screen.getByLabelText("Struggling below (%)"), { target: { value: "95" } }); // above passing
+    fireEvent.click(screen.getByRole("button", { name: "Save thresholds" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm new thresholds" }));
+    expect(await screen.findByText(/can't be above the passing threshold/)).toBeInTheDocument();
+  });
+});

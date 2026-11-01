@@ -24,6 +24,12 @@ export interface Cohort {
   archived: boolean;
 }
 
+export interface LearnerDevice {
+  deviceId: string;
+  setUpAt: string;
+  switchedOffAt: string | null;
+}
+
 export interface LearnerRecord {
   learnerId: string;
   learnerCode: string;
@@ -44,6 +50,19 @@ export interface LearnerRecord {
   archivedAt: string | null;
   /** Sent on the list. */
   lastSyncedAt?: string | null;
+  /** Sent on GET .../learners/:id, not on the list. */
+  devices?: LearnerDevice[];
+}
+
+/** PATCH /v1/staff/learners/:id body: every field editable by staff. cohortId/learnerCode/username are read-only server-side (issue #39). */
+export interface LearnerFieldChanges {
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  email?: string | null;
+  trainingLevel?: string | null;
+  note1?: string | null;
+  note2?: string | null;
 }
 
 /** No draft/published distinction: "published" means a version exists; archived is separate. */
@@ -190,6 +209,23 @@ export interface StaffAccountReveal {
   temporaryPassword: string;
   shownOnce: true;
 }
+
+/**
+ * Score-classification settings (issue #41). Mirrors packages/analytics/src/scoring.ts's
+ * Thresholds/DEFAULT_THRESHOLDS, duplicated rather than imported (server code is not in the
+ * frontend's build), same pattern as STAFF_PERMISSIONS above. These are read live by the
+ * scoring engine on every report request, never stored per result — a change applies
+ * immediately to every learner's pass/struggling status, past and future, not just going
+ * forward.
+ */
+export interface Thresholds {
+  passPct: number;
+  strugglingPct: number;
+  weakTopicPct: number;
+  weakTopicMinAnswers: number;
+}
+
+export const DEFAULT_THRESHOLDS: Thresholds = { passPct: 70, strugglingPct: 50, weakTopicPct: 60, weakTopicMinAnswers: 2 };
 
 /** Which roles the signed-in staff member may create, from their own permissions (server-enforced; this is UX only). Least-privileged first, matching the form's previous default. */
 export function creatableRoles(permissions: StaffPermissionKey[]): StaffRole[] {

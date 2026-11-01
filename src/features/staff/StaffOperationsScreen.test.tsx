@@ -201,3 +201,140 @@ describe("content and assignments panel", () => {
     expect(await screen.findByText("No modules are assigned to this cohort yet.")).toBeInTheDocument();
   });
 });
+
+describe("issue #38: cohort management panel", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; });
+
+  it("hides create/rename/archive controls without cohort permissions", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByLabelText("New cohort name")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rename" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
+  });
+
+  it("creates, renames and archives a cohort, surfacing a name clash", async () => {
+    state.session.permissions = ["cohort.create", "cohort.edit", "cohort.archive"];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+
+    await userEvent.type(screen.getByLabelText("New cohort name"), "Fresh Cohort");
+    await userEvent.click(screen.getByRole("button", { name: "Create cohort" }));
+    expect(await screen.findByText("Fresh Cohort", { selector: "span" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Rename" })[0]);
+    const renameInput = screen.getByLabelText("Rename cohort");
+    await userEvent.clear(renameInput);
+    await userEvent.type(renameInput, "Fresh Cohort");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("A cohort with this name already exists.")).toBeInTheDocument();
+
+    await userEvent.clear(renameInput);
+    await userEvent.type(renameInput, "Renamed Bootcamp");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Renamed Bootcamp", { selector: "span" })).toBeInTheDocument();
+
+    const archiveButtons = screen.getAllByRole("button", { name: "Archive" });
+    await userEvent.click(archiveButtons[archiveButtons.length - 1]);
+    await userEvent.click(screen.getByRole("button", { name: "Archive cohort" }));
+    expect(await screen.findByText("Fresh Cohort (archived)", { selector: "span" })).toBeInTheDocument();
+  });
+});
+
+describe("issue #41: cohort export", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it("hides Export without results.export", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
+  });
+
+  it("downloads the cohort export as a file when permitted", async () => {
+    state.session.permissions = ["staff.create_trainer", "results.export"];
+    const createObjectURL = vi.fn(() => "blob:mock-url");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await userEvent.click(screen.getAllByRole("button", { name: "Export" })[0]);
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+  });
+
+  it("shows an error notice if the export request fails", async () => {
+    state.session.permissions = ["staff.create_trainer", "results.export"];
+    vi.spyOn(gateway, "exportCohort").mockRejectedValueOnce(new ApiError("FORBIDDEN", 403));
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await userEvent.click(screen.getAllByRole("button", { name: "Export" })[0]);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/permission/);
+  });
+});
+
+describe("issue #40: module archive, purge and version view", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; });
+
+  it("hides archive/purge/view without the right permissions", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Purge" })).not.toBeInTheDocument();
+    // getModuleVersion only serves the mock's latest version; the demo seed module has none published through it, so "View latest version" is still offered but not required for this permission check.
+  });
+
+  it("archives a module unconditionally and blocks purging one that's assigned, then allows purging once unassigned", async () => {
+    state.session.permissions = ["staff.create_trainer", "content.archive", "data.purge", "assignment.manage"];
+    const cohortId = (await gateway.listCohorts())[0].cohortId;
+    await gateway.assign({ moduleId: "rcyc-recruit-cyber-squad-gamified-001", cohortId });
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+
+    await userEvent.click(screen.getByRole("button", { name: "Purge" }));
+    await userEvent.click(screen.getByRole("button", { name: "Permanently delete" }));
+    expect(await screen.findByText("This can't be removed while it's still in use.")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive module" }));
+    expect(await screen.findByText(/Archived/)).toBeInTheDocument();
+  });
+});
+
+describe("issue #39: real archive wiring and Manage link on the student table", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; });
+
+  it("hides the per-student Archive button without learner.archive, but always shows Manage", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByRole("button", { name: /Archive Student/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Manage" }).length).toBeGreaterThan(0);
+  });
+
+  it("archives a student for real through the gateway, not a simulated demo message", async () => {
+    state.session.permissions = ["staff.create_trainer", "learner.archive"];
+    const archive = vi.spyOn(gateway, "archiveLearner");
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await userEvent.click(screen.getByRole("button", { name: "Archive Alex Rivera" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive Student" }));
+    expect(await screen.findByText("Alex Rivera archived.")).toBeInTheDocument();
+    expect(archive).toHaveBeenCalledWith("student-demo-001");
+    expect(screen.getAllByText("Archived").length).toBeGreaterThan(0);
+  });
+});

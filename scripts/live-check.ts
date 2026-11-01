@@ -107,7 +107,7 @@ async function main() {
   if (!username || !password) die("A username and password are needed.");
 
   const staff = new ApiStaffAdminGateway(baseUrl, recording);
-  const session = await step("sign in", () => staff.signIn({ username: username.trim(), password }), (s) => `role ${s.role}${s.passwordChangeRequired ? ", password change required" : ""}`);
+  const session = await step("sign in", () => staff.login({ username: username.trim(), password }), (s) => `role ${s.role}${s.passwordChangeRequired ? ", password change required" : ""}`);
   if (!session) return;
   if (session.passwordChangeRequired) die("This account must change its password in the app before the reads can be checked.");
 
@@ -153,7 +153,7 @@ async function main() {
   }
 
   await fetch(`${baseUrl}/v1/staff/logout`, { method: "POST", headers: { authorization: `Bearer ${(staff as unknown as { token: string | null }).token ?? ""}` } }).catch(() => undefined);
-  staff.signOut();
+  staff.logout();
 
   console.log(failures === 0 ? "\nRESULT: all checks passed." : `\nRESULT: ${failures} check(s) failed. Paste this output back.`);
   process.exitCode = failures === 0 ? 0 : 1;

@@ -25,7 +25,7 @@ afterAll(async () => { if (server) await new Promise<void>((resolve) => server.c
 
 it("uses the real in-memory server for cohort, module, student and one-time setup flows", async () => {
   const gateway = new ApiStaffAdminGateway(base);
-  await gateway.signIn({ username: "test-admin", password: "local-test-password" });
+  await gateway.login({ username: "test-admin", password: "local-test-password" });
   expect(await gateway.listCohorts()).toEqual([]);
   expect(await gateway.listLearnerRecords()).toEqual([]);
   expect((await gateway.listModules()).length).toBeGreaterThan(0);
