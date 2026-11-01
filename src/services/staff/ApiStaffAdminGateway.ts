@@ -40,16 +40,22 @@ function parseModuleCheck(value: unknown): ModuleCheckWire {
   const willBe = text(c.will_be);
   if (!["new_module", "new_version", "blocked"].includes(willBe)) invalid();
   const s = record(c.summary);
+  // The summary can echo a malformed value straight from the uploaded JSON
+  // when the module is invalid (a negative/fractional/string content_version,
+  // a numeric module_id, an object-valued level, …). errors[]/warnings[]
+  // below (parsed strictly) is what actually tells staff what's wrong, so
+  // the summary itself is read leniently instead of rejecting the whole
+  // response over a value it is only echoing back.
   return {
     valid: bool(c.valid),
     will_be: willBe as ModuleCheckWire["will_be"],
     summary: {
-      module_id: s.module_id === null ? null : text(s.module_id),
-      module_name: s.module_name === null ? null : text(s.module_name),
-      content_version: s.content_version === null ? null : number(s.content_version),
-      level: s.level === null ? null : text(s.level),
-      activity_type: text(s.activity_type),
-      question_count: number(s.question_count),
+      module_id: typeof s.module_id === "string" ? s.module_id : null,
+      module_name: typeof s.module_name === "string" ? s.module_name : null,
+      content_version: typeof s.content_version === "number" && Number.isInteger(s.content_version) && s.content_version >= 0 ? s.content_version : null,
+      level: typeof s.level === "string" ? s.level : null,
+      activity_type: typeof s.activity_type === "string" ? s.activity_type : "",
+      question_count: typeof s.question_count === "number" && Number.isInteger(s.question_count) && s.question_count >= 0 ? s.question_count : 0,
     },
     errors: list(c.errors).map(parseIssue),
     warnings: list(c.warnings).map(parseIssue),

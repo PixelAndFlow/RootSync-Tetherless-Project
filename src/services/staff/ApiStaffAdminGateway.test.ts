@@ -131,6 +131,29 @@ describe("ApiStaffAdminGateway", () => {
     expect(JSON.parse(fetcher.mock.calls[2][1].body)).toEqual(draft);
   });
 
+  it("Chris's PR #35 review, point 4: reads a malformed check summary leniently instead of rejecting a real field-error response", async () => {
+    const draft = { module_id: "new-module", content_version: "oops", title: { en: "New Module" }, questions: [] };
+    const malformedChecks = [
+      { content_version: -1 }, { content_version: 1.5 }, { content_version: "oops" },
+      { module_id: 42 }, { level: { en: "beginner" } },
+    ].map((bad) => ({
+      valid: false, will_be: "blocked",
+      summary: { module_id: "new-module", module_name: "New Module", content_version: 1, level: null, activity_type: "multiple_choice", question_count: 0, ...bad },
+      errors: [{ field: "content_version", code: "INVALID", message: "content_version must be a whole number of 1 or more." }],
+      warnings: [],
+    }));
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })));
+    for (const body of malformedChecks) fetcher.mockResolvedValueOnce(new Response(JSON.stringify(body)));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.signIn({ username: "test-admin", password: "temporary-password" });
+
+    for (let i = 0; i < malformedChecks.length; i++) {
+      const check = await gateway.checkModule(draft);
+      expect(check.valid).toBe(false);
+      expect(check.errors).toEqual([{ field: "content_version", code: "INVALID", message: "content_version must be a whole number of 1 or more." }]);
+    }
+  });
+
   it("lists, creates and removes assignments, calling the right routes", async () => {
     const assignment = { assignment_id: "assignment-1", module_id: "security-tools", module_name: "Security Tools", content_version: null, target: "cohort", cohort_id: "cohort-1", learner_id: null, created_at: "2026-01-01T00:00:00.000Z", created_by: "staff-1" };
     const fetcher = vi.fn()
