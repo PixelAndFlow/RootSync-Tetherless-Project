@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import cohorts from "../../../packages/contract/fixtures/cohorts.json";
 import learners from "../../../packages/contract/fixtures/learners.json";
 import modules from "../../../packages/contract/fixtures/modules.json";
-import { toCohort, toLearnerRecord, toModuleListing } from "./staffMappers";
+import assignments from "../../../packages/contract/fixtures/assignments.json";
+import { toAssignment, toCohort, toLearnerRecord, toModuleListing } from "./staffMappers";
 
 // Wire name -> app name. The words match; only the case changes (decided 2026-10-27).
 const camel = (name: string) => name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
@@ -23,5 +24,8 @@ describe("wire to app translation, against the recorded server responses", () =>
   });
   it("translates every module field", () => {
     for (const row of modules.modules) expectTranslated(row, toModuleListing(row as never) as never);
+  });
+  it("translates every assignment field", () => {
+    for (const row of assignments.assignments) expectTranslated(row, toAssignment(row as never) as never);
   });
 });

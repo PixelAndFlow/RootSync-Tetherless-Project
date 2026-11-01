@@ -1,9 +1,9 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
-import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, ModuleListing as ModuleListingWire } from "../../../packages/contract/src/staff-api";
-import type { Cohort, LearnerRecord, ModuleListing, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
+import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire } from "../../../packages/contract/src/staff-api";
+import type { Assignment, Cohort, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
-import { toCohort, toLearnerRecord, toModuleListing } from "./staffMappers";
+import { toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult } from "./staffMappers";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 import { ApiTrainerDataGateway } from "../trainer/ApiTrainerDataGateway";
 
@@ -29,6 +29,57 @@ function parseModule(value: unknown): ModuleListingWire {
   const m = record(value);
   const title = m.title === null ? null : record(m.title);
   return { module_id: text(m.module_id), module_name: text(m.module_name), title: title === null ? null : { en: text(title.en), ...(title.es === undefined ? {} : { es: text(title.es) }) }, level: nullable(m.level), note: nullable(m.note), activity_type: text(m.activity_type), latest_version: m.latest_version === null ? null : number(m.latest_version), versions: list(m.versions).map(number), question_count: number(m.question_count), used: bool(m.used), archived: bool(m.archived), created_by: nullable(m.created_by), created_at: text(m.created_at) };
+}
+
+function parseIssue(value: unknown): StaffErrorDetailWire {
+  const i = record(value);
+  return { ...(typeof i.row === "number" ? { row: i.row } : {}), ...(typeof i.field === "string" ? { field: i.field } : {}), code: text(i.code), message: text(i.message) };
+}
+function parseModuleCheck(value: unknown): ModuleCheckWire {
+  const c = record(value);
+  const willBe = text(c.will_be);
+  if (!["new_module", "new_version", "blocked"].includes(willBe)) invalid();
+  const s = record(c.summary);
+  // The summary can echo a malformed value straight from the uploaded JSON
+  // when the module is invalid (a negative/fractional/string content_version,
+  // a numeric module_id, an object-valued level, …). errors[]/warnings[]
+  // below (parsed strictly) is what actually tells staff what's wrong, so
+  // the summary itself is read leniently instead of rejecting the whole
+  // response over a value it is only echoing back.
+  return {
+    valid: bool(c.valid),
+    will_be: willBe as ModuleCheckWire["will_be"],
+    summary: {
+      module_id: typeof s.module_id === "string" ? s.module_id : null,
+      module_name: typeof s.module_name === "string" ? s.module_name : null,
+      content_version: typeof s.content_version === "number" && Number.isInteger(s.content_version) && s.content_version >= 0 ? s.content_version : null,
+      level: typeof s.level === "string" ? s.level : null,
+      activity_type: typeof s.activity_type === "string" ? s.activity_type : "",
+      question_count: typeof s.question_count === "number" && Number.isInteger(s.question_count) && s.question_count >= 0 ? s.question_count : 0,
+    },
+    errors: list(c.errors).map(parseIssue),
+    warnings: list(c.warnings).map(parseIssue),
+  };
+}
+function parseModulePublishResult(value: unknown): ModulePublishResultWire {
+  const p = record(value);
+  return { module_id: text(p.module_id), content_version: number(p.content_version), published_at: text(p.published_at), warnings: list(p.warnings).map(parseIssue) };
+}
+function parseAssignment(value: unknown): AssignmentWire {
+  const a = record(value);
+  const target = text(a.target);
+  if (!["cohort", "learner"].includes(target)) invalid();
+  return {
+    assignment_id: text(a.assignment_id),
+    module_id: text(a.module_id),
+    module_name: text(a.module_name),
+    content_version: a.content_version === null ? null : number(a.content_version),
+    target: target as AssignmentWire["target"],
+    cohort_id: a.cohort_id === null ? null : text(a.cohort_id),
+    learner_id: a.learner_id === null ? null : text(a.learner_id),
+    created_at: text(a.created_at),
+    created_by: a.created_by === null ? null : text(a.created_by),
+  };
 }
 
 function mapAccount(value: unknown): StaffAccountSummary {
@@ -90,6 +141,28 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     return (await Promise.all(cohorts.map((cohort) => this.listLearnerRecords({ cohortId: cohort.cohortId })))).flat();
   }
   async listModules(): Promise<ModuleListing[]> { return list(record(await this.api.get("/v1/staff/modules")).modules).map(parseModule).map(toModuleListing); }
+  async checkModule(json: unknown): Promise<ModuleCheckResult> {
+    return toModuleCheck(parseModuleCheck(await this.api.post("/v1/staff/modules/check", json)));
+  }
+  async createModule(json: unknown): Promise<ModulePublishResult> {
+    return toModulePublishResult(parseModulePublishResult(await this.api.post("/v1/staff/modules", json)));
+  }
+  async listAssignments(cohortId: string): Promise<Assignment[]> {
+    if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return list(record(await this.api.get(`/v1/staff/assignments?cohort_id=${encodeURIComponent(cohortId)}`)).assignments).map(parseAssignment).map(toAssignment);
+  }
+  async createAssignment(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
+    const hasCohort = !!input.cohortId, hasLearner = !!input.learnerId;
+    if (!input.moduleId.trim() || hasCohort === hasLearner) throw new ApiError("INVALID_INPUT", 422);
+    const body: Record<string, unknown> = { module_id: input.moduleId };
+    if (input.contentVersion !== undefined && input.contentVersion !== null) body.content_version = input.contentVersion;
+    if (hasCohort) body.cohort_id = input.cohortId; else body.learner_id = input.learnerId;
+    return toAssignment(parseAssignment(record(await this.api.post("/v1/staff/assignments", body)).assignment));
+  }
+  async removeAssignment(assignmentId: string): Promise<void> {
+    if (!assignmentId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/assignments/${encodeURIComponent(assignmentId)}/remove`, {});
+  }
   async createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
     const firstName = input.firstName.trim(), lastName = input.lastName.trim();
     if (!input.cohortId.trim() || !firstName || !lastName) throw new ApiError("INVALID_INPUT", 422);
