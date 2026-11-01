@@ -43,6 +43,11 @@ export class ApiClient {
     return this.sendWithBody("PATCH", path, payload);
   }
 
+  /** Issue #41: role permissions and thresholds both use PUT (replace, not merge-by-field like PATCH). */
+  async put(path: string, payload: unknown): Promise<unknown> {
+    return this.sendWithBody("PUT", path, payload);
+  }
+
   /** Issue #40: purgeModule is the only staff DELETE route today. */
   async delete(path: string): Promise<unknown> {
     if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
@@ -63,7 +68,27 @@ export class ApiClient {
     return body;
   }
 
-  private async sendWithBody(method: "POST" | "PATCH", path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
+  /** Issue #41: exportCohort returns the raw file (with content-disposition), not a JSON envelope. */
+  async getBlob(path: string): Promise<Blob> {
+    if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
+    const token = this.token();
+    if (!token) throw new ApiError("UNAUTHORIZED", 401);
+    let response: Response;
+    try {
+      response = await this.transport(`${this.baseUrl}${path}`, {
+        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        cache: "no-store", credentials: "omit", redirect: "error",
+      });
+    } catch { throw new ApiError("NETWORK_ERROR", 0, true); }
+    if (!response.ok) {
+      let body: unknown;
+      try { body = await response.json(); } catch { throw parseApiError(null, response.status); }
+      throw parseApiError(body, response.status);
+    }
+    return response.blob();
+  }
+
+  private async sendWithBody(method: "POST" | "PATCH" | "PUT", path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
     if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
     const auth = options.auth ?? true;
     const token = auth ? this.token() : null;

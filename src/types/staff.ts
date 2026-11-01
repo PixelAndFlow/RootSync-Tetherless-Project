@@ -210,6 +210,23 @@ export interface StaffAccountReveal {
   shownOnce: true;
 }
 
+/**
+ * Score-classification settings (issue #41). Mirrors packages/analytics/src/scoring.ts's
+ * Thresholds/DEFAULT_THRESHOLDS, duplicated rather than imported (server code is not in the
+ * frontend's build), same pattern as STAFF_PERMISSIONS above. These are read live by the
+ * scoring engine on every report request, never stored per result — a change applies
+ * immediately to every learner's pass/struggling status, past and future, not just going
+ * forward.
+ */
+export interface Thresholds {
+  passPct: number;
+  strugglingPct: number;
+  weakTopicPct: number;
+  weakTopicMinAnswers: number;
+}
+
+export const DEFAULT_THRESHOLDS: Thresholds = { passPct: 70, strugglingPct: 50, weakTopicPct: 60, weakTopicMinAnswers: 2 };
+
 /** Which roles the signed-in staff member may create, from their own permissions (server-enforced; this is UX only). Least-privileged first, matching the form's previous default. */
 export function creatableRoles(permissions: StaffPermissionKey[]): StaffRole[] {
   return (["trainer", "admin", "superadmin"] as const).filter((role) => permissions.includes(permissionToManage(role)));

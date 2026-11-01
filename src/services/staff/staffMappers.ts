@@ -7,8 +7,9 @@ import type {
   ModulePublishResult as ModulePublishResultWire,
   Assignment as AssignmentWire,
   StaffErrorDetail as StaffErrorDetailWire,
+  ReportThresholds as ThresholdsWire,
 } from "../../../packages/contract/src/staff-api";
-import type { Cohort, LearnerRecord, LearnerDevice, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment } from "../../types/staff";
+import type { Cohort, LearnerRecord, LearnerDevice, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment, Thresholds } from "../../types/staff";
 
 /**
  * Wire (snake_case, packages/contract) to app (camelCase) translation, in one place.
@@ -93,6 +94,14 @@ export function toModuleCheck(wire: ModuleCheckWire): ModuleCheckResult {
 
 export function toModulePublishResult(wire: ModulePublishResultWire): ModulePublishResult {
   return { moduleId: wire.module_id, contentVersion: wire.content_version, publishedAt: wire.published_at, warnings: wire.warnings.map(toIssue) };
+}
+
+export function toThresholds(wire: ThresholdsWire): Thresholds {
+  return { passPct: wire.pass_pct, strugglingPct: wire.struggling_pct, weakTopicPct: wire.weak_topic_pct, weakTopicMinAnswers: wire.weak_topic_min_answers };
+}
+
+export function fromThresholds(t: Thresholds): ThresholdsWire {
+  return { pass_pct: t.passPct, struggling_pct: t.strugglingPct, weak_topic_pct: t.weakTopicPct, weak_topic_min_answers: t.weakTopicMinAnswers };
 }
 
 export function toAssignment(wire: AssignmentWire): Assignment {

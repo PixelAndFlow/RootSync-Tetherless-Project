@@ -244,6 +244,44 @@ describe("issue #38: cohort management panel", () => {
   });
 });
 
+describe("issue #41: cohort export", () => {
+  let gateway: MockStaffAdminGateway;
+  beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
+  afterEach(() => { state.session.permissions = ["staff.create_trainer"]; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it("hides Export without results.export", async () => {
+    state.session.permissions = [];
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
+  });
+
+  it("downloads the cohort export as a file when permitted", async () => {
+    state.session.permissions = ["staff.create_trainer", "results.export"];
+    const createObjectURL = vi.fn(() => "blob:mock-url");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await userEvent.click(screen.getAllByRole("button", { name: "Export" })[0]);
+
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+  });
+
+  it("shows an error notice if the export request fails", async () => {
+    state.session.permissions = ["staff.create_trainer", "results.export"];
+    vi.spyOn(gateway, "exportCohort").mockRejectedValueOnce(new ApiError("FORBIDDEN", 403));
+    show(<StaffOperationsScreen />);
+    await screen.findByText("Alex Rivera");
+    await userEvent.click(screen.getAllByRole("button", { name: "Export" })[0]);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/permission/);
+  });
+});
+
 describe("issue #40: module archive, purge and version view", () => {
   let gateway: MockStaffAdminGateway;
   beforeEach(() => { gateway = new MockStaffAdminGateway(); state.gateway = gateway; });
@@ -261,7 +299,7 @@ describe("issue #40: module archive, purge and version view", () => {
   it("archives a module unconditionally and blocks purging one that's assigned, then allows purging once unassigned", async () => {
     state.session.permissions = ["staff.create_trainer", "content.archive", "data.purge", "assignment.manage"];
     const cohortId = (await gateway.listCohorts())[0].cohortId;
-    await gateway.createAssignment({ moduleId: "rcyc-recruit-cyber-squad-gamified-001", cohortId });
+    await gateway.assign({ moduleId: "rcyc-recruit-cyber-squad-gamified-001", cohortId });
     show(<StaffOperationsScreen />);
     await screen.findByText("Alex Rivera");
 

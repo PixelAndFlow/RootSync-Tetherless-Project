@@ -7,7 +7,7 @@ import { StaffContentWorkflowScreen } from "./StaffContentWorkflowScreen";
 
 const state = vi.hoisted(() => ({
   permissions: ["content.create", "assignment.manage"] as string[],
-  gateway: { checkModule: vi.fn(), createModule: vi.fn(), listModules: vi.fn(), listCohorts: vi.fn(), createAssignment: vi.fn() },
+  gateway: { checkModule: vi.fn(), publishModule: vi.fn(), listModules: vi.fn(), listCohorts: vi.fn(), assign: vi.fn() },
 }));
 vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => ({ session: { permissions: state.permissions } }) }));
 vi.mock("../../app/providers/GatewayProvider", () => ({ useStaffAdminGateway: () => state.gateway }));
@@ -41,10 +41,10 @@ describe("staff content workflow screen", () => {
   beforeEach(() => {
     state.permissions = ["content.create", "assignment.manage"];
     state.gateway.checkModule.mockReset();
-    state.gateway.createModule.mockReset();
+    state.gateway.publishModule.mockReset();
     state.gateway.listModules.mockReset();
     state.gateway.listCohorts.mockReset().mockResolvedValue([cohortOne]);
-    state.gateway.createAssignment.mockReset();
+    state.gateway.assign.mockReset();
   });
 
   it("blocks a staff member with neither content permission", () => {
@@ -74,8 +74,8 @@ describe("staff content workflow screen", () => {
 
   it("walks a module from file selection through validation, preview, publish and assignment", async () => {
     state.gateway.checkModule.mockResolvedValue(validCheck);
-    state.gateway.createModule.mockResolvedValue({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
-    state.gateway.createAssignment.mockResolvedValue({ assignmentId: "a1", moduleId: "new-module", moduleName: "New Module", contentVersion: 1, target: "cohort", cohortId: "cohort-1", learnerId: null, createdAt: "2026-01-01", createdBy: null });
+    state.gateway.publishModule.mockResolvedValue({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
+    state.gateway.assign.mockResolvedValue({ assignmentId: "a1", moduleId: "new-module", moduleName: "New Module", contentVersion: 1, target: "cohort", cohortId: "cohort-1", learnerId: null, createdAt: "2026-01-01", createdBy: null });
     render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);
 
     const input = screen.getByLabelText("JSON file");
@@ -92,13 +92,13 @@ describe("staff content workflow screen", () => {
     expect(await screen.findByText(/New Module — 1 questions/)).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: "Publish module" }));
-    expect(state.gateway.createModule).toHaveBeenCalledWith(draft);
+    expect(state.gateway.publishModule).toHaveBeenCalledWith(draft);
     expect(await screen.findByText(/Published new-module version 1/)).toBeVisible();
 
     await screen.findByText("Assign to a cohort");
     await userEvent.selectOptions(await screen.findByLabelText("Cohort"), "cohort-1");
     await userEvent.click(screen.getByRole("button", { name: "Assign to cohort" }));
-    expect(state.gateway.createAssignment).toHaveBeenCalledWith({ moduleId: "new-module", contentVersion: 1, cohortId: "cohort-1" });
+    expect(state.gateway.assign).toHaveBeenCalledWith({ moduleId: "new-module", contentVersion: 1, cohortId: "cohort-1" });
     expect(await screen.findByText("Assigned to the selected cohort.")).toBeVisible();
   });
 
@@ -131,9 +131,9 @@ describe("staff content workflow screen", () => {
 
   it("Chris's PR #35 review, point 2: a stale assignment response can't mark a later module as assigned", async () => {
     state.gateway.checkModule.mockImplementation(async (json: typeof draft) => ({ ...validCheck, summary: { ...validCheck.summary, moduleId: json.module_id, moduleName: json.module_id } }));
-    state.gateway.createModule.mockImplementation(async (json: typeof draft) => ({ moduleId: json.module_id, contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] }));
+    state.gateway.publishModule.mockImplementation(async (json: typeof draft) => ({ moduleId: json.module_id, contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] }));
     let resolveAssignA: ((value: unknown) => void) | undefined;
-    state.gateway.createAssignment.mockImplementationOnce(() => new Promise((resolve) => { resolveAssignA = resolve; }));
+    state.gateway.assign.mockImplementationOnce(() => new Promise((resolve) => { resolveAssignA = resolve; }));
 
     render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);
 
@@ -145,7 +145,7 @@ describe("staff content workflow screen", () => {
     await screen.findByText("Assign to a cohort");
     await userEvent.selectOptions(await screen.findByLabelText("Cohort"), "cohort-1");
     await userEvent.click(screen.getByRole("button", { name: "Assign to cohort" }));
-    expect(state.gateway.createAssignment).toHaveBeenCalledTimes(1);
+    expect(state.gateway.assign).toHaveBeenCalledTimes(1);
 
     // Move on to module B before A's assignment resolves.
     const draftB = { ...draft, module_id: "other-module" };
@@ -167,12 +167,12 @@ describe("staff content workflow screen", () => {
     await userEvent.selectOptions(screen.getByLabelText("Cohort"), "cohort-1");
     await userEvent.click(screen.getByRole("button", { name: "Assign to cohort" }));
     expect(await screen.findByText("Assigned to the selected cohort.")).toBeVisible();
-    expect(state.gateway.createAssignment).toHaveBeenCalledTimes(2);
+    expect(state.gateway.assign).toHaveBeenCalledTimes(2);
   });
 
   it("Chris's PR #35 review, point 3: cohort loading can fail and retry without republishing", async () => {
     state.gateway.checkModule.mockResolvedValue(validCheck);
-    state.gateway.createModule.mockResolvedValue({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
+    state.gateway.publishModule.mockResolvedValue({ moduleId: "new-module", contentVersion: 1, publishedAt: "2026-01-01T00:00:00.000Z", warnings: [] });
     state.gateway.listCohorts.mockReset().mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce([cohortOne]);
 
     render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);
@@ -184,16 +184,16 @@ describe("staff content workflow screen", () => {
     // Publication succeeded even though cohort loading is about to fail.
     expect(await screen.findByText(/Published new-module version 1/)).toBeVisible();
     const retryButton = await screen.findByRole("button", { name: "Retry loading cohorts" });
-    expect(state.gateway.createModule).toHaveBeenCalledTimes(1);
+    expect(state.gateway.publishModule).toHaveBeenCalledTimes(1);
 
     await userEvent.click(retryButton);
     await screen.findByLabelText("Cohort");
-    expect(state.gateway.createModule).toHaveBeenCalledTimes(1); // retry did not republish
+    expect(state.gateway.publishModule).toHaveBeenCalledTimes(1); // retry did not republish
   });
 
   it("Chris's PR #35 review, point 3: a lost publish response is recovered via VERSION_EXISTS instead of stranding the user", async () => {
     state.gateway.checkModule.mockResolvedValue(validCheck);
-    state.gateway.createModule.mockRejectedValue(new ApiError("VERSION_EXISTS", 409));
+    state.gateway.publishModule.mockRejectedValue(new ApiError("VERSION_EXISTS", 409));
     state.gateway.listModules.mockResolvedValue([{ moduleId: "new-module", moduleName: "New Module", title: { en: "New Module" }, level: null, note: null, activityType: "multiple_choice", latestVersion: 1, versions: [1], questionCount: 1, used: false, archived: false, createdBy: null, createdAt: "2026-01-01T00:00:00.000Z" }]);
 
     render(<MemoryRouter><StaffContentWorkflowScreen /></MemoryRouter>);

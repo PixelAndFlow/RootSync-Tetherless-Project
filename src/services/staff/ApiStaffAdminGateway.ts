@@ -2,9 +2,9 @@ import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
 import type { TetherlessModule } from "../../../packages/content/src/tetherless-module";
 import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, LearnerDevice as LearnerDeviceWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire } from "../../../packages/contract/src/staff-api";
-import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffRole, StaffSession } from "../../types/staff";
+import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffPermissionKey, StaffRole, StaffSession, Thresholds } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
-import { toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult } from "./staffMappers";
+import { fromThresholds, toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult, toThresholds } from "./staffMappers";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 import { ApiTrainerDataGateway } from "../trainer/ApiTrainerDataGateway";
 
@@ -87,6 +87,20 @@ function parseAssignment(value: unknown): AssignmentWire {
   };
 }
 
+const ROLES = ["superadmin", "admin", "trainer"] as const;
+
+function parseThresholds(value: unknown): Thresholds {
+  const t = record(value);
+  return toThresholds({ pass_pct: number(t.pass_pct), struggling_pct: number(t.struggling_pct), weak_topic_pct: number(t.weak_topic_pct), weak_topic_min_answers: number(t.weak_topic_min_answers) });
+}
+
+function parseRolePermissions(value: unknown): Record<StaffRole, StaffPermissionKey[]> {
+  const r = record(value);
+  const result = {} as Record<StaffRole, StaffPermissionKey[]>;
+  for (const role of ROLES) result[role] = list(r[role]).map(text) as StaffPermissionKey[];
+  return result;
+}
+
 function mapAccount(value: unknown): StaffAccountSummary {
   const account = record(value);
   const role = text(account.role);
@@ -122,9 +136,9 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
   /** The trainer dashboard reads, sharing this gateway's staff session token. */
   trainerData(): ApiTrainerDataGateway { return new ApiTrainerDataGateway(this.api); }
 
-  signOut(): void { this.token = null; }
+  logout(): void { this.token = null; }
 
-  async signIn(input: { username: string; password: string }): Promise<StaffSession> {
+  async login(input: { username: string; password: string }): Promise<StaffSession> {
     const body = record(await this.api.post("/v1/staff/login", input, { auth: false }));
     const session = mapSession(body.staff);
     this.token = text(body.token);
@@ -163,7 +177,7 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
   async checkModule(json: unknown): Promise<ModuleCheckResult> {
     return toModuleCheck(parseModuleCheck(await this.api.post("/v1/staff/modules/check", json)));
   }
-  async createModule(json: unknown): Promise<ModulePublishResult> {
+  async publishModule(json: unknown): Promise<ModulePublishResult> {
     return toModulePublishResult(parseModulePublishResult(await this.api.post("/v1/staff/modules", json)));
   }
   async getModuleVersion(moduleId: string, contentVersion: number): Promise<TetherlessModule> {
@@ -184,7 +198,7 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
     return list(record(await this.api.get(`/v1/staff/assignments?cohort_id=${encodeURIComponent(cohortId)}`)).assignments).map(parseAssignment).map(toAssignment);
   }
-  async createAssignment(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
+  async assign(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
     const hasCohort = !!input.cohortId, hasLearner = !!input.learnerId;
     if (!input.moduleId.trim() || hasCohort === hasLearner) throw new ApiError("INVALID_INPUT", 422);
     const body: Record<string, unknown> = { module_id: input.moduleId };
@@ -192,7 +206,7 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     if (hasCohort) body.cohort_id = input.cohortId; else body.learner_id = input.learnerId;
     return toAssignment(parseAssignment(record(await this.api.post("/v1/staff/assignments", body)).assignment));
   }
-  async removeAssignment(assignmentId: string): Promise<void> {
+  async unassign(assignmentId: string): Promise<void> {
     if (!assignmentId.trim()) throw new ApiError("INVALID_INPUT", 422);
     await this.api.post(`/v1/staff/assignments/${encodeURIComponent(assignmentId)}/remove`, {});
   }
@@ -239,12 +253,12 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const body = record(await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/purge`, { confirm: confirmLearnerCode }));
     return { eventsDeleted: number(body.events_deleted) };
   }
-  async listStaffAccounts(): Promise<StaffAccountSummary[]> {
+  async listStaff(): Promise<StaffAccountSummary[]> {
     const body = record(await this.api.get("/v1/staff/accounts"));
     if (!Array.isArray(body.accounts)) return invalid();
     return body.accounts.map(mapAccount);
   }
-  async createStaffAccount(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
+  async createStaff(input: { role: StaffRole; username: string; displayName: string }): Promise<StaffAccountReveal> {
     const username = input.username.trim().toLowerCase();
     if (!STAFF_USERNAME_PATTERN.test(username) || !input.displayName.trim()) throw new ApiError("INVALID_INPUT", 422);
     const temporaryPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
@@ -256,7 +270,21 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const body = record(await this.api.post(`/v1/staff/accounts/${encodeURIComponent(staffId)}/reset-password`, { temporary_password: temporaryPassword }));
     return { account: mapAccount(body.account), temporaryPassword, shownOnce: true };
   }
-  canManage(role: StaffRole, action: "staff" | "system"): boolean {
-    return action === "staff" ? role !== "trainer" : role === "superadmin";
+  async setStaffDisabled(staffId: string, disabled: boolean): Promise<void> {
+    if (!staffId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    await this.api.post(`/v1/staff/accounts/${encodeURIComponent(staffId)}/${disabled ? "disable" : "enable"}`, {});
+  }
+  async getRolePermissions(): Promise<{ roles: Record<StaffRole, StaffPermissionKey[]>; permissions: StaffPermissionKey[] }> {
+    const body = record(await this.api.get("/v1/staff/roles"));
+    return { roles: parseRolePermissions(body.roles), permissions: list(body.permissions).map(text) as StaffPermissionKey[] };
+  }
+  async setRolePermissions(role: StaffRole, permissions: StaffPermissionKey[]): Promise<void> {
+    await this.api.put(`/v1/staff/roles/${encodeURIComponent(role)}/permissions`, { permissions });
+  }
+  async getThresholds(): Promise<Thresholds> { return parseThresholds(await this.api.get("/v1/staff/settings/thresholds")); }
+  async setThresholds(t: Thresholds): Promise<Thresholds> { return parseThresholds(await this.api.put("/v1/staff/settings/thresholds", fromThresholds(t))); }
+  async exportCohort(cohortId: string): Promise<Blob> {
+    if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return this.api.getBlob(`/v1/staff/cohorts/${encodeURIComponent(cohortId)}/export`);
   }
 }

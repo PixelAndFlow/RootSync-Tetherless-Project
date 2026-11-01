@@ -12,11 +12,11 @@ function SessionControls() {
 
 it("clears the gateway session when signing out", async () => {
   const gateways = createMockGateways();
-  const signOut = vi.spyOn(gateways.staffAdmin!, "signOut");
+  const logout = vi.spyOn(gateways.staffAdmin!, "logout");
   render(<GatewayProvider gateways={gateways}><StaffSessionProvider><SessionControls /></StaffSessionProvider></GatewayProvider>);
   await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
   expect(await screen.findByText("Signed in")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
   expect(screen.getByText("Signed out")).toBeInTheDocument();
-  expect(signOut).toHaveBeenCalledOnce();
+  expect(logout).toHaveBeenCalledOnce();
 });
