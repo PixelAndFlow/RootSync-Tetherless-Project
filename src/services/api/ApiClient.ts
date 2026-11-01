@@ -85,7 +85,11 @@ export class ApiClient {
       try { body = await response.json(); } catch { throw parseApiError(null, response.status); }
       throw parseApiError(body, response.status);
     }
-    return response.blob();
+    // Not response.blob(): under Node's native fetch, the Blob it constructs isn't
+    // always `instanceof` the ambient Blob a test (or an older runtime) sees, since
+    // fetch and Blob can come from different realms. Building it from the raw bytes
+    // with the ambient Blob constructor keeps it real everywhere this runs.
+    return new Blob([await response.arrayBuffer()], { type: response.headers.get("content-type") ?? "application/octet-stream" });
   }
 
   private async sendWithBody(method: "POST" | "PATCH" | "PUT", path: string, payload: unknown, options: { auth?: boolean } = {}): Promise<unknown> {
