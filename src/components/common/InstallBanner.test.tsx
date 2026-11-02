@@ -18,6 +18,11 @@ function setMatchMedia(matches: boolean) {
   });
 }
 
+/** Real WebKit/iOS Safari always defines this; Chromium never does, even under device emulation. */
+function setIosStandaloneProperty(value: boolean) {
+  Object.defineProperty(Navigator.prototype, "standalone", { configurable: true, value });
+}
+
 class FakeBeforeInstallPromptEvent extends Event {
   prompt = vi.fn().mockResolvedValue(undefined);
   userChoice = Promise.resolve({ outcome: "accepted" as const });
@@ -73,6 +78,7 @@ describe("InstallBanner", () => {
 
   it("shows Add to Home Screen instructions on iOS Safari, with no Install button (no beforeinstallprompt exists there)", async () => {
     setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1");
+    setIosStandaloneProperty(false);
     render(<InstallBanner />);
     const banner = await screen.findByRole("status", { name: /Install Tetherless/ });
     expect(banner).toHaveTextContent("tap Share, then Add to Home Screen");
@@ -81,6 +87,13 @@ describe("InstallBanner", () => {
 
   it("stays hidden on iOS Chrome (CriOS), which can't reliably install a PWA via Add to Home Screen", () => {
     setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/120.0 Mobile/15E148 Safari/604.1");
+    setIosStandaloneProperty(false);
+    render(<InstallBanner />);
+    expect(screen.queryByRole("status", { name: /Install Tetherless/ })).not.toBeInTheDocument();
+  });
+
+  it("stays hidden on a Chromium browser spoofing an iPhone Safari user agent (e.g. Playwright's device emulation), since navigator.standalone is WebKit-only", () => {
+    setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1");
     render(<InstallBanner />);
     expect(screen.queryByRole("status", { name: /Install Tetherless/ })).not.toBeInTheDocument();
   });
