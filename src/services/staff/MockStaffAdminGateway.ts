@@ -265,7 +265,11 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     modules.splice(index, 1);
     moduleBodies.delete(moduleId);
   }
-  async listAssignments(cohortId: string): Promise<Assignment[]> { return structuredClone(assignments.filter((a) => a.cohortId === cohortId)); }
+  /** Mirrors the real backend's join (memory-store.ts/pg-store.ts): a learner-targeted assignment has
+   * cohortId: null, so it only surfaces here through the learner's own current cohort. */
+  async listAssignments(cohortId: string): Promise<Assignment[]> {
+    return structuredClone(assignments.filter((a) => a.cohortId === cohortId || (a.target === "learner" && students.find((student) => student.learnerId === a.learnerId)?.cohortId === cohortId)));
+  }
   async assign(input: { moduleId: string; contentVersion?: number | null; cohortId?: string; learnerId?: string }): Promise<Assignment> {
     const hasCohort = !!input.cohortId, hasLearner = !!input.learnerId;
     if (hasCohort === hasLearner) throw new ApiError("INVALID_INPUT", 422);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
-import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
+import { useStaffAdminGateway, useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
 import { MetricCard } from "../../components/trainer/MetricCard";
 import { PerformanceBar } from "../../components/trainer/PerformanceBar";
@@ -15,19 +15,42 @@ const percent = (value: number | undefined) => value === undefined ? "—" : `${
 
 /**
  * One student on one module, from the trainer data gateway (server reports when connected to the
- * API, fixtures otherwise). The module comes from the `?module=` the dashboard links with.
+ * API, fixtures otherwise). `?module=` disambiguates when a learner has more than one assigned
+ * module; when it's missing, falls back to the learner's real assignments (#6/#15) instead of a
+ * dead end that tells the trainer to click a link the dashboard may not offer.
  */
 export function TrainerLearnerDetailScreen() {
   const live = readFrontendRuntimeConfig().mode === "integration";
   const { session } = useStaffSession();
   const trainerData = useTrainerDataGateway();
+  const staffAdmin = useStaffAdminGateway();
   const { learnerId } = useParams();
   const [params] = useSearchParams();
-  const moduleId = params.get("module")?.trim() || (live ? null : moduleLibrary[0].module_id);
+  const paramModuleId = params.get("module")?.trim() || null;
   const [detail, setDetail] = useState<TrainerModuleDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
+  const [assignedModules, setAssignedModules] = useState<{ moduleId: string; moduleName: string }[] | null>(null);
   const signedIn = !live || Boolean(session);
+  const needsAssignmentLookup = live && !paramModuleId;
+
+  useEffect(() => {
+    if (!signedIn || !learnerId || !needsAssignmentLookup) { setAssignedModules(null); return; }
+    if (!staffAdmin) { setAssignedModules([]); return; }
+    let cancelled = false;
+    void staffAdmin.getLearnerRecord(learnerId)
+      .then((learner) => staffAdmin.listAssignments(learner.cohortId))
+      .then((assignments) => {
+        if (cancelled) return;
+        const forLearner = assignments.filter((a) => a.target === "cohort" || a.learnerId === learnerId);
+        const byModule = new Map(forLearner.map((a) => [a.moduleId, a.moduleName] as const));
+        setAssignedModules([...byModule].map(([moduleId, moduleName]) => ({ moduleId, moduleName })));
+      })
+      .catch(() => { if (!cancelled) setAssignedModules([]); });
+    return () => { cancelled = true; };
+  }, [staffAdmin, signedIn, learnerId, needsAssignmentLookup]);
+
+  const moduleId = paramModuleId || (live ? (assignedModules?.length === 1 ? assignedModules[0].moduleId : null) : moduleLibrary[0].module_id);
 
   useEffect(() => {
     if (!signedIn || !learnerId || !moduleId) return;
@@ -39,7 +62,11 @@ export function TrainerLearnerDetailScreen() {
 
   if (!signedIn) return <Navigate replace to="/staff/sign-in?next=/trainer" />;
   const back = <Link className="text-sm font-bold app-wordmark" to="/trainer">← Student results</Link>;
-  if (!moduleId) return <section>{back}<h1 className="mt-6 text-2xl font-bold">Select a student module</h1><p>Open a module result from the trainer dashboard. No module has been selected for this link.</p></section>;
+  if (!moduleId) {
+    if (needsAssignmentLookup && assignedModules === null) return <section>{back}<p className="mt-6" role="status">Loading…</p></section>;
+    if (assignedModules && assignedModules.length > 1) return <section>{back}<h1 className="mt-6 text-2xl font-bold">Select a module</h1><p className="mt-2 text-slate-400">This student has more than one assigned module.</p><ul className="mt-4 grid gap-2">{assignedModules.map((module) => <li key={module.moduleId}><Link className="ui-action-secondary inline-flex min-h-9 items-center px-4 py-2 text-sm" to={`/trainer/learners/${encodeURIComponent(learnerId ?? "")}?module=${encodeURIComponent(module.moduleId)}`}>{module.moduleName}</Link></li>)}</ul></section>;
+    return <section>{back}<h1 className="mt-6 text-2xl font-bold">Select a student module</h1><p>{needsAssignmentLookup && assignedModules?.length === 0 ? "This student has no assigned modules." : "Open a module result from the trainer dashboard. No module has been selected for this link."}</p></section>;
+  }
   if (error) return <section>{back}<ReportError error={error} retry={() => setRetry((n) => n + 1)} /></section>;
   if (!detail) return <section>{back}<p className="mt-6" role="status">Loading Student detail…</p></section>;
 
