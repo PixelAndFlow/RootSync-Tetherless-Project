@@ -1,9 +1,19 @@
 # RootSync-Tetherless-Project
 
 Code repo for Tetherless, a cyberathlete training PWA built for RCO
-via Pursuit.org. See `README.md` for project overview and
-`ARCHITECTURE.md` for current (undecided) technical state. Private
-planning lives in `RootSync-Tetherless-Project-Docs`.
+via Pursuit.org. See `README.md` for project overview, `ARCHITECTURE.md`
+for the current (decided and built) technical state, and `FEATURES.md`
+for what the app can actually do today. Private planning lives in
+`RootSync-Tetherless-Project-Docs`.
+
+## Keep FEATURES.md current
+
+`FEATURES.md` is a living capability list, not a changelog. Any PR
+that adds, removes, or materially changes a user-facing capability
+(learner, trainer, or staff) must update the relevant bullet in the
+same PR — move it out of "Known gaps" if it just shipped, don't leave
+stale "not yet built" claims sitting next to the real thing. Bump its
+"Last updated" date whenever you touch it.
 
 ## Git commit policy
 
