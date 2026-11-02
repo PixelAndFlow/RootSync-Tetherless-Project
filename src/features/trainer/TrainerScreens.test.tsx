@@ -11,7 +11,7 @@ import { TrainerLearnerDetailScreen } from "./TrainerLearnerDetailScreen";
 
 const state = vi.hoisted(() => ({
   mode: "integration" as "integration" | "mock",
-  staff: { listCohorts: vi.fn() },
+  staff: { listCohorts: vi.fn(), getLearnerRecord: vi.fn(), listAssignments: vi.fn() },
   trainerData: undefined as unknown as TrainerDataGateway,
   session: { session: { role: "trainer" } as { role: string } | null },
 }));
@@ -37,6 +37,8 @@ beforeEach(() => {
   state.mode = "integration";
   state.session = { session: { role: "trainer" } };
   state.staff.listCohorts.mockReset().mockResolvedValue(cohorts);
+  state.staff.getLearnerRecord.mockReset().mockResolvedValue({ learnerId: "learner-1", cohortId: "cohort-1" });
+  state.staff.listAssignments.mockReset().mockResolvedValue([]);
   state.trainerData = {
     listLearners: vi.fn().mockImplementation(async ({ cohortId }: { cohortId: string }) => cohortId === "cohort-1" ? [learner] : []),
     getLearnerModuleDetail: vi.fn().mockResolvedValue(detail),
@@ -46,10 +48,39 @@ beforeEach(() => {
 const dashboard = () => render(<MemoryRouter><Routes><Route path="/" element={<TrainerDashboardScreen />} /><Route path="/staff/sign-in" element={<p>sign-in page</p>} /></Routes></MemoryRouter>);
 const detailPage = (path = "/trainer/learners/learner-1?module=module-1") => render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/trainer/learners/:learnerId" element={<TrainerLearnerDetailScreen />} /><Route path="/staff/sign-in" element={<p>sign-in page</p>} /></Routes></MemoryRouter>);
 
-it("does not request a demo module for a live detail link with no module selection", () => {
+it("does not request a demo module for a live detail link with no assigned modules", async () => {
   detailPage("/trainer/learners/learner-1");
-  expect(screen.getByRole("heading", { name: "Select a student module" })).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "Select a student module" })).toBeVisible();
+  expect(screen.getByText("This student has no assigned modules.")).toBeInTheDocument();
   expect(state.trainerData.getLearnerModuleDetail).not.toHaveBeenCalled();
+});
+
+describe("issue #6/#15: trainer detail falls back to the learner's assignments when ?module= is missing", () => {
+  it("auto-selects the learner's one assigned module instead of a dead end", async () => {
+    state.staff.listAssignments.mockResolvedValue([{ assignmentId: "a1", moduleId: "module-1", moduleName: "Test module", target: "cohort", learnerId: null }]);
+    detailPage("/trainer/learners/learner-1");
+    expect(await screen.findByRole("heading", { name: "Test Student" })).toBeInTheDocument();
+    expect(state.trainerData.getLearnerModuleDetail).toHaveBeenCalledWith("learner-1", "module-1");
+  });
+
+  it("offers a picker when the learner has more than one assigned module", async () => {
+    state.staff.listAssignments.mockResolvedValue([
+      { assignmentId: "a1", moduleId: "module-1", moduleName: "First module", target: "cohort", learnerId: null },
+      { assignmentId: "a2", moduleId: "module-2", moduleName: "Second module", target: "learner", learnerId: "learner-1" },
+    ]);
+    detailPage("/trainer/learners/learner-1");
+    expect(await screen.findByRole("heading", { name: "Select a module" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "First module" })).toHaveAttribute("href", "/trainer/learners/learner-1?module=module-1");
+    expect(screen.getByRole("link", { name: "Second module" })).toHaveAttribute("href", "/trainer/learners/learner-1?module=module-2");
+    expect(state.trainerData.getLearnerModuleDetail).not.toHaveBeenCalled();
+  });
+
+  it("ignores a cohort-wide assignment that targets a different learner's own assignment list only when relevant", async () => {
+    state.staff.listAssignments.mockResolvedValue([{ assignmentId: "a1", moduleId: "module-9", moduleName: "Other learner's module", target: "learner", learnerId: "someone-else" }]);
+    detailPage("/trainer/learners/learner-1");
+    expect(await screen.findByRole("heading", { name: "Select a student module" })).toBeVisible();
+    expect(screen.getByText("This student has no assigned modules.")).toBeInTheDocument();
+  });
 });
 
 describe("trainer dashboard (connected to the API)", () => {
