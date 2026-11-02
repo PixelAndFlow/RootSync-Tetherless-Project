@@ -223,6 +223,9 @@ Marc Delsoin, Chris Wozniak, Naquan Mckune.
 
 ## Documentation map
 
+- [`FEATURES.md`](./FEATURES.md) — what the application can actually
+  do today, by audience (Student/Trainer/Staff), kept updated as
+  features ship.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the real, current
   architecture (this file used to say "undecided"; it no longer is).
 - [`ROADMAP.md`](./ROADMAP.md) — roadmap.
