@@ -17,10 +17,17 @@ function isStandalone(): boolean {
  * iOS never fires beforeinstallprompt (issue #9) — Safari is the only iOS
  * browser whose share sheet reliably creates a true standalone install, so
  * that's the one case this shows static instructions for instead of a button.
+ *
+ * UA-sniffing alone isn't enough: Chromium's iPhone device-emulation profiles
+ * (e.g. Playwright's, used by our own visual-regression suite) spoof an iOS
+ * Safari user agent while still running Chromium. `navigator.standalone` is a
+ * real WebKit/iOS-Safari-only property that Chromium never defines, even
+ * under that emulation, so requiring it keeps this from false-triggering there.
  */
 function isIosSafari(): boolean {
   const ua = navigator.userAgent;
-  return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  const iosUserAgent = /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return iosUserAgent && "standalone" in navigator;
 }
 
 function readDismissed(): boolean {
