@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { StatusChip } from "../components/common/StatusChip";
+import { InstallBanner } from "../components/common/InstallBanner";
 import { useSyncStatus } from "./providers/SyncStatusProvider";
 import { useLearnerProfile } from "./providers/LearnerProfileProvider";
 import { readFrontendRuntimeConfig } from "../services/integration/runtimeConfig";
@@ -31,6 +32,7 @@ export function AppShell() {
         </nav>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8" id="main-content" tabIndex={-1}>
+        <InstallBanner />
         <div className="app-demo-notice mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm" role="status"><p><strong>{liveStaff ? "Live API mode." : "Demo preview."}</strong> {liveStaff ? "Student answers are saved on this device and sent to the server when synchronization succeeds. Download assigned missions before going offline." : "Sample data is shown and sync is simulated; no Student or staff change is sent to RCO."}</p>{profile && <Link className="ui-action-secondary" to="/learner/settings">Student profile and settings</Link>}</div>
         <Outlet />
       </main>

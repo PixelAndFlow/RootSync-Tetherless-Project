@@ -27,6 +27,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .app-header { z-index: 40; border-color: #3e3e42; background: #181818; }
 .app-demo-notice, .app-sync-next-step { border-color: #3e3e42; background: #2d2d30; color: #cccccc; }
 .app-demo-notice strong, .app-sync-next-step strong { color: var(--rco-purple-accessible); }
+.app-install-banner { border-color: var(--rco-purple); background: #2d2d30; color: #cccccc; }
+.app-install-banner strong { color: var(--rco-purple-accessible); }
 .app-wordmark { color: var(--rco-purple-accessible); }
 .app-section-eyebrow { color: var(--rco-magenta-accessible); }
 .app-skip-link, .app-preference-active { border-color: var(--rco-purple); background: var(--rco-purple); color: #fff; }
@@ -110,6 +112,8 @@ button[class~="border-white/15"], a[class~="border-white/15"], input[class~="bor
 .app-light-theme .app-storage-status { border-color: #c8c8c8; background: #e8e8e8; }
 .app-light-theme .app-demo-notice, .app-light-theme .app-sync-next-step { border-color: #c8c8c8; background: #e8e8e8; color: #1e1e1e; }
 .app-light-theme .app-demo-notice strong, .app-light-theme .app-sync-next-step strong { color: #5a1ee4; }
+.app-light-theme .app-install-banner { border-color: #5a1ee4; background: #e8e8e8; color: #1e1e1e; }
+.app-light-theme .app-install-banner strong { color: #5a1ee4; }
 .app-light-theme .app-storage-status > :first-child { color: #5a1ee4; }
 .app-light-theme .app-status-chip, .app-light-theme .app-offline-badge, .app-light-theme .app-nav-link-active { color: #ffffff; }
 .app-light-theme .app-nav-link-inactive { color: #1e1e1e; }
