@@ -1,5 +1,6 @@
-# TRIAL RUN (2026-10-15), not adopted.
-# Tetherless API + PostgreSQL.
+# Self-hosting config: Tetherless API + PostgreSQL. (Originally written as a
+# 2026-10-15 trial; real and maintained since — Render hosts the project's own
+# deployment separately, see README.md's Deployment section.)
 #
 #   cp .env.example .env        # then fill in the values
 #   docker compose up -d --build

@@ -1,3 +1,10 @@
+> **Superseded (2026-11-02).** This file is a snapshot of the frontend
+> as of late October 2026, back when every adapter was mock-only and
+> the real API/DDIL work was still deferred. That's no longer true —
+> see [`README.md`](./README.md) and [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+> for the current, accurate picture. Kept here for history only; do
+> not treat anything below as current status.
+
 # RootSync Tetherless
 
 Frontend prototype for the Raices Cyber Organization (RCO) Tetherless capstone project. Tetherless is a mobile-first cybersecurity learning experience designed for disconnected, disrupted, intermittent, and limited-connectivity conditions.
