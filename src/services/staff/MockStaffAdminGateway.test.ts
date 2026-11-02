@@ -59,6 +59,17 @@ describe("MockStaffAdminGateway", () => {
     await expect(gateway.unassign(assignment.assignmentId)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
+  it("issue #50: listAssignments surfaces a learner-targeted assignment under the learner's own cohort, like the real backend's join", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const draft = genuinelyValidModule({ moduleId: "new-module-50" });
+    await gateway.publishModule(draft);
+    const learnerAssignment = await gateway.assign({ moduleId: "new-module-50", learnerId: "student-demo-001" });
+    expect(learnerAssignment).toMatchObject({ moduleId: "new-module-50", target: "learner", learnerId: "student-demo-001", cohortId: null });
+
+    expect(await gateway.listAssignments("cohort-demo-001")).toEqual([learnerAssignment]);
+    expect(await gateway.listAssignments("cohort-demo-002")).toEqual([]);
+  });
+
   it("rejects publishing a module that fails its own check", async () => {
     const gateway = new MockStaffAdminGateway();
     await expect(gateway.publishModule({ module_id: "" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
