@@ -140,6 +140,25 @@ published and versioned only through the staff API (see below).
 | `scripts/test-all.sh` | Everything above that doesn't need a browser or a real device, in one run. |
 | `scripts/backup.sh` / `scripts/restore.sh` | PostgreSQL backup/restore for a self-hosted deployment. |
 | `scripts/seed-demo-cohort.mjs` | Seeds a disposable demo cohort against a running API, for manual testing. |
+| `npm run check:android-emulator` | Non-invasive readiness check for a local Android Studio/SDK setup — reports whether the Emulator, Platform Tools, and the project's named AVDs are available. Doesn't require or install anything itself. |
+
+### Device and browser coverage
+
+The Playwright suite (`npx playwright test`, run via `npm run test:device`
+and in CI) checks these RCO-representative profiles:
+
+- Android 10 / Nokia 2.4 class / 360×800 viewport
+- Android 11 Go / Nokia C21 Plus class / 360×720 viewport
+- Android 12 / Moto e22 class / 360×800 viewport
+- iPhone 8-sized viewport / 375×667
+- iPhone SE 2-sized viewport / 375×667
+
+These are **Chromium viewport/touch simulations, not real Android or iOS
+certification.** They don't prove Safari/WebKit behavior, actual low-RAM
+device performance, storage eviction, installed-PWA restart behavior, or
+multi-day offline persistence — that needs a real Android Emulator/Xcode
+setup and real-device or device-cloud testing (see the open real-device
+testing issues in the repo's GitHub issues).
 
 CI runs two real workflows:
 
