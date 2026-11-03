@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InstallBanner } from "./InstallBanner";
 
-const DISMISSED_KEY = "tetherless.installBannerDismissed";
+const ANDROID_DISMISSED_KEY = "tetherless.installBannerDismissed.android";
+const IOS_DISMISSED_KEY = "tetherless.installBannerDismissed.ios";
 const originalUserAgent = navigator.userAgent;
 const originalStandalone = Object.getOwnPropertyDescriptor(Navigator.prototype, "standalone");
 
@@ -31,6 +32,7 @@ class FakeBeforeInstallPromptEvent extends Event {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
   setMatchMedia(false);
   setUserAgent("Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36");
 });
@@ -59,30 +61,50 @@ describe("InstallBanner", () => {
     expect(event.prompt).toHaveBeenCalledTimes(1);
   });
 
-  it("hides and remembers dismissal when 'Not now' is clicked", async () => {
+  it("hides and permanently remembers dismissal on Android when 'Not now' is clicked", async () => {
     render(<InstallBanner />);
     act(() => { window.dispatchEvent(new FakeBeforeInstallPromptEvent()); });
     await screen.findByRole("status", { name: /Install Tetherless/ });
 
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(screen.queryByRole("status", { name: /Install Tetherless/ })).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(DISMISSED_KEY)).toBe("true");
+    expect(window.localStorage.getItem(ANDROID_DISMISSED_KEY)).toBe("true");
   });
 
-  it("never shows once dismissed, even across remounts", () => {
-    window.localStorage.setItem(DISMISSED_KEY, "true");
+  it("never shows again on Android once dismissed, even across remounts", () => {
+    window.localStorage.setItem(ANDROID_DISMISSED_KEY, "true");
     render(<InstallBanner />);
     act(() => { window.dispatchEvent(new FakeBeforeInstallPromptEvent()); });
     expect(screen.queryByRole("status", { name: /Install Tetherless/ })).not.toBeInTheDocument();
   });
 
-  it("shows Add to Home Screen instructions on iOS Safari, with no Install button (no beforeinstallprompt exists there)", async () => {
+  it("shows step-by-step Add to Home Screen instructions on iOS Safari, with no Install button (no beforeinstallprompt exists there)", async () => {
     setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1");
     setIosStandaloneProperty(false);
     render(<InstallBanner />);
     const banner = await screen.findByRole("status", { name: /Install Tetherless/ });
-    expect(banner).toHaveTextContent("tap Share, then Add to Home Screen");
+    expect(banner).toHaveTextContent("Tap the Share icon in Safari");
+    expect(banner).toHaveTextContent("Scroll down and tap Add to Home Screen");
+    expect(banner).toHaveTextContent("Tap Add in the top right");
     expect(screen.queryByRole("button", { name: "Install" })).not.toBeInTheDocument();
+  });
+
+  it("on iOS Safari, 'Remind me later' only dismisses for the current session — it reappears on the next fresh visit until actually installed", async () => {
+    setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1");
+    setIosStandaloneProperty(false);
+
+    const { unmount } = render(<InstallBanner />);
+    await screen.findByRole("status", { name: /Install Tetherless/ });
+    await userEvent.click(screen.getByRole("button", { name: "Remind me later" }));
+    expect(screen.queryByRole("status", { name: /Install Tetherless/ })).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem(IOS_DISMISSED_KEY)).toBe("true");
+    expect(window.localStorage.getItem(IOS_DISMISSED_KEY)).toBeNull();
+    unmount();
+
+    // Simulates a new browser session (sessionStorage cleared) while still not installed.
+    window.sessionStorage.clear();
+    render(<InstallBanner />);
+    await screen.findByRole("status", { name: /Install Tetherless/ });
   });
 
   it("stays hidden on iOS Chrome (CriOS), which can't reliably install a PWA via Add to Home Screen", () => {

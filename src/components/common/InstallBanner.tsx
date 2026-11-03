@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-const DISMISSED_KEY = "tetherless.installBannerDismissed";
+const ANDROID_DISMISSED_KEY = "tetherless.installBannerDismissed.android";
+const IOS_DISMISSED_KEY = "tetherless.installBannerDismissed.ios";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -30,12 +31,30 @@ function isIosSafari(): boolean {
   return iosUserAgent && "standalone" in navigator;
 }
 
-function readDismissed(): boolean {
-  try { return window.localStorage.getItem(DISMISSED_KEY) === "true"; } catch { return false; }
+/**
+ * Android's dismissal is permanent (localStorage): a real one-tap native
+ * install exists there, so repeatedly re-nagging after an explicit "Not now"
+ * adds friction without adding a better path to install.
+ *
+ * iOS has no native prompt at all — Add to Home Screen is a manual, easy to
+ * forget sequence — so its dismissal is session-only (sessionStorage): it
+ * comes back on every fresh visit until the learner actually installs,
+ * rather than going silent forever after one dismissal.
+ */
+function readDismissed(kind: "android" | "ios"): boolean {
+  try {
+    const storage = kind === "android" ? window.localStorage : window.sessionStorage;
+    const key = kind === "android" ? ANDROID_DISMISSED_KEY : IOS_DISMISSED_KEY;
+    return storage.getItem(key) === "true";
+  } catch { return false; }
 }
 
-function writeDismissed() {
-  try { window.localStorage.setItem(DISMISSED_KEY, "true"); } catch { /* best-effort only */ }
+function writeDismissed(kind: "android" | "ios") {
+  try {
+    const storage = kind === "android" ? window.localStorage : window.sessionStorage;
+    const key = kind === "android" ? ANDROID_DISMISSED_KEY : IOS_DISMISSED_KEY;
+    storage.setItem(key, "true");
+  } catch { /* best-effort only */ }
 }
 
 type BannerState =
@@ -54,12 +73,14 @@ export function InstallBanner() {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    if (isStandalone() || readDismissed()) return;
+    if (isStandalone()) return;
 
     if (isIosSafari()) {
-      setState({ kind: "ios" });
+      if (!readDismissed("ios")) setState({ kind: "ios" });
       return;
     }
+
+    if (readDismissed("android")) return;
 
     function onBeforeInstallPrompt(event: Event) {
       event.preventDefault();
@@ -77,7 +98,7 @@ export function InstallBanner() {
   }, []);
 
   function dismiss() {
-    writeDismissed();
+    if (state.kind === "android" || state.kind === "ios") writeDismissed(state.kind);
     setState({ kind: "hidden" });
   }
 
@@ -96,20 +117,28 @@ export function InstallBanner() {
   if (state.kind === "hidden") return null;
 
   return (
-    <div aria-label="Install Tetherless" className="app-install-banner mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm" role="status">
-      <p>
-        <strong>Install Tetherless</strong>{" "}
-        {state.kind === "android"
-          ? "for quicker, full-screen access and better offline support."
-          : "for quicker, full-screen access: tap Share, then Add to Home Screen."}
-      </p>
+    <div aria-label="Install Tetherless" className="app-install-banner mb-5 flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm" role="status">
+      {state.kind === "android" ? (
+        <p><strong>Install Tetherless</strong> for quicker, full-screen access and better offline support.</p>
+      ) : (
+        <div>
+          <p><strong>Install Tetherless</strong> for offline access and full-screen play — it only takes a few taps:</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-300">
+            <li>Tap the <strong>Share</strong> icon in Safari&rsquo;s toolbar.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Tap <strong>Add</strong> in the top right.</li>
+          </ol>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         {state.kind === "android" && (
           <button className="ui-action" disabled={installing} onClick={() => void install()} type="button">
             {installing ? "Installing..." : "Install"}
           </button>
         )}
-        <button className="ui-action-secondary" onClick={dismiss} type="button">Not now</button>
+        <button className="ui-action-secondary" onClick={dismiss} type="button">
+          {state.kind === "ios" ? "Remind me later" : "Not now"}
+        </button>
       </div>
     </div>
   );

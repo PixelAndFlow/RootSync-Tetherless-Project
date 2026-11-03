@@ -132,9 +132,14 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
 - **Installable PWA**: Web App Manifest + service worker, plus an
   app-owned install banner — prompts for install on Chrome/Android
   (and desktop Chromium) without depending on the browser to surface
-  it unprompted, and shows Add to Home Screen instructions on iOS
-  Safari (which never fires an install prompt at all). Dismissible,
-  and never shown once the app is already installed (#9).
+  it unprompted, and shows step-by-step Add to Home Screen
+  instructions on iOS Safari (which never fires an install prompt at
+  all). Dismissal behavior is intentionally asymmetric: Android's
+  "Not now" is permanent (a real one-tap install already exists
+  there), while iOS Safari's "Remind me later" only dismisses for the
+  current browser session and returns on every fresh visit until the
+  learner actually installs, since there's no native nudge to lean on
+  there otherwise. Never shown once the app is already installed (#9).
 - **Two auto-deployed Render services** (frontend + API), redeploying
   on every push to `main`; self-hostable via `docker-compose.yml`
   (API + PostgreSQL + optional HTTPS).
