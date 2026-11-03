@@ -27,7 +27,9 @@ prototype. Relevant to anyone reviewing its security posture:
 
 The private docs repo's `security/` folder (threat model, incident
 response plan, dependency-vulnerability policy, secrets-rotation
-runbook, pre-launch pen-test checklist) is still placeholder content
-as of this writing, despite the app now being live. Treat that as
-open work, not a completed security review — do not assume those
-documents reflect the real, current system yet.
+runbook, pre-launch pen-test checklist) was rewritten 2026-11-03 to
+reflect the real, deployed system instead of pre-kickoff placeholders.
+One real gap it surfaced: GitHub Dependabot vulnerability alerts are
+disabled on this repo — enable them (or run `npm audit` manually
+across each package) before treating the dependency side of a
+security review as covered.
