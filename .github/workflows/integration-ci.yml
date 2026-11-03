@@ -1,8 +1,11 @@
 name: Integration checks
 
-# The one CI run the integration branch needs (Tetherless_Contract_Drift_
-# and_Naming_Proposal_v1.00_2026-10-25.md §2.3, point 4): the app's checks,
-# the server's tests and type check, and the contract checks, in one place.
+# The one CI run every change to main needs (originally scoped to a
+# separate `integration` branch per Tetherless_Contract_Drift_and_Naming_
+# Proposal_v1.00_2026-10-25.md §2.3, point 4; that branch was deleted
+# 2026-11-03 once everything merged into main, so this now runs on main
+# directly): the app's checks, the server's tests and type check, and
+# the contract checks, in one place.
 #
 # The frontend job here is deliberately light (install/build/unit-test
 # only) — the full Playwright/visual/performance-budget suite is already
@@ -18,9 +21,9 @@ name: Integration checks
 
 on:
   push:
-    branches: [integration]
+    branches: [main]
   pull_request:
-    branches: [integration]
+    branches: [main]
 
 permissions:
   contents: read

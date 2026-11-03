@@ -164,8 +164,8 @@ testing issues in the repo's GitHub issues).
 
 CI runs two real workflows:
 
-- **`.github/workflows/integration-ci.yml`** — on the `integration`
-  branch: frontend build + unit tests + DDIL tests, and the backend's
+- **`.github/workflows/integration-ci.yml`** — on every push/PR to
+  `main`: frontend build + unit tests + DDIL tests, and the backend's
   own test suite run against *both* `MemoryStore` and a real
   PostgreSQL service container.
 - **`.github/workflows/frontend-quality.yml`** (job name `quality`) —
