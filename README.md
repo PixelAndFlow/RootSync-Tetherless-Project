@@ -55,7 +55,9 @@ tests/                  DDIL/sync unit tests, browser-driven device tests, cross
 e2e/                    Playwright mobile, accessibility, and visual tests
 .github/workflows/      CI — see Build, test, and maintain
 public/                 Brand assets, manifest, and PWA icon
-docs/                   Historical frontend handoff/integration notes (see Documentation map below)
+docs/                   CONTENT_AUTHORING_GUIDE.md only — historical handoff/status
+                         notes that used to live here moved to the private docs repo
+                         (see Documentation map below)
 ```
 
 ## Install and run locally
@@ -162,8 +164,8 @@ testing issues in the repo's GitHub issues).
 
 CI runs two real workflows:
 
-- **`.github/workflows/integration-ci.yml`** — on the `integration`
-  branch: frontend build + unit tests + DDIL tests, and the backend's
+- **`.github/workflows/integration-ci.yml`** — on every push/PR to
+  `main`: frontend build + unit tests + DDIL tests, and the backend's
   own test suite run against *both* `MemoryStore` and a real
   PostgreSQL service container.
 - **`.github/workflows/frontend-quality.yml`** (job name `quality`) —
@@ -250,13 +252,13 @@ Marc Delsoin, Chris Wozniak, Naquan Mckune.
 - [`ROADMAP.md`](./ROADMAP.md) — roadmap.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributing.
 - [`SECURITY.md`](./SECURITY.md) — security policy.
-- `docs/` — frontend handoff and integration notes written during the
-  mock-adapter build-out (roughly 2026-10-08 through 10-30). Several
-  describe a mock-only state that the real API/DDIL work has since
-  superseded; treat anything there about what's "not yet built" as a
-  snapshot in time, not current status. [`README_FRONTEND.md`](./README_FRONTEND.md)
-  is the last of those snapshots and is kept only for history — this
-  file supersedes it.
+- `docs/` — just [`CONTENT_AUTHORING_GUIDE.md`](./docs/CONTENT_AUTHORING_GUIDE.md)
+  now. The frontend handoff/integration/status notes that used to live
+  here (written during the mock-adapter build-out, roughly 2026-10-08
+  through 10-30, describing a mock-only state the real API/DDIL work
+  has since superseded) were moved to the private docs repo as part of
+  a 2026-11-03 sanitization pass — see that repo's
+  `compliance/public-repo-sanitization-2026-11-03.md`.
 - The canonical project-management documentation (PRDs, delivery
   plans, decisions, test evidence) lives in the separate
   [Tetherless docs repository](https://github.com/PixelAndFlow/RootSync-Tetherless-Project-Docs),

@@ -17,6 +17,13 @@ async function signIn(username: string) {
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "demo-password-123" } });
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
   await waitFor(() => expect(screen.queryByLabelText("Username")).not.toBeInTheDocument());
+  // Signing in lands on either the password-change screen or straight on /staff, in two separate
+  // renders — wait for one of those two terminal states to actually commit before branching on it,
+  // otherwise this can race (and did, intermittently, under CI load): a synchronous check right after
+  // the waitFor above can run in the gap between "Username gone" and the next screen's content.
+  await waitFor(() => expect(
+    screen.queryByLabelText("Temporary password") ?? screen.queryByRole("link", { name: "System" }),
+  ).not.toBeNull());
   if (screen.queryByLabelText("Temporary password")) {
     fireEvent.change(screen.getByLabelText("Temporary password"), { target: { value: "demo-password-123" } });
     fireEvent.change(screen.getByLabelText("New password", { exact: true }), { target: { value: "replacement-password-123" } });
