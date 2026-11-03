@@ -14,10 +14,9 @@
    `activity_type` does not imply a game renderer exists.
 7. Run `npm run validate:content` before using a changed fixture.
 
-On the integration branch, `npm.cmd run check:shared-content` also checks fixtures
-with Marc's browser-bundled validator at fetched commit `e2ceb7e`. This is a
-read-only compatibility probe, not a second copied validator or a live import
-feature. See [integration status](FRONTEND_INTEGRATION_STATUS.md).
+`npm run check:shared-content` also checks fixtures against a separately
+pinned copy of the validator, as a read-only cross-check (not a live import
+feature).
 
 ## What the current validator protects
 
