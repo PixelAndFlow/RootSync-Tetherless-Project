@@ -10,4 +10,6 @@ export interface TrainerDataGateway {
   listLearners(input: { cohortId: string; moduleId?: string }): Promise<TrainerLearnerSummary[]>;
   getLearnerModuleDetail(learnerId: string, moduleId: string): Promise<TrainerModuleDetail>;
   getModuleCohortSummary(input: { cohortId: string; moduleId: string }): Promise<ModuleCohortSummary>;
+  /** Issue #49: this learner's own assigned modules, server/gateway-side — no reach-across into StaffAdminGateway needed. */
+  listLearnerAssignedModules(learnerId: string): Promise<{ moduleId: string; moduleName: string }[]>;
 }

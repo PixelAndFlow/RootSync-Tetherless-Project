@@ -119,6 +119,14 @@ describe("ApiTrainerDataGateway requests", () => {
     await expect(other.getLearnerModuleDetail(learnerId, "sample-module")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
+  it("issue #49: lists a learner's own assigned modules from the no-module_id learner report, with no StaffAdminGateway reach-across", async () => {
+    const { gateway, fetcher } = gatewayWith(row([module(), module({ module_id: "second-module", module_name: "Second module" })]));
+    expect(await gateway.listLearnerAssignedModules(learnerId)).toEqual([{ moduleId: "sample-module", moduleName: "Synthetic module" }, { moduleId: "second-module", moduleName: "Second module" }]);
+    expect(fetcher.mock.calls[0][0]).toBe(`http://localhost:8080/v1/staff/learners/${learnerId}/report`);
+    const { gateway: empty } = gatewayWith(row([]));
+    expect(await empty.listLearnerAssignedModules(learnerId)).toEqual([]);
+  });
+
   it("maps the cohort summary, with nullable averages and the spec's counts", async () => {
     const { gateway, fetcher } = gatewayWith({ cohort_id: cohortId, module_id: "sample-module", module_name: "Synthetic module", generated_at: "x", learner_count: 3, started_count: 2, completed_count: 1, average_initial_score_percent: null, average_best_score_percent: 80, average_mastery_percent: 55.5, passing_count: 1, struggling_count: 1, not_yet_passing_count: 0 });
     expect(await gateway.getModuleCohortSummary({ cohortId, moduleId: "sample-module" })).toEqual({

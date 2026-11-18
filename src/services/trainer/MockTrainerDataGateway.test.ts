@@ -50,4 +50,10 @@ describe("MockTrainerDataGateway", () => {
     await expect(gateway.getLearnerModuleDetail("unknown", moduleId)).rejects.toThrow("Fixture learner/module record not found.");
     await expect(gateway.getModuleCohortSummary({ cohortId, moduleId: "unknown-module" })).rejects.toThrow("Fixture module not found.");
   });
+
+  it("issue #49: lists a fixture learner's own assigned modules, empty for an unknown learner", async () => {
+    const gateway = new MockTrainerDataGateway();
+    expect(await gateway.listLearnerAssignedModules("fixture-learner-001")).toEqual([{ moduleId, moduleName: "Operation Cyber Squad" }]);
+    expect(await gateway.listLearnerAssignedModules("unknown-learner")).toEqual([]);
+  });
 });
