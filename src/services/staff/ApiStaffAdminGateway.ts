@@ -136,7 +136,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
   /** The trainer dashboard reads, sharing this gateway's staff session token. */
   trainerData(): ApiTrainerDataGateway { return new ApiTrainerDataGateway(this.api); }
 
-  logout(): void { this.token = null; }
+  /** Issue #58: best-effort server-side invalidation — the local token is always cleared, even if this call fails (offline, already expired). */
+  async logout(): Promise<void> {
+    if (this.token) { try { await this.api.post("/v1/staff/logout", {}); } catch { /* local sign-out must not get stuck behind a network failure */ } }
+    this.token = null;
+  }
 
   async login(input: { username: string; password: string }): Promise<StaffSession> {
     const body = record(await this.api.post("/v1/staff/login", input, { auth: false }));

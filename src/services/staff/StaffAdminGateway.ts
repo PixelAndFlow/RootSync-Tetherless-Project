@@ -4,7 +4,8 @@ import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleChec
 /** Frontend boundary for Marc's StaffAdminGateway. The mock is intentional until API wiring is approved. */
 export interface StaffAdminGateway {
   login(input: { username: string; password: string }): Promise<StaffSession>;
-  logout(): void;
+  /** Issue #58: calls the server's logout endpoint (invalidating the token server-side) before clearing it locally. */
+  logout(): Promise<void>;
   /** Re-reads the current session from the server (spec v1.30 §10's `me`). Useful after another tab or device changes something about this account. */
   me(): Promise<StaffSession>;
   changePassword(input: { currentPassword: string; newPassword: string }): Promise<StaffSession>;
