@@ -80,7 +80,7 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
   /** No real token in demo mode — this is just enough state for me() to echo back whoever last signed in/changed their password. */
   private currentSession: StaffSession | null = null;
 
-  logout(): void { this.currentSession = null; }
+  async logout(): Promise<void> { this.currentSession = null; }
   async login(input: { username: string; password: string }): Promise<StaffSession> {
     if (input.password !== "demo-password-123") throw new ApiError("UNAUTHORIZED", 401);
     const roleByUsername: Record<string, StaffRole> = { demo: "superadmin", admin: "admin", trainer: "trainer" };

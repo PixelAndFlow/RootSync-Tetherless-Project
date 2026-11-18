@@ -49,15 +49,36 @@ describe("ApiStaffAdminGateway", () => {
     await expect(gateway.login({ username: "test-admin", password: "temporary-password" })).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
-  it("clears the shared staff and trainer data token on sign-out", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })));
+  it("issue #58: clears the shared staff and trainer data token on sign-out, after calling the server's logout endpoint", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
     const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
     const trainerData = gateway.trainerData();
     await gateway.login({ username: "test-admin", password: "temporary-password" });
-    gateway.logout();
+    await gateway.logout();
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/logout");
+    expect(fetcher.mock.calls[1][1]).toMatchObject({ method: "POST", headers: { authorization: "Bearer session-token" } });
     await expect(gateway.listCohorts()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(trainerData.listLearners({ cohortId: "11111111-1111-4111-8111-111111111111" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("issue #58: logout still clears the local token when the server call fails", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockRejectedValueOnce(new TypeError("offline"));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.login({ username: "test-admin", password: "temporary-password" });
+    await gateway.logout();
+    await expect(gateway.listCohorts()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("issue #58: logout is a no-op against the server when there was never a session", async () => {
+    const fetcher = vi.fn();
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.logout();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("reads contract data, creates a student and reveals the returned code", async () => {

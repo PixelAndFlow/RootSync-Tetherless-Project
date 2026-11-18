@@ -5,7 +5,7 @@ a **living document** — update it in the same PR that adds, removes,
 or materially changes a feature, not as a later cleanup pass. See
 [Keeping this updated](#keeping-this-updated) at the bottom.
 
-Last updated: 2026-11-02.
+Last updated: 2026-11-18.
 
 ## Student (learner) experience
 
@@ -69,7 +69,10 @@ capability below is gated by a specific permission, independently
 assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
 
 - **Sign-in and session**: role-aware landing page, forced password
-  change on first login, session expiry.
+  change on first login, session expiry. Sign-out invalidates the
+  session token server-side, not just locally; an open session picks
+  up a permission change made elsewhere as soon as the tab regains
+  focus, without needing to sign back in.
 - **Cohorts**: create, rename, archive.
 - **Learners**: create, edit, archive, reissue a setup code, remotely
   switch off a device, and a permanent, confirmation-gated purge
