@@ -241,6 +241,30 @@ describe("MockStaffAdminGateway", () => {
     expect(Array.isArray(body.learners)).toBe(true);
     await expect(gateway.exportCohort("not-a-real-cohort")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
+
+  it("issue #52: export shape matches the real server's per-learner fields, so a privacy-export check isn't misled in demo mode", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const cohortId = (await gateway.listCohorts())[0].cohortId;
+    const blob = await gateway.exportCohort(cohortId);
+    const text = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsText(blob);
+    });
+    const body = JSON.parse(text);
+    // switchedOffAt is shared, mutable module state other tests in this file
+    // also touch, so check shape/identity, not its exact value.
+    const withDevices = body.learners.find((l: { learnerId: string }) => l.learnerId === "student-demo-001");
+    expect(withDevices.devices).toHaveLength(1);
+    expect(withDevices.devices[0]).toMatchObject({ deviceId: "device-demo-001", setUpAt: "2026-01-02T00:00:00.000Z" });
+    expect(withDevices.devices[0]).toHaveProperty("switchedOffAt");
+    for (const learner of body.learners) {
+      expect(Array.isArray(learner.devices)).toBe(true);
+      expect(learner.accepted_events).toEqual([]);
+      expect(learner.rejected_events).toEqual([]);
+    }
+  });
 });
 
 /** A module that satisfies every rule in packages/content/src/tetherless-module.ts's validateTetherlessModule(), not just the mock's old simplified checks. */
