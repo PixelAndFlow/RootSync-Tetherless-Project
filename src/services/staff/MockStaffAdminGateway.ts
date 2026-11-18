@@ -37,6 +37,9 @@ const learnerDevices = new Map<string, LearnerDevice[]>([
   ["student-demo-002", [{ deviceId: "device-demo-002", setUpAt: "2026-01-02T00:00:00.000Z", switchedOffAt: null }]],
 ]);
 
+/** Issue #53's purge guardrail, mirrored for demo mode: cohorts exportCohort has ever run against. */
+const exportedCohortIds = new Set<string>();
+
 /** Mirrors packages/server/src/learners.ts's checkLearnerFields rules, for updateLearner's VALIDATION_FAILED details. */
 const LEARNER_FIELD_LIMITS = { firstName: 80, lastName: 80, phone: 32, email: 254, trainingLevel: 40, note1: 1000, note2: 1000 } as const;
 const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
@@ -178,10 +181,16 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     if (!device) throw new ApiError("NOT_FOUND", 404);
     device.switchedOffAt = new Date().toISOString();
   }
-  async purgeLearner(learnerId: string, confirmLearnerCode: string): Promise<{ eventsDeleted: number }> {
+  async purgeLearner(learnerId: string, confirmLearnerCode: string, options?: { overrideUnexported?: boolean }): Promise<{ eventsDeleted: number }> {
     const index = students.findIndex((candidate) => candidate.learnerId === learnerId);
     if (index === -1) throw new ApiError("NOT_FOUND", 404);
-    if (confirmLearnerCode !== students[index].learnerCode) throw new ApiError("CONFIRMATION_REQUIRED", 422);
+    const student = students[index];
+    if (confirmLearnerCode !== student.learnerCode) throw new ApiError("CONFIRMATION_REQUIRED", 422);
+    // Issue #53's guardrail, mirrored from the real server: block unless this learner's
+    // cohort was exported at least once in this session, or the caller explicitly overrides.
+    if (!exportedCohortIds.has(student.cohortId) && !options?.overrideUnexported) {
+      throw new ApiError("EXPORT_REQUIRED", 409);
+    }
     students.splice(index, 1);
     learnerDevices.delete(learnerId);
     return { eventsDeleted: 0 };
@@ -363,6 +372,7 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
   async exportCohort(cohortId: string): Promise<Blob> {
     const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
     if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    exportedCohortIds.add(cohortId);
     const learners = students
       .filter((student) => student.cohortId === cohortId)
       .map((student) => ({

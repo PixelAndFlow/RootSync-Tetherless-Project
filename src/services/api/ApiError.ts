@@ -25,6 +25,7 @@ const messages: Record<string, string> = {
   COHORT_ARCHIVED: "This cohort has been archived and can't be changed.",
   LEARNER_ARCHIVED: "This student has been archived.",
   MODULE_ARCHIVED: "This module has been archived.",
+  EXPORT_REQUIRED: "This learner's cohort has never been exported. Export it first, or confirm you want to purge without exporting.",
   ALREADY_ASSIGNED: "This module is already assigned to that cohort or student.",
   VERSION_EXISTS: "This module version already exists.",
   IN_USE: "This can't be removed while it's still in use.",

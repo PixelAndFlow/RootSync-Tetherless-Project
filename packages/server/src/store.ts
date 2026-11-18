@@ -222,4 +222,6 @@ export interface Store {
   /** Permanently delete one learner and everything tied to them. Bypasses the append-only rule for this one purpose. */
   purgeLearner(learnerId: string): Promise<boolean>;
   addAudit(e: AuditEntry): Promise<void>;
+  /** Issue #53's purge guardrail: has this cohort ever been exported (any staff member, any time)? Derived from the audit log's own "cohort.export" entries, not a separate table. */
+  hasExportedCohort(cohortId: string): Promise<boolean>;
 }

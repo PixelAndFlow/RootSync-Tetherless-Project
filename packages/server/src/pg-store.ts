@@ -506,4 +506,8 @@ export class PgStore implements Store {
   async addAudit(e: AuditEntry) {
     await this.pool.query("INSERT INTO audit_log (staff_id, action, target, detail, at) VALUES ($1, $2, $3, $4, $5)", [e.staff_id, e.action, e.target, JSON.stringify(e.detail ?? null), e.at]);
   }
+  async hasExportedCohort(cohortId: string): Promise<boolean> {
+    const { rowCount } = await this.pool.query("SELECT 1 FROM audit_log WHERE action = 'cohort.export' AND target = $1 LIMIT 1", [cohortId]);
+    return (rowCount ?? 0) > 0;
+  }
 }

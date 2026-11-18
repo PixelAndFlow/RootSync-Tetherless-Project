@@ -305,4 +305,7 @@ export class MemoryStore implements Store {
   async addAudit(e: AuditEntry) {
     this.audit.push(clone(e));
   }
+  async hasExportedCohort(cohortId: string): Promise<boolean> {
+    return this.audit.some((e) => e.action === "cohort.export" && e.target === cohortId);
+  }
 }
