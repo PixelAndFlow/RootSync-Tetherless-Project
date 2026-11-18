@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
-import { useStaffAdminGateway, useTrainerDataGateway } from "../../app/providers/GatewayProvider";
+import { useTrainerDataGateway } from "../../app/providers/GatewayProvider";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
 import { MetricCard } from "../../components/trainer/MetricCard";
 import { PerformanceBar } from "../../components/trainer/PerformanceBar";
@@ -16,14 +16,13 @@ const percent = (value: number | undefined) => value === undefined ? "—" : `${
 /**
  * One student on one module, from the trainer data gateway (server reports when connected to the
  * API, fixtures otherwise). `?module=` disambiguates when a learner has more than one assigned
- * module; when it's missing, falls back to the learner's real assignments (#6/#15) instead of a
- * dead end that tells the trainer to click a link the dashboard may not offer.
+ * module; when it's missing, falls back to the learner's real assigned modules (#6/#15, #49)
+ * instead of a dead end that tells the trainer to click a link the dashboard may not offer.
  */
 export function TrainerLearnerDetailScreen() {
   const live = readFrontendRuntimeConfig().mode === "integration";
   const { session } = useStaffSession();
   const trainerData = useTrainerDataGateway();
-  const staffAdmin = useStaffAdminGateway();
   const { learnerId } = useParams();
   const [params] = useSearchParams();
   const paramModuleId = params.get("module")?.trim() || null;
@@ -36,19 +35,12 @@ export function TrainerLearnerDetailScreen() {
 
   useEffect(() => {
     if (!signedIn || !learnerId || !needsAssignmentLookup) { setAssignedModules(null); return; }
-    if (!staffAdmin) { setAssignedModules([]); return; }
     let cancelled = false;
-    void staffAdmin.getLearnerRecord(learnerId)
-      .then((learner) => staffAdmin.listAssignments(learner.cohortId))
-      .then((assignments) => {
-        if (cancelled) return;
-        const forLearner = assignments.filter((a) => a.target === "cohort" || a.learnerId === learnerId);
-        const byModule = new Map(forLearner.map((a) => [a.moduleId, a.moduleName] as const));
-        setAssignedModules([...byModule].map(([moduleId, moduleName]) => ({ moduleId, moduleName })));
-      })
+    void trainerData.listLearnerAssignedModules(learnerId)
+      .then((modules) => { if (!cancelled) setAssignedModules(modules); })
       .catch(() => { if (!cancelled) setAssignedModules([]); });
     return () => { cancelled = true; };
-  }, [staffAdmin, signedIn, learnerId, needsAssignmentLookup]);
+  }, [trainerData, signedIn, learnerId, needsAssignmentLookup]);
 
   const moduleId = paramModuleId || (live ? (assignedModules?.length === 1 ? assignedModules[0].moduleId : null) : moduleLibrary[0].module_id);
 

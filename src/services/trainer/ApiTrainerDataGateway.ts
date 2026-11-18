@@ -124,4 +124,10 @@ export class ApiTrainerDataGateway implements TrainerDataGateway {
   async getModuleCohortSummary(input: { cohortId: string; moduleId: string }): Promise<ModuleCohortSummary> {
     return toCohortSummary(parseCohortSummary(await this.api.get(`/v1/staff/cohorts/${uuidInput(input.cohortId)}/modules/${moduleInput(input.moduleId)}/summary`)));
   }
+
+  /** Issue #49: the learner report route already returns every one of a learner's modules when `module_id` is omitted — no new route needed. */
+  async listLearnerAssignedModules(learnerId: string): Promise<{ moduleId: string; moduleName: string }[]> {
+    const row = parseLearnerRow(await this.api.get(`/v1/staff/learners/${uuidInput(learnerId)}/report`));
+    return row.modules.map((m) => ({ moduleId: m.module_id, moduleName: m.module_name }));
+  }
 }

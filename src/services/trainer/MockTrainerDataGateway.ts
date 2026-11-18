@@ -186,6 +186,13 @@ export class MockTrainerDataGateway implements TrainerDataGateway {
     });
   }
 
+  /** Issue #49: derived from the same fixture rows listLearners/getLearnerModuleDetail already use. */
+  async listLearnerAssignedModules(learnerId: string): Promise<{ moduleId: string; moduleName: string }[]> {
+    if (this.scenario === "load_failure") throw new Error("Trainer fixture load failed for scenario testing.");
+    const byModule = new Map(learners.filter((l) => l.learnerId === learnerId).map((l) => [l.moduleId, l.moduleTitle] as const));
+    return this.copy([...byModule].map(([moduleId, moduleName]) => ({ moduleId, moduleName })));
+  }
+
   private copy<T>(value: T): T {
     return structuredClone(value);
   }
