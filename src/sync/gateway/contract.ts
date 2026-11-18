@@ -8,12 +8,14 @@
  * Source of truth: origin/chris -> src/services/offline/OfflineLearningGateway.ts
  * and src/types/learning.ts.
  *
- * When Chris changes his contract, this file must follow, and the integration
- * test in tests/sync/gateway-contract.test.ts will fail if the method list
- * drifts. That test is the reason this mirror is safe to keep: it turns a
- * silent divergence into a red test.
+ * When Chris changes his contract, this file must follow, and the
+ * integration test in tests/sync/gateway.test.ts will fail if the method
+ * list drifts. That test is the reason this mirror is safe to keep: it
+ * turns a silent divergence into a red test.
  *
- * Ten methods, not nine — getModuleProgress() is the one that is easy to miss.
+ * Seventeen methods, not ten — getModuleProgress() is the one that is easy
+ * to miss among the original ten; the other seven are the API Spec v1.30
+ * §8.1 additions (see GATEWAY_METHODS below).
  */
 
 export type SyncStatus =
@@ -164,29 +166,14 @@ export interface OfflineLearningGateway {
 
 /**
  * API Spec v1.30 §8.1 additions. Mirrored here the same way as the ten
- * methods above — see the file header. `TetherlessModule`/`LocalizedText`
- * are re-exported, not redefined: the module JSON schema is Chris's, large,
- * and DDIL only stores/returns it verbatim, so duplicating it here would be
- * drift risk for no benefit.
+ * methods above — see the file header. `TetherlessModule`/`LocalizedText`,
+ * `LearnerProfile`, and `ModuleSummary` are re-exported, not redefined:
+ * duplicating them here (issue #12) was drift risk for no benefit, the same
+ * reasoning that already applied to the module schema below.
  */
 export type { LocalizedText, TetherlessModule } from "../../types/content.ts";
-
-export interface LearnerProfile {
-  learnerId: string;
-  deviceId: string;
-  username: string;
-  learnerCode: string;
-  cohortName: string;
-}
-
-export interface ModuleSummary {
-  moduleId: string;
-  contentVersion: number;
-  title: { en: string; es?: string };
-  level: string;
-  activityType: string;
-  downloadState: "not_downloaded" | "downloading" | "available_offline" | "download_problem";
-}
+export type { SetupProfile as LearnerProfile } from "../../services/setup/LearnerSetupGateway.ts";
+export type { ModuleSummary } from "../../services/offline/OfflineLearningGateway.ts";
 
 /** The two device-scoped HTTP calls setupDevice/listAssignedModules/getModule need, beyond POST /v1/sync/events. */
 export interface DeviceApi {
@@ -194,7 +181,17 @@ export interface DeviceApi {
   get(path: string): Promise<unknown>;
 }
 
-/** The exact method list, used by the contract test to detect drift. */
+/**
+ * The exact method list, used by the contract test to detect drift.
+ *
+ * The original ten, plus the seven API Spec v1.30 §8.1 additions
+ * (setupDevice, getLearnerProfile, listAssignedModules,
+ * prepareModuleForOffline, getModule, abandonAttempt, recoverAuth) — all
+ * real, shipped, and always present on the one concrete gateway
+ * (DdilLearningGateway) today, not merely "agreed optional additions" still
+ * pending a future implementation. Issue #12: this list had been left frozen
+ * at the original ten long after that stopped being true.
+ */
 export const GATEWAY_METHODS = [
   "startSession",
   "startAttempt",
@@ -206,4 +203,11 @@ export const GATEWAY_METHODS = [
   "getSyncSummary",
   "requestSync",
   "subscribeToSyncStatus",
+  "setupDevice",
+  "getLearnerProfile",
+  "listAssignedModules",
+  "prepareModuleForOffline",
+  "getModule",
+  "abandonAttempt",
+  "recoverAuth",
 ] as const;
