@@ -5,7 +5,7 @@ a **living document** — update it in the same PR that adds, removes,
 or materially changes a feature, not as a later cleanup pass. See
 [Keeping this updated](#keeping-this-updated) at the bottom.
 
-Last updated: 2026-11-02.
+Last updated: 2026-11-18.
 
 ## Student (learner) experience
 
@@ -147,6 +147,12 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   regression checks on every pull request; a separate backend suite
   runs against both the in-memory store and a real PostgreSQL service
   container.
+- **Code-split staff/trainer bundle**: the whole admin surface (content
+  validation, roster import, permissions editor, staff accounts, …)
+  still ships from the same build as the learner app, but as separate
+  lazy-loaded chunks fetched only on first visit to a `/staff/*` or
+  `/trainer/*` route — a learner device that never visits those routes
+  never downloads their JS (#48).
 
 ## Known gaps (not yet built)
 
@@ -155,8 +161,6 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   at `prototypes/block-the-threat/` and may inform this decision.
 - Bulk CSV roster import for learners (`checkRoster`/`commitRoster`)
   — split out as #43; manual learner-by-learner creation works today.
-- A separate admin app — the whole product currently ships as one
-  JS bundle; tracked in #48.
 - Local push notifications and an outbound webhook (Systeme.io/Zapier)
   from the backend — neither exists yet.
 - AI-driven analysis of performance data — `packages/analytics`

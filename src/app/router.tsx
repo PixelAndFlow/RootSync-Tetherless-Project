@@ -1,29 +1,39 @@
+import { lazy, Suspense } from "react";
 import { createHashRouter, Navigate, Outlet, type LoaderFunctionArgs } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { LearnerSetupScreen } from "../features/onboarding/LearnerSetupScreen";
 import { LearnerProfileGate } from "../features/onboarding/LearnerProfileGate";
 import { MissionDetailScreen } from "../features/missions/MissionDetailScreen";
 import { MissionLibraryScreen } from "../features/missions/MissionLibraryScreen";
-import { TrainerDashboardScreen } from "../features/trainer/TrainerDashboardScreen";
 import { MissionPlayScreen } from "../features/training/MissionPlayScreen";
 import { MissionResultsScreen } from "../features/results/MissionResultsScreen";
 import { RemediationScreen } from "../features/remediation/RemediationScreen";
 import { MissionReviewScreen } from "../features/review/MissionReviewScreen";
 import { SyncStatusScreen } from "../features/sync-status/SyncStatusScreen";
-import { TrainerLearnerDetailScreen } from "../features/trainer/TrainerLearnerDetailScreen";
 import { RouteErrorScreen, RouteNotFoundScreen } from "../features/system/RouteFallbackScreen";
+import { LoadingState } from "../components/common/PageState";
 import { loadModuleCatalog } from "../features/missions/moduleCatalog";
 import { appGateways } from "../services/gateways";
 import { LearnerSettingsScreen } from "../features/settings/LearnerSettingsScreen";
-import { StaffSignInScreen } from "../features/staff/StaffSignInScreen";
-import { StaffPasswordChangeScreen } from "../features/staff/StaffPasswordChangeScreen";
-import { StaffDashboardScreen } from "../features/staff/StaffDashboardScreen";
-import { StaffOperationsScreen } from "../features/staff/StaffOperationsScreen";
-import { StaffLearnerDetailScreen } from "../features/staff/StaffLearnerDetailScreen";
-import { StaffContentWorkflowScreen } from "../features/staff/StaffContentWorkflowScreen";
-import { StaffPermissionScreen } from "../features/staff/StaffPermissionScreen";
-import { StaffAccountsScreen } from "../features/staff/StaffAccountsScreen";
 import { StaffPasswordGate } from "../features/staff/StaffPasswordGate";
+
+/**
+ * Issue #48: every learner device was downloading the whole staff/trainer
+ * admin surface (content validation, roster import, permissions editor, …)
+ * in the one JS bundle, even though a learner's own screens never reference
+ * any of it. Each import() below becomes its own chunk, fetched only when a
+ * staff or trainer route is actually visited.
+ */
+const TrainerDashboardScreen = lazy(() => import("../features/trainer/TrainerDashboardScreen").then((m) => ({ default: m.TrainerDashboardScreen })));
+const TrainerLearnerDetailScreen = lazy(() => import("../features/trainer/TrainerLearnerDetailScreen").then((m) => ({ default: m.TrainerLearnerDetailScreen })));
+const StaffSignInScreen = lazy(() => import("../features/staff/StaffSignInScreen").then((m) => ({ default: m.StaffSignInScreen })));
+const StaffPasswordChangeScreen = lazy(() => import("../features/staff/StaffPasswordChangeScreen").then((m) => ({ default: m.StaffPasswordChangeScreen })));
+const StaffDashboardScreen = lazy(() => import("../features/staff/StaffDashboardScreen").then((m) => ({ default: m.StaffDashboardScreen })));
+const StaffOperationsScreen = lazy(() => import("../features/staff/StaffOperationsScreen").then((m) => ({ default: m.StaffOperationsScreen })));
+const StaffLearnerDetailScreen = lazy(() => import("../features/staff/StaffLearnerDetailScreen").then((m) => ({ default: m.StaffLearnerDetailScreen })));
+const StaffContentWorkflowScreen = lazy(() => import("../features/staff/StaffContentWorkflowScreen").then((m) => ({ default: m.StaffContentWorkflowScreen })));
+const StaffPermissionScreen = lazy(() => import("../features/staff/StaffPermissionScreen").then((m) => ({ default: m.StaffPermissionScreen })));
+const StaffAccountsScreen = lazy(() => import("../features/staff/StaffAccountsScreen").then((m) => ({ default: m.StaffAccountsScreen })));
 
 /**
  * Guards the mission routes against an unknown module ID before the screen
@@ -66,16 +76,25 @@ export const router = createHashRouter([
         ],
       },
       { path: "/learner/sync", element: <SyncStatusScreen /> },
-      { path: "/trainer", element: <TrainerDashboardScreen /> },
-      { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
-      { path: "/staff/sign-in", element: <StaffSignInScreen /> },
-      { path: "/staff/change-password", element: <StaffPasswordChangeScreen /> },
-      { path: "/staff", element: <StaffPasswordGate><StaffDashboardScreen /></StaffPasswordGate> },
-      { path: "/staff/operations", element: <StaffPasswordGate><StaffOperationsScreen /></StaffPasswordGate> },
-      { path: "/staff/operations/learners/:learnerId", element: <StaffPasswordGate><StaffLearnerDetailScreen /></StaffPasswordGate> },
-      { path: "/staff/content", element: <StaffPasswordGate><StaffContentWorkflowScreen /></StaffPasswordGate> },
-      { path: "/staff/accounts", element: <StaffPasswordGate><StaffAccountsScreen /></StaffPasswordGate> },
-      { path: "/staff/system", element: <StaffPasswordGate><StaffPermissionScreen permission="system" /></StaffPasswordGate> },
+      {
+        // Issue #48: one Suspense boundary for the whole staff/trainer area,
+        // same nested-route shape as the learner-profile gate above. A
+        // learner device that never visits any of these paths never fetches
+        // their chunks at all.
+        element: <Suspense fallback={<LoadingState label="Loading…" />}><Outlet /></Suspense>,
+        children: [
+          { path: "/trainer", element: <TrainerDashboardScreen /> },
+          { path: "/trainer/learners/:learnerId", element: <TrainerLearnerDetailScreen /> },
+          { path: "/staff/sign-in", element: <StaffSignInScreen /> },
+          { path: "/staff/change-password", element: <StaffPasswordChangeScreen /> },
+          { path: "/staff", element: <StaffPasswordGate><StaffDashboardScreen /></StaffPasswordGate> },
+          { path: "/staff/operations", element: <StaffPasswordGate><StaffOperationsScreen /></StaffPasswordGate> },
+          { path: "/staff/operations/learners/:learnerId", element: <StaffPasswordGate><StaffLearnerDetailScreen /></StaffPasswordGate> },
+          { path: "/staff/content", element: <StaffPasswordGate><StaffContentWorkflowScreen /></StaffPasswordGate> },
+          { path: "/staff/accounts", element: <StaffPasswordGate><StaffAccountsScreen /></StaffPasswordGate> },
+          { path: "/staff/system", element: <StaffPasswordGate><StaffPermissionScreen permission="system" /></StaffPasswordGate> },
+        ],
+      },
       { path: "*", element: <RouteNotFoundScreen /> },
     ],
   },
