@@ -1,10 +1,10 @@
 import { ApiClient } from "../api/ApiClient";
 import { ApiError, isRecord } from "../api/ApiError";
 import type { TetherlessModule } from "../../../packages/content/src/tetherless-module";
-import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, LearnerDevice as LearnerDeviceWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire } from "../../../packages/contract/src/staff-api";
-import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffPermissionKey, StaffRole, StaffSession, Thresholds } from "../../types/staff";
+import type { Cohort as CohortWire, LearnerRecord as LearnerRecordWire, LearnerDevice as LearnerDeviceWire, ModuleListing as ModuleListingWire, ModuleCheck as ModuleCheckWire, ModulePublishResult as ModulePublishResultWire, Assignment as AssignmentWire, StaffErrorDetail as StaffErrorDetailWire, RosterCheck as RosterCheckWire, RosterCommitResult as RosterCommitResultWire, RosterPreviewRow as RosterPreviewRowWire } from "../../../packages/contract/src/staff-api";
+import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, RosterCheckResult, RosterCommitResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffPermissionKey, StaffRole, StaffSession, Thresholds } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
-import { fromThresholds, toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult, toThresholds } from "./staffMappers";
+import { fromThresholds, toAssignment, toCohort, toLearnerRecord, toModuleCheck, toModuleListing, toModulePublishResult, toRosterCheck, toRosterCommit, toThresholds } from "./staffMappers";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 import { ApiTrainerDataGateway } from "../trainer/ApiTrainerDataGateway";
 
@@ -84,6 +84,34 @@ function parseAssignment(value: unknown): AssignmentWire {
     learner_id: a.learner_id === null ? null : text(a.learner_id),
     created_at: text(a.created_at),
     created_by: a.created_by === null ? null : text(a.created_by),
+  };
+}
+
+function parseRosterPreviewRow(value: unknown): RosterPreviewRowWire {
+  const r = record(value);
+  return { first_name: text(r.first_name), last_name: text(r.last_name), phone: nullable(r.phone), email: nullable(r.email), training_level: nullable(r.training_level), note_1: nullable(r.note_1), note_2: nullable(r.note_2) };
+}
+function parseRosterCheck(value: unknown): RosterCheckWire {
+  const c = record(value);
+  return {
+    import_id: text(c.import_id),
+    cohort_id: text(c.cohort_id),
+    valid: bool(c.valid),
+    rows_total: number(c.rows_total),
+    rows_ok: number(c.rows_ok),
+    errors: list(c.errors).map(parseIssue),
+    warnings: list(c.warnings).map(parseIssue),
+    preview: list(c.preview).map(parseRosterPreviewRow),
+  };
+}
+function parseRosterCommit(value: unknown): RosterCommitResultWire {
+  const c = record(value);
+  return {
+    created: number(c.created),
+    learners: list(c.learners).map((value) => {
+      const l = record(value);
+      return { learner_id: text(l.learner_id), learner_code: text(l.learner_code), first_name: text(l.first_name), last_name: text(l.last_name), setup_code: text(l.setup_code) };
+    }),
   };
 }
 
@@ -218,6 +246,17 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     const learnerId = text(record(body.learner).learner_id);
     if (!setupCode || !learnerId) invalid();
     return { learnerId, setupCode, shownOnce: true };
+  }
+  async checkRoster(cohortId: string, file: File): Promise<RosterCheckResult> {
+    if (!cohortId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    const form = new FormData();
+    form.append("cohort_id", cohortId);
+    form.append("file", file, file.name);
+    return toRosterCheck(parseRosterCheck(await this.api.postForm("/v1/staff/learners/import/check", form)));
+  }
+  async commitRoster(importId: string): Promise<RosterCommitResult> {
+    if (!importId.trim()) throw new ApiError("INVALID_INPUT", 422);
+    return toRosterCommit(parseRosterCommit(await this.api.post(`/v1/staff/learners/import/${encodeURIComponent(importId)}/commit`, {})));
   }
   async getLearnerRecord(learnerId: string): Promise<LearnerRecord> {
     if (!learnerId.trim()) throw new ApiError("INVALID_INPUT", 422);

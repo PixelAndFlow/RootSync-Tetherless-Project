@@ -92,6 +92,45 @@ export interface LearnerRecord {
   devices?: LearnerDevice[];
 }
 
+// ---------------------------------------------------------------- roster import
+
+export interface RosterPreviewRow {
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  training_level: string | null;
+  note_1: string | null;
+  note_2: string | null;
+}
+
+/** POST /v1/staff/learners/import/check (issue #43). A .csv or .xlsx roster, checked but not yet created. */
+export interface RosterCheck {
+  import_id: string;
+  cohort_id: string;
+  valid: boolean;
+  rows_total: number;
+  rows_ok: number;
+  errors: StaffErrorDetail[];
+  warnings: StaffErrorDetail[];
+  /** First 20 valid rows only, for a preview table before commit. */
+  preview: RosterPreviewRow[];
+}
+
+export interface RosterImportedLearner {
+  learner_id: string;
+  learner_code: string;
+  first_name: string;
+  last_name: string;
+  setup_code: string;
+}
+
+/** POST /v1/staff/learners/import/:importId/commit success response. */
+export interface RosterCommitResult {
+  created: number;
+  learners: RosterImportedLearner[];
+}
+
 // ---------------------------------------------------------------- modules
 
 /** GET /v1/staff/modules row. No draft/published distinction — "published" means a version exists; archived is separate and independent of version history. */

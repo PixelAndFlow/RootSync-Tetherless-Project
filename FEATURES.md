@@ -5,7 +5,7 @@ a **living document** — update it in the same PR that adds, removes,
 or materially changes a feature, not as a later cleanup pass. See
 [Keeping this updated](#keeping-this-updated) at the bottom.
 
-Last updated: 2026-11-02.
+Last updated: 2026-11-18.
 
 ## Student (learner) experience
 
@@ -71,9 +71,14 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
 - **Sign-in and session**: role-aware landing page, forced password
   change on first login, session expiry.
 - **Cohorts**: create, rename, archive.
-- **Learners**: create, edit, archive, reissue a setup code, remotely
-  switch off a device, and a permanent, confirmation-gated purge
-  (type the learner's code back to confirm).
+- **Learners**: create one at a time, or import a roster in bulk from
+  a .csv file (checked and previewed before anything is created, then
+  committed with every setup code shown once — copy/print/download);
+  edit, archive, reissue a setup code, remotely switch off a device,
+  and a permanent, confirmation-gated purge (type the learner's code
+  back to confirm). The real server also accepts .xlsx rosters; the
+  mock adapter is CSV-only (no Node zip/XML reader in the browser
+  bundle), a demo-mode-only limitation, not a product gap.
 - **Content/modules**: upload and validate a module (JSON, or CSV/
   Kahoot via the importer CLI), publish new versions, view an older
   published version, archive, and purge an unused module. A module in
@@ -153,8 +158,6 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
 - A second game/activity format beyond multiple-choice — not decided
   (#42). A real, working but explicitly "not adopted" prototype exists
   at `prototypes/block-the-threat/` and may inform this decision.
-- Bulk CSV roster import for learners (`checkRoster`/`commitRoster`)
-  — split out as #43; manual learner-by-learner creation works today.
 - A separate admin app — the whole product currently ships as one
   JS bundle; tracked in #48.
 - Local push notifications and an outbound webhook (Systeme.io/Zapier)

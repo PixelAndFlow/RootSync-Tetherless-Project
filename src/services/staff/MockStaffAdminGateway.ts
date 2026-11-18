@@ -1,7 +1,8 @@
 import { ApiError, isRecord } from "../api/ApiError";
 import type { Issue } from "../../../packages/content/src/issues";
 import { checkNewVersion, validateTetherlessModule, type TetherlessModule } from "../../../packages/content/src/tetherless-module";
-import { DEFAULT_ROLE_PERMISSIONS, DEFAULT_THRESHOLDS, STAFF_PERMISSIONS, STAFF_ROLES, type Assignment, type Cohort, type LearnerDevice, type LearnerFieldChanges, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffPermissionKey, type StaffRole, type StaffSession, type Thresholds } from "../../types/staff";
+import { parseCsv } from "../../../packages/content/src/csv";
+import { DEFAULT_ROLE_PERMISSIONS, DEFAULT_THRESHOLDS, STAFF_PERMISSIONS, STAFF_ROLES, type Assignment, type Cohort, type LearnerDevice, type LearnerFieldChanges, type LearnerRecord, type ModuleCheckResult, type ModuleListing, type ModulePublishResult, type RosterCheckResult, type RosterCommitResult, type RosterImportedLearner, type RosterPreviewRow, type SetupCodeReveal, type StaffAccountReveal, type StaffAccountSummary, type StaffPermissionKey, type StaffRole, type StaffSession, type Thresholds } from "../../types/staff";
 import { STAFF_USERNAME_PATTERN } from "./username";
 import type { StaffAdminGateway } from "./StaffAdminGateway";
 
@@ -63,6 +64,54 @@ function validateLearnerChanges(changes: LearnerFieldChanges): { value: Partial<
   }
   return { value, details };
 }
+/**
+ * Issue #43. Mirrors packages/server/src/roster.ts's header matching and
+ * row rules, but CSV-only — a real .xlsx needs the server's zip/XML
+ * reader (Node-only, not something to ship to the browser bundle), so the
+ * mock rejects it with a message pointing at the live server. A pending,
+ * valid check is kept here until committed, same "one commit per check"
+ * rule as the real importId.
+ */
+const ROSTER_FIELD_MAP: Record<string, keyof RosterPreviewRow> = {
+  first_name: "firstName", last_name: "lastName", phone: "phone", email: "email", training_level: "trainingLevel", note_1: "note1", note_2: "note2",
+};
+const rosterHeaderKey = (h: string): string => h.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const ROSTER_CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O/1/I/L, per spec v1.30 §10.1
+function randomLearnerCode(cohortName: string): string {
+  let suffix = "";
+  for (let i = 0; i < 4; i++) suffix += ROSTER_CODE_CHARS[Math.floor(Math.random() * ROSTER_CODE_CHARS.length)];
+  return `${cohortName}-${suffix}`;
+}
+function validateRosterRow(cells: Partial<Record<keyof RosterPreviewRow, string>>, row: number): { value: RosterPreviewRow | null; errors: RosterCheckResult["errors"] } {
+  const errors: RosterCheckResult["errors"] = [];
+  const value: Partial<RosterPreviewRow> = {};
+  for (const field of ["firstName", "lastName", "phone", "email", "trainingLevel", "note1", "note2"] as const) {
+    const s = (cells[field] ?? "").trim();
+    const required = field === "firstName" || field === "lastName";
+    if (!s) {
+      if (required) errors.push({ row, field, code: "REQUIRED", message: `${field === "firstName" ? "First" : "Last"} name is missing.` });
+      else (value as Record<string, unknown>)[field] = null;
+      continue;
+    }
+    if (s.length > LEARNER_FIELD_LIMITS[field]) { errors.push({ row, field, code: "TOO_LONG", message: `${field} is longer than ${LEARNER_FIELD_LIMITS[field]} characters.` }); continue; }
+    if (/[<>]/.test(s) && field !== "note1" && field !== "note2") { errors.push({ row, field, code: "INVALID", message: `${field} can't contain < or >.` }); continue; }
+    if (field === "email" && !EMAIL_PATTERN.test(s)) { errors.push({ row, field, code: "FORMAT", message: "This doesn't look like an email address." }); continue; }
+    if (field === "phone" && !PHONE_PATTERN.test(s)) { errors.push({ row, field, code: "FORMAT", message: "Phone numbers can contain digits, spaces and + ( ) . - only." }); continue; }
+    (value as Record<string, unknown>)[field] = s;
+  }
+  return { value: errors.length ? null : (value as RosterPreviewRow), errors };
+}
+const rosterImports = new Map<string, { cohortId: string; rows: RosterPreviewRow[] }>();
+/** Not file.text() — jsdom's File/Blob don't implement it (same gap MockStaffAdminGateway.test.ts's own blob-reading tests work around). */
+function readFileText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read the file."));
+    reader.readAsText(file);
+  });
+}
+
 const accounts: StaffAccountSummary[] = [
   { staffId: "superadmin-demo-001", username: "demo", displayName: "Demo SuperAdmin", role: "superadmin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
   { staffId: "admin-demo-001", username: "admin", displayName: "Demo Admin", role: "admin", disabled: false, createdAt: "2026-01-01T00:00:00.000Z" },
@@ -135,6 +184,61 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
   async createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal> {
     if (!cohorts.some((cohort) => cohort.cohortId === input.cohortId) || !input.firstName.trim() || !input.lastName.trim()) throw new ApiError("INVALID_INPUT", 422);
     return { learnerId: crypto.randomUUID(), setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, shownOnce: true };
+  }
+  async checkRoster(cohortId: string, file: File): Promise<RosterCheckResult> {
+    const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
+    if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    if (!/\.csv$/i.test(file.name)) throw new ApiError("UNSUPPORTED_FILE", 422);
+    const { rows: grid } = parseCsv(await readFileText(file));
+    const header = (grid[0] ?? []).map(rosterHeaderKey);
+    const errors: RosterCheckResult["errors"] = [];
+    const warnings: RosterCheckResult["errors"] = [];
+    for (const required of ["first_name", "last_name"]) {
+      if (!header.includes(required)) errors.push({ row: 1, field: required, code: "MISSING_COLUMN", message: `The header row needs a ${required} column.` });
+    }
+    header.forEach((h, i) => {
+      if (h && !ROSTER_FIELD_MAP[h]) warnings.push({ row: 1, field: grid[0]![i]!, code: "UNKNOWN_COLUMN", message: `Column "${grid[0]![i]}" isn't used and will be ignored.` });
+    });
+    const rows: RosterPreviewRow[] = [];
+    let total = 0;
+    if (!errors.length) {
+      for (let r = 1; r < grid.length; r++) {
+        const cells = grid[r]!;
+        if (cells.every((c) => !c.trim())) continue;
+        total++;
+        const byField: Partial<Record<keyof RosterPreviewRow, string>> = {};
+        header.forEach((h, i) => { const field = ROSTER_FIELD_MAP[h]; if (field) byField[field] = cells[i] ?? ""; });
+        const { value, errors: rowErrors } = validateRosterRow(byField, r + 1);
+        if (rowErrors.length) errors.push(...rowErrors);
+        else if (value) rows.push(value);
+      }
+      if (total === 0) errors.push({ row: 2, code: "EMPTY", message: "The file has a header row but no learners." });
+    }
+    const importId = crypto.randomUUID();
+    const valid = errors.length === 0;
+    if (valid) rosterImports.set(importId, { cohortId, rows });
+    return { importId, cohortId, valid, rowsTotal: total, rowsOk: rows.length, errors, warnings, preview: rows.slice(0, 20) };
+  }
+  async commitRoster(importId: string): Promise<RosterCommitResult> {
+    const pending = rosterImports.get(importId);
+    if (!pending) throw new ApiError("IMPORT_NOT_FOUND", 404);
+    rosterImports.delete(importId); // one commit per check, same as the server
+    const cohort = cohorts.find((candidate) => candidate.cohortId === pending.cohortId);
+    if (!cohort) throw new ApiError("NOT_FOUND", 404);
+    const created: RosterImportedLearner[] = [];
+    for (const row of pending.rows) {
+      const learnerId = crypto.randomUUID();
+      const learner: LearnerRecord = {
+        learnerId, learnerCode: randomLearnerCode(cohort.name), cohortId: cohort.cohortId,
+        firstName: row.firstName, lastName: row.lastName, username: null,
+        phone: row.phone, email: row.email, trainingLevel: row.trainingLevel, note1: row.note1, note2: row.note2,
+        status: "awaiting_setup", createdAt: new Date().toISOString(), archivedAt: null,
+      };
+      students.push(learner);
+      cohort.learnerCount = (cohort.learnerCount ?? 0) + 1;
+      created.push({ learnerId, learnerCode: learner.learnerCode, firstName: learner.firstName, lastName: learner.lastName, setupCode: `DEMO-${crypto.randomUUID().slice(0, 8).toUpperCase()}` });
+    }
+    return { created: created.length, learners: created };
   }
   async getLearnerRecord(learnerId: string): Promise<LearnerRecord> {
     const student = students.find((candidate) => candidate.learnerId === learnerId);

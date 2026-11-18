@@ -195,6 +195,42 @@ export interface SetupCodeReveal {
   shownOnce: true;
 }
 
+export interface RosterPreviewRow {
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  trainingLevel: string | null;
+  note1: string | null;
+  note2: string | null;
+}
+
+/** POST /v1/staff/learners/import/check (issue #43). A .csv or .xlsx roster, checked but not yet created. */
+export interface RosterCheckResult {
+  importId: string;
+  cohortId: string;
+  valid: boolean;
+  rowsTotal: number;
+  rowsOk: number;
+  errors: ModuleCheckIssue[];
+  warnings: ModuleCheckIssue[];
+  /** First 20 valid rows only, for a preview table before commit. */
+  preview: RosterPreviewRow[];
+}
+
+export interface RosterImportedLearner {
+  learnerId: string;
+  learnerCode: string;
+  firstName: string;
+  lastName: string;
+  setupCode: string;
+}
+
+export interface RosterCommitResult {
+  created: number;
+  learners: RosterImportedLearner[];
+}
+
 export interface StaffAccountSummary {
   staffId: string;
   username: string;
