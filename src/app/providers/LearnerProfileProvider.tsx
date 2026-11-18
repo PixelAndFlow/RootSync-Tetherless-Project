@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { SetupProfile } from "../../services/setup/LearnerSetupGateway";
 import { useOfflineLearningGatewayOptional, useOfflineLearningGatewayReadyOptional } from "./GatewayProvider";
 
-export interface LearnerProfile {
+export interface StoredLearnerProfile {
   learnerId: string;
   deviceId: string;
   displayName: string;
@@ -16,30 +16,30 @@ export interface LearnerProfile {
 }
 
 interface LearnerProfileContextValue {
-  profile: LearnerProfile | null;
+  profile: StoredLearnerProfile | null;
   /** True only while a recovery effect below is still in flight for a device
    * that might turn out to already be set up. A route guard must wait for
    * this to settle before deciding there is no profile (issue #24). In live
    * mode this provider already blocks its own render until recovery settles
    * (see below), so this stays true only for the mock-gateway case. */
   recovering: boolean;
-  saveProfile: (input: Pick<LearnerProfile, "displayName" | "username">) => void;
+  saveProfile: (input: Pick<StoredLearnerProfile, "displayName" | "username">) => void;
   acceptDemoSetup: (input: SetupProfile) => void;
   setSpanishAssist: (enabled: boolean) => void;
   setHighContrast: (enabled: boolean) => void;
   setReducedMotion: (enabled: boolean) => void;
-  setColorTheme: (theme: LearnerProfile["colorTheme"]) => void;
+  setColorTheme: (theme: StoredLearnerProfile["colorTheme"]) => void;
   resetProfile: () => void;
 }
 
 const storageKey = "tetherless.learner-profile.v1";
 const LearnerProfileContext = createContext<LearnerProfileContextValue | null>(null);
 
-function readStoredProfile(): LearnerProfile | null {
+function readStoredProfile(): StoredLearnerProfile | null {
   try {
     const value = window.localStorage.getItem(storageKey);
     if (!value) return null;
-    const storedProfile = JSON.parse(value) as Partial<LearnerProfile>;
+    const storedProfile = JSON.parse(value) as Partial<StoredLearnerProfile>;
     if (typeof storedProfile.learnerId !== "string" || !storedProfile.learnerId || typeof storedProfile.deviceId !== "string" || !storedProfile.deviceId || typeof storedProfile.displayName !== "string" || !storedProfile.displayName || typeof storedProfile.username !== "string" || !storedProfile.username) return null;
     return {
       learnerId: storedProfile.learnerId,
@@ -61,7 +61,7 @@ function readStoredProfile(): LearnerProfile | null {
 export function LearnerProfileProvider({ children }: { children: React.ReactNode }) {
   const gateway = useOfflineLearningGatewayOptional();
   const live = Boolean(useOfflineLearningGatewayReadyOptional());
-  const [profile, setProfile] = useState<LearnerProfile | null>(readStoredProfile);
+  const [profile, setProfile] = useState<StoredLearnerProfile | null>(readStoredProfile);
   const profileRef = useRef(profile);
   profileRef.current = profile;
   // Live mode never trusts a cached profile enough to skip waiting on DDIL
@@ -102,7 +102,7 @@ export function LearnerProfileProvider({ children }: { children: React.ReactNode
     return () => { cancelled = true; };
   }, [gateway, live, retry]);
 
-  const updateProfile = (nextProfile: LearnerProfile) => {
+  const updateProfile = (nextProfile: StoredLearnerProfile) => {
     // Live enrollment is already committed in DDIL. Optional presentation-cache
     // failure must never send a student back through a consumed one-time code.
     try { window.localStorage.setItem(storageKey, JSON.stringify(nextProfile)); }

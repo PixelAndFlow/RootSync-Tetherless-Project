@@ -167,26 +167,14 @@ export interface OfflineLearningGateway {
  * methods above — see the file header. `TetherlessModule`/`LocalizedText`
  * are re-exported, not redefined: the module JSON schema is Chris's, large,
  * and DDIL only stores/returns it verbatim, so duplicating it here would be
- * drift risk for no benefit.
+ * drift risk for no benefit. `LearnerProfile`/`ModuleSummary` are the same
+ * call: stable data shapes, not part of the negotiated method surface this
+ * file's own drift test (tests/sync/gateway.test.ts) exists to catch, so
+ * they're re-exported from the source of truth (issue #12) rather than
+ * copied a second time.
  */
 export type { LocalizedText, TetherlessModule } from "../../types/content.ts";
-
-export interface LearnerProfile {
-  learnerId: string;
-  deviceId: string;
-  username: string;
-  learnerCode: string;
-  cohortName: string;
-}
-
-export interface ModuleSummary {
-  moduleId: string;
-  contentVersion: number;
-  title: { en: string; es?: string };
-  level: string;
-  activityType: string;
-  downloadState: "not_downloaded" | "downloading" | "available_offline" | "download_problem";
-}
+export type { LearnerProfile, ModuleSummary } from "../../services/offline/OfflineLearningGateway.ts";
 
 /** The two device-scoped HTTP calls setupDevice/listAssignedModules/getModule need, beyond POST /v1/sync/events. */
 export interface DeviceApi {
