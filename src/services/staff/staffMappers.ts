@@ -8,8 +8,11 @@ import type {
   Assignment as AssignmentWire,
   StaffErrorDetail as StaffErrorDetailWire,
   ReportThresholds as ThresholdsWire,
+  RosterCheck as RosterCheckWire,
+  RosterCommitResult as RosterCommitResultWire,
+  RosterPreviewRow as RosterPreviewRowWire,
 } from "../../../packages/contract/src/staff-api";
-import type { Cohort, LearnerRecord, LearnerDevice, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment, Thresholds } from "../../types/staff";
+import type { Cohort, LearnerRecord, LearnerDevice, ModuleListing, ModuleCheckIssue, ModuleCheckResult, ModulePublishResult, Assignment, Thresholds, RosterCheckResult, RosterCommitResult, RosterPreviewRow } from "../../types/staff";
 
 /**
  * Wire (snake_case, packages/contract) to app (camelCase) translation, in one place.
@@ -94,6 +97,30 @@ export function toModuleCheck(wire: ModuleCheckWire): ModuleCheckResult {
 
 export function toModulePublishResult(wire: ModulePublishResultWire): ModulePublishResult {
   return { moduleId: wire.module_id, contentVersion: wire.content_version, publishedAt: wire.published_at, warnings: wire.warnings.map(toIssue) };
+}
+
+function toRosterPreviewRow(wire: RosterPreviewRowWire): RosterPreviewRow {
+  return { firstName: wire.first_name, lastName: wire.last_name, phone: wire.phone, email: wire.email, trainingLevel: wire.training_level, note1: wire.note_1, note2: wire.note_2 };
+}
+
+export function toRosterCheck(wire: RosterCheckWire): RosterCheckResult {
+  return {
+    importId: wire.import_id,
+    cohortId: wire.cohort_id,
+    valid: wire.valid,
+    rowsTotal: wire.rows_total,
+    rowsOk: wire.rows_ok,
+    errors: wire.errors.map(toIssue),
+    warnings: wire.warnings.map(toIssue),
+    preview: wire.preview.map(toRosterPreviewRow),
+  };
+}
+
+export function toRosterCommit(wire: RosterCommitResultWire): RosterCommitResult {
+  return {
+    created: wire.created,
+    learners: wire.learners.map((l) => ({ learnerId: l.learner_id, learnerCode: l.learner_code, firstName: l.first_name, lastName: l.last_name, setupCode: l.setup_code })),
+  };
 }
 
 export function toThresholds(wire: ThresholdsWire): Thresholds {

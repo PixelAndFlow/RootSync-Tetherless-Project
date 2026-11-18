@@ -10,10 +10,7 @@ import { SPEC_SECTION_10_METHODS } from "./spec-section-10-methods";
  */
 
 /** Spec methods not yet built on the gateway — each needs a tracking issue, not a silent gap. */
-const ALLOWED_MISSING: Record<string, string> = {
-  checkRoster: "bulk CSV roster import, split out of #39 into #43 — not yet built",
-  commitRoster: "bulk CSV roster import, split out of #39 into #43 — not yet built",
-};
+const ALLOWED_MISSING: Record<string, string> = {};
 
 /** Real gateway methods with no spec §10 entry — each needs a reason, not a silent extra. */
 const ALLOWED_EXTRA: Record<string, string> = {

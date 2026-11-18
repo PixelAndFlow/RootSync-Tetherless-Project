@@ -241,6 +241,58 @@ describe("MockStaffAdminGateway", () => {
     expect(Array.isArray(body.learners)).toBe(true);
     await expect(gateway.exportCohort("not-a-real-cohort")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
+
+  it("issue #43: checks a CSV roster, then commits it into real students with setup codes", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const cohort = (await gateway.listCohorts())[0];
+    const before = (await gateway.listLearnerRecords({ cohortId: cohort.cohortId })).length;
+    const file = new File(["first_name,last_name,email\nTaylor,Nguyen,taylor@example.com\nCasey,Brooks,\n"], "roster.csv", { type: "text/csv" });
+
+    const check = await gateway.checkRoster(cohort.cohortId, file);
+    expect(check).toMatchObject({ cohortId: cohort.cohortId, valid: true, rowsTotal: 2, rowsOk: 2, errors: [], warnings: [] });
+    expect(check.preview).toEqual([
+      { firstName: "Taylor", lastName: "Nguyen", phone: null, email: "taylor@example.com", trainingLevel: null, note1: null, note2: null },
+      { firstName: "Casey", lastName: "Brooks", phone: null, email: null, trainingLevel: null, note1: null, note2: null },
+    ]);
+
+    const commit = await gateway.commitRoster(check.importId);
+    expect(commit.created).toBe(2);
+    expect(commit.learners.map((l) => l.firstName)).toEqual(["Taylor", "Casey"]);
+    expect(commit.learners.every((l) => /^DEMO-/.test(l.setupCode))).toBe(true);
+
+    const after = await gateway.listLearnerRecords({ cohortId: cohort.cohortId });
+    expect(after).toHaveLength(before + 2);
+    expect(after.some((l) => l.firstName === "Taylor" && l.status === "awaiting_setup")).toBe(true);
+
+    // One commit per check, same rule as the real importId.
+    await expect(gateway.commitRoster(check.importId)).rejects.toMatchObject({ code: "IMPORT_NOT_FOUND" });
+  });
+
+  it("issue #43: reports missing-column and per-row errors, and flags unknown columns as warnings, without creating anyone", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const cohort = (await gateway.listCohorts())[0];
+
+    const missingColumn = new File(["first_name\nTaylor\n"], "roster.csv", { type: "text/csv" });
+    const missing = await gateway.checkRoster(cohort.cohortId, missingColumn);
+    expect(missing.valid).toBe(false);
+    expect(missing.errors).toEqual([{ row: 1, field: "last_name", code: "MISSING_COLUMN", message: "The header row needs a last_name column." }]);
+
+    const badRow = new File(["first_name,last_name,extra\nTaylor,,x\n"], "roster.csv", { type: "text/csv" });
+    const bad = await gateway.checkRoster(cohort.cohortId, badRow);
+    expect(bad.valid).toBe(false);
+    expect(bad.errors).toEqual([{ row: 2, field: "lastName", code: "REQUIRED", message: "Last name is missing." }]);
+    expect(bad.warnings).toEqual([{ row: 1, field: "extra", code: "UNKNOWN_COLUMN", message: 'Column "extra" isn\'t used and will be ignored.' }]);
+
+    await expect(gateway.commitRoster(bad.importId)).rejects.toMatchObject({ code: "IMPORT_NOT_FOUND" }); // never saved — the check was invalid
+  });
+
+  it("issue #43: rejects a non-.csv file and an unknown import ID", async () => {
+    const gateway = new MockStaffAdminGateway();
+    const cohort = (await gateway.listCohorts())[0];
+    const xlsx = new File(["not really xlsx"], "roster.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    await expect(gateway.checkRoster(cohort.cohortId, xlsx)).rejects.toMatchObject({ code: "UNSUPPORTED_FILE" });
+    await expect(gateway.commitRoster("not-a-real-import")).rejects.toMatchObject({ code: "IMPORT_NOT_FOUND" });
+  });
 });
 
 /** A module that satisfies every rule in packages/content/src/tetherless-module.ts's validateTetherlessModule(), not just the mock's old simplified checks. */

@@ -19,6 +19,7 @@ import { StaffSignInScreen } from "../features/staff/StaffSignInScreen";
 import { StaffPasswordChangeScreen } from "../features/staff/StaffPasswordChangeScreen";
 import { StaffDashboardScreen } from "../features/staff/StaffDashboardScreen";
 import { StaffOperationsScreen } from "../features/staff/StaffOperationsScreen";
+import { StaffRosterImportScreen } from "../features/staff/StaffRosterImportScreen";
 import { StaffLearnerDetailScreen } from "../features/staff/StaffLearnerDetailScreen";
 import { StaffContentWorkflowScreen } from "../features/staff/StaffContentWorkflowScreen";
 import { StaffPermissionScreen } from "../features/staff/StaffPermissionScreen";
@@ -73,6 +74,7 @@ export const router = createHashRouter([
       { path: "/staff", element: <StaffPasswordGate><StaffDashboardScreen /></StaffPasswordGate> },
       { path: "/staff/operations", element: <StaffPasswordGate><StaffOperationsScreen /></StaffPasswordGate> },
       { path: "/staff/operations/learners/:learnerId", element: <StaffPasswordGate><StaffLearnerDetailScreen /></StaffPasswordGate> },
+      { path: "/staff/operations/import", element: <StaffPasswordGate><StaffRosterImportScreen /></StaffPasswordGate> },
       { path: "/staff/content", element: <StaffPasswordGate><StaffContentWorkflowScreen /></StaffPasswordGate> },
       { path: "/staff/accounts", element: <StaffPasswordGate><StaffAccountsScreen /></StaffPasswordGate> },
       { path: "/staff/system", element: <StaffPasswordGate><StaffPermissionScreen permission="system" /></StaffPasswordGate> },

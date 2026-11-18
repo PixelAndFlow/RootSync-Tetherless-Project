@@ -357,4 +357,35 @@ describe("ApiStaffAdminGateway", () => {
     await gateway.login({ username: "test-admin", password: "temporary-password" });
     await expect(gateway.listStaff()).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
+
+  it("issue #43: checks a roster file as multipart/form-data, then commits the returned import ID", async () => {
+    const checkBody = {
+      import_id: "import-1", cohort_id: "cohort-1", valid: true, rows_total: 1, rows_ok: 1, errors: [], warnings: [],
+      preview: [{ first_name: "Alex", last_name: "Rivera", phone: null, email: null, training_level: null, note_1: null, note_2: null }],
+    };
+    const commitBody = { created: 1, learners: [{ learner_id: "l1", learner_code: "COHORT-ABCD", first_name: "Alex", last_name: "Rivera", setup_code: "DEMO-123" }] };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "session-token", staff })))
+      .mockResolvedValueOnce(new Response(JSON.stringify(checkBody)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(commitBody)));
+    const gateway = new ApiStaffAdminGateway("http://localhost:8080", fetcher);
+    await gateway.login({ username: "test-admin", password: "temporary-password" });
+
+    const file = new File(["first_name,last_name\nAlex,Rivera\n"], "roster.csv", { type: "text/csv" });
+    const check = await gateway.checkRoster("cohort-1", file);
+    expect(check).toEqual({ importId: "import-1", cohortId: "cohort-1", valid: true, rowsTotal: 1, rowsOk: 1, errors: [], warnings: [], preview: [{ firstName: "Alex", lastName: "Rivera", phone: null, email: null, trainingLevel: null, note1: null, note2: null }] });
+    expect(fetcher.mock.calls[1][0]).toBe("http://localhost:8080/v1/staff/learners/import/check");
+    const sentForm = fetcher.mock.calls[1][1].body as FormData;
+    expect(sentForm).toBeInstanceOf(FormData);
+    expect(sentForm.get("cohort_id")).toBe("cohort-1");
+    expect((sentForm.get("file") as File).name).toBe("roster.csv");
+    expect(fetcher.mock.calls[1][1].headers).not.toHaveProperty("content-type"); // fetch sets its own multipart boundary
+
+    const commit = await gateway.commitRoster("import-1");
+    expect(commit).toEqual({ created: 1, learners: [{ learnerId: "l1", learnerCode: "COHORT-ABCD", firstName: "Alex", lastName: "Rivera", setupCode: "DEMO-123" }] });
+    expect(fetcher.mock.calls[2][0]).toBe("http://localhost:8080/v1/staff/learners/import/import-1/commit");
+
+    await expect(gateway.checkRoster(" ", file)).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(gateway.commitRoster(" ")).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
 });

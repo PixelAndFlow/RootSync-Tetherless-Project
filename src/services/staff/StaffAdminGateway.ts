@@ -1,5 +1,5 @@
 import type { TetherlessModule } from "../../../packages/content/src/tetherless-module";
-import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffPermissionKey, StaffRole, StaffSession, Thresholds } from "../../types/staff";
+import type { Assignment, Cohort, LearnerFieldChanges, LearnerRecord, ModuleCheckResult, ModuleListing, ModulePublishResult, RosterCheckResult, RosterCommitResult, SetupCodeReveal, StaffAccountReveal, StaffAccountSummary, StaffPermissionKey, StaffRole, StaffSession, Thresholds } from "../../types/staff";
 
 /** Frontend boundary for Marc's StaffAdminGateway. The mock is intentional until API wiring is approved. */
 export interface StaffAdminGateway {
@@ -15,6 +15,10 @@ export interface StaffAdminGateway {
   archiveCohort(cohortId: string): Promise<void>;
   listLearnerRecords(input: { cohortId?: string }): Promise<LearnerRecord[]>;
   createLearner(input: { cohortId: string; firstName: string; lastName: string }): Promise<SetupCodeReveal>;
+  /** Issue #43. Validates a roster file (.csv or .xlsx) against this cohort without creating anyone. The check expires after a short TTL; commitRoster's IMPORT_NOT_FOUND means check again. */
+  checkRoster(cohortId: string, file: File): Promise<RosterCheckResult>;
+  /** Creates every row from a valid check. Setup codes appear only in this response — show them once, with copy/print/download. Rejected with IMPORT_INVALID if the check had errors, IMPORT_NOT_FOUND if it expired or was already committed. */
+  commitRoster(importId: string): Promise<RosterCommitResult>;
   /** Issue #39. Includes `devices`, unlike listLearnerRecords. */
   getLearnerRecord(learnerId: string): Promise<LearnerRecord>;
   /** Only the fields present in `changes` are validated and updated. cohortId/learnerCode/username can't be changed here (read-only server-side). */

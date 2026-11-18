@@ -68,6 +68,27 @@ export class ApiClient {
     return body;
   }
 
+  /** Issue #43: roster import's check step sends a file, as multipart/form-data rather than JSON. No content-type header — fetch sets its own boundary for a FormData body. */
+  async postForm(path: string, form: FormData): Promise<unknown> {
+    if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
+    const token = this.token();
+    if (!token) throw new ApiError("UNAUTHORIZED", 401);
+    let response: Response;
+    try {
+      response = await this.transport(`${this.baseUrl}${path}`, {
+        method: "POST",
+        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        body: form,
+        cache: "no-store", credentials: "omit", redirect: "error",
+      });
+    } catch { throw new ApiError("NETWORK_ERROR", 0, true); }
+    let body: unknown;
+    try { body = await response.json(); }
+    catch { throw response.ok ? new ApiError("INVALID_RESPONSE", response.status) : parseApiError(null, response.status); }
+    if (!response.ok) throw parseApiError(body, response.status);
+    return body;
+  }
+
   /** Issue #41: exportCohort returns the raw file (with content-disposition), not a JSON envelope. */
   async getBlob(path: string): Promise<Blob> {
     if (!path.startsWith("/v1/") || path.includes("..")) throw new Error("Invalid API path.");
