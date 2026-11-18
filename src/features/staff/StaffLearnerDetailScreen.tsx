@@ -5,7 +5,7 @@ import { ApiErrorNotice } from "../../components/common/ApiErrorNotice";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
 import { useStaffAdminGateway } from "../../app/providers/GatewayProvider";
-import type { LearnerRecord } from "../../types/staff";
+import type { Assignment, LearnerRecord, ModuleListing } from "../../types/staff";
 
 const STATUS: Record<LearnerRecord["status"], string> = { awaiting_setup: "Awaiting setup", active: "Active", phone_switched_off: "Phone switched off", archived: "Archived" };
 
@@ -42,6 +42,15 @@ export function StaffLearnerDetailScreen() {
   const [purgeError, setPurgeError] = useState<unknown>(null);
   const [purged, setPurged] = useState(false);
 
+  const [modules, setModules] = useState<ModuleListing[] | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[] | null>(null);
+  const [assignmentsError, setAssignmentsError] = useState<unknown>(null);
+  const [reloadAssignments, setReloadAssignments] = useState(0);
+  const [assignModuleId, setAssignModuleId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<unknown>(null);
+  const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!gateway || !session || !learnerId) return;
     let cancelled = false;
@@ -54,6 +63,20 @@ export function StaffLearnerDetailScreen() {
     return () => { cancelled = true; };
   }, [gateway, session, learnerId, reload]);
 
+  // Individual-learner assignments only (target === "learner"), same pattern as
+  // StaffOperationsScreen's cohort-wide assignment list, just filtered to this one learner.
+  useEffect(() => {
+    if (!gateway || !session || !learner) { setModules(null); setAssignments(null); return; }
+    let cancelled = false;
+    setAssignments(null); setAssignmentsError(null);
+    void Promise.all([gateway.listModules(), gateway.listAssignments(learner.cohortId)]).then(([moduleList, cohortAssignments]) => {
+      if (cancelled) return;
+      setModules(moduleList);
+      setAssignments(cohortAssignments.filter((a) => a.target === "learner" && a.learnerId === learnerId));
+    }).catch((err: unknown) => { if (!cancelled) setAssignmentsError(err); });
+    return () => { cancelled = true; };
+  }, [gateway, session, learner, learnerId, reloadAssignments]);
+
   if (!session) return <Navigate replace to="/staff/sign-in" />;
   if (!learnerId) return <Navigate replace to="/staff/operations" />;
   if (purged) return <section><ReturnLink to="/staff/operations">Program operations</ReturnLink><h1 className="mt-4 text-2xl font-bold">Student deleted</h1><p className="mt-3 text-slate-300">This student and their data have been permanently deleted.</p></section>;
@@ -63,6 +86,7 @@ export function StaffLearnerDetailScreen() {
   const canIssueCode = session.permissions.includes("learner.setup_code");
   const canRevokeDevice = session.permissions.includes("device.revoke");
   const canPurge = session.permissions.includes("data.purge");
+  const canManageAssignments = session.permissions.includes("assignment.manage");
 
   const submitFields = async (event: FormEvent) => {
     event.preventDefault();
@@ -101,6 +125,21 @@ export function StaffLearnerDetailScreen() {
     setArchiving(true); setArchiveError(null);
     try { await gateway.archiveLearner(learnerId); setReload((n) => n + 1); }
     catch (err) { setArchiveError(err); } finally { setArchiving(false); }
+  };
+
+  const submitAssignment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!gateway || assigning || !assignModuleId) return;
+    setAssigning(true); setAssignError(null);
+    try { await gateway.assign({ moduleId: assignModuleId, learnerId }); setAssignModuleId(""); setReloadAssignments((n) => n + 1); }
+    catch (err) { setAssignError(err); } finally { setAssigning(false); }
+  };
+
+  const removeAssignment = async (assignment: Assignment) => {
+    if (!gateway || removingAssignmentId) return;
+    setRemovingAssignmentId(assignment.assignmentId);
+    try { await gateway.unassign(assignment.assignmentId); setReloadAssignments((n) => n + 1); }
+    catch (err) { setAssignmentsError(err); } finally { setRemovingAssignmentId(null); }
   };
 
   const submitPurge = async (event: FormEvent) => {
@@ -150,6 +189,16 @@ export function StaffLearnerDetailScreen() {
           {reveal && <div className="mt-4 rounded-xl border border-dashed border-violet-300/40 p-4"><p className="font-bold">One-time setup code</p><p className="mt-2 text-sm">Copy this code now. It cannot be shown again after you dismiss it.</p><code className="mt-2 block select-all break-all text-lg">{reveal.setupCode}</code>{reveal.phonesSwitchedOff > 0 && <p className="mt-2 text-sm text-slate-300">{reveal.phonesSwitchedOff} existing phone{reveal.phonesSwitchedOff === 1 ? "" : "s"} switched off.</p>}<button className="ui-action-secondary mt-3" onClick={() => setReveal(null)} type="button">Done</button></div>}
         </article>
       </div>
+
+      <article className="ui-panel mt-6 p-5"><h2 className="text-xl font-bold">Individually assigned modules</h2>
+        <p className="mt-2 text-sm text-slate-300">Modules assigned to this student alone, on top of whatever their cohort is assigned. Cohort-wide assignments are managed from the cohort's own page.</p>
+        {assignmentsError !== null ? <div className="mt-4"><ApiErrorNotice error={assignmentsError} /><button className="ui-action-secondary mt-2" onClick={() => setReloadAssignments((n) => n + 1)} type="button">Retry</button></div>
+         : !assignments ? <p className="mt-3" role="status">Loading assignments…</p>
+         : assignments.length === 0 ? <p className="mt-3 text-sm text-slate-400">No modules are individually assigned to this student.</p>
+         : <ul className="mt-3 grid gap-2">{assignments.map((assignment) => <li className="flex items-center justify-between gap-3 rounded-xl border border-white/10 p-3 text-sm" key={assignment.assignmentId}><span>{assignment.moduleName}{assignment.contentVersion !== null ? ` v${assignment.contentVersion}` : " (latest)"}</span>{canManageAssignments && <button className="ui-action-secondary min-h-9 px-3 py-1 text-xs" disabled={removingAssignmentId === assignment.assignmentId} onClick={() => void removeAssignment(assignment)} type="button">{removingAssignmentId === assignment.assignmentId ? "Removing…" : "Remove"}</button>}</li>)}</ul>}
+        {canManageAssignments && modules && <form className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => void submitAssignment(event)}><label className="grid gap-2 text-sm font-semibold sm:col-span-2">Assign a module to this student<select className="integration-input" disabled={assigning} onChange={(event) => setAssignModuleId(event.target.value)} value={assignModuleId}><option value="">Choose a module…</option>{modules.filter((m) => !m.archived && m.latestVersion !== null).map((m) => <option key={m.moduleId} value={m.moduleId}>{m.moduleName}</option>)}</select></label><button className="ui-action" disabled={!assignModuleId || assigning} type="submit">{assigning ? "Assigning…" : "Assign"}</button></form>}
+        {assignError !== null && <div className="mt-3"><ApiErrorNotice error={assignError} /></div>}
+      </article>
 
       {(canArchive || canPurge) && <article className="ui-panel mt-6 p-5"><h2 className="text-xl font-bold">Archive and delete</h2>
         {canArchive && <div className="mt-4"><p className="text-sm text-slate-300">Archiving removes this student's device access and hides them from active lists. Their history is kept.</p>

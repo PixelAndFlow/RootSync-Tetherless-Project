@@ -6,7 +6,7 @@ import { ApiError } from "../../services/api/ApiError";
 import { MockStaffAdminGateway } from "../../services/staff/MockStaffAdminGateway";
 import { StaffLearnerDetailScreen } from "./StaffLearnerDetailScreen";
 
-const ALL_PERMISSIONS = ["learner.edit", "learner.archive", "learner.setup_code", "device.revoke", "data.purge"];
+const ALL_PERMISSIONS = ["learner.edit", "learner.archive", "learner.setup_code", "device.revoke", "data.purge", "assignment.manage"];
 const state = vi.hoisted(() => ({ gateway: null as unknown, session: { role: "admin", displayName: "Tester", permissions: [] as string[] } }));
 vi.mock("../../app/providers/StaffSessionProvider", () => ({ useStaffSession: () => ({ session: state.session, signOut: vi.fn() }) }));
 vi.mock("../../app/providers/GatewayProvider", () => ({ useStaffAdminGateway: () => state.gateway }));
@@ -78,6 +78,27 @@ describe("issue #39: StaffLearnerDetailScreen", () => {
     await userEvent.click(switchOff);
     expect(await screen.findByText(/Switched off/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Switch off" })).not.toBeInTheDocument();
+  });
+
+  it("assigns a module directly to this student, then removes it (individual, not cohort-wide)", async () => {
+    show("student-demo-003");
+    await screen.findByRole("heading", { name: "Sam Ortiz" });
+    await screen.findByText("No modules are individually assigned to this student.");
+
+    await userEvent.selectOptions(screen.getByLabelText("Assign a module to this student"), "rcyc-recruit-cyber-squad-gamified-001");
+    await userEvent.click(screen.getByRole("button", { name: "Assign" }));
+    expect(await screen.findByText("Operation Cyber Squad (latest)")).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await screen.findByText("No modules are individually assigned to this student.");
+  });
+
+  it("hides assignment management controls without assignment.manage", async () => {
+    state.session.permissions = ALL_PERMISSIONS.filter((p) => p !== "assignment.manage");
+    show("student-demo-003");
+    await screen.findByRole("heading", { name: "Sam Ortiz" });
+    await screen.findByText("No modules are individually assigned to this student.");
+    expect(screen.queryByLabelText("Assign a module to this student")).not.toBeInTheDocument();
   });
 
   it("archives the student through a confirmation dialog", async () => {
