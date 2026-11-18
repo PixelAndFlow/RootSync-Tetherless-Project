@@ -1,19 +1,14 @@
 /** Read-only frontend contract reference, pinned to backend e2ceb7e.
  * DDIL owns event construction, runtime payload validation and transport.
  * This file is NOT an event factory and does not replace packages/contract.
+ *
+ * The pinned event-type list and event-envelope shape that used to live here
+ * (WIRE_EVENT_TYPES/WireEventType/WireEventBase) were removed (issue #12): a
+ * third, hand-maintained copy of the same union that src/sync/types.ts
+ * (EventType/ActivityEvent) already owns as the real, actively-typed source,
+ * with nothing in the app actually importing this copy. Reach for EventType
+ * from src/sync/types.ts instead.
  */
-export const WIRE_EVENT_TYPES = ["session_started", "visibility_changed", "heartbeat", "session_ended", "attempt_started", "answer_submitted", "attempt_completed", "attempt_abandoned"] as const;
-export type WireEventType = typeof WIRE_EVENT_TYPES[number];
-export interface WireEventBase {
-  event_id: string;
-  schema_version: 1;
-  event_type: WireEventType;
-  device_id: string;
-  device_seq: number;
-  session_id: string;
-  occurred_at: string;
-  monotonic_ms: number;
-}
 
 /** UUID shape guard for frontend adapter inputs, not a replacement for server validation. */
 export function isPlainUuid(value: unknown): value is string {

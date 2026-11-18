@@ -78,13 +78,13 @@ function apiServing(module: TetherlessModule): DeviceApi {
 
 // ---------------------------------------------------------------- contract
 
-test("the gateway implements all ten of Chris's methods", () => {
+test("the gateway implements all seventeen of the contract's methods", () => {
   const { DdilLearningGateway: Cls } = { DdilLearningGateway };
   const proto = Cls.prototype as unknown as Record<string, unknown>;
   for (const m of GATEWAY_METHODS) {
     assert.equal(typeof proto[m], "function", `missing gateway method: ${m}`);
   }
-  assert.equal(GATEWAY_METHODS.length, 10, "the contract has ten methods, not nine");
+  assert.equal(GATEWAY_METHODS.length, 17, "the contract has seventeen methods, not ten (issue #12)");
 });
 
 test("the gateway declares no methods outside the contract", () => {
@@ -104,20 +104,13 @@ test("the gateway declares no methods outside the contract", () => {
     "require",
     "retainLocal",
     "setContentVersion",
-    "recoverAuth",
     "pinAttemptVersion",
     "versionOfAttempt",
-    // §6.3 N-7/N-8: emitted outside the nine-method gateway for now.
+    // §6.3 N-7/N-8: emitted outside the gateway contract for now.
     "noteVisibility",
     "heartbeat",
-    "abandonAttempt",
     "elapsedMonotonic",
-    // API Spec v1.30 §8.1: agreed optional additions beyond the ten.
-    "setupDevice",
-    "getLearnerProfile",
-    "listAssignedModules",
-    "prepareModuleForOffline",
-    "getModule",
+    // Implementation helpers behind the contract methods above, not methods of their own.
     "fetchAndCacheModule",
     "moduleKey",
     "deriveModuleState",
