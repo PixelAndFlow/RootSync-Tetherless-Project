@@ -349,11 +349,28 @@ export class MockStaffAdminGateway implements StaffAdminGateway {
     thresholds = { ...t };
     return { ...thresholds };
   }
-  /** Demo-only: a plausible export shape, not the server's full export_version 2 body. */
+  /**
+   * Demo-only. Matches the real server's per-learner export shape (issue
+   * #52): devices come from this file's own tracked learnerDevices map, so
+   * those are real. accepted_events/rejected_events are always empty here —
+   * demo mode has no underlying event log at all (the mock learner gateway
+   * that would generate them is a separate, unwired-together fixture world),
+   * so there is nothing honest to put there. Keeping the keys (rather than
+   * omitting them) matches the real shape for anything that reads this
+   * export; leaving them fabricated-non-empty would be worse than the gap
+   * this replaces.
+   */
   async exportCohort(cohortId: string): Promise<Blob> {
     const cohort = cohorts.find((candidate) => candidate.cohortId === cohortId);
     if (!cohort) throw new ApiError("NOT_FOUND", 404);
-    const learners = students.filter((student) => student.cohortId === cohortId);
+    const learners = students
+      .filter((student) => student.cohortId === cohortId)
+      .map((student) => ({
+        ...student,
+        devices: learnerDevices.get(student.learnerId) ?? [],
+        accepted_events: [] as never[],
+        rejected_events: [] as never[],
+      }));
     const body = { export_version: 2, cohort, generated_at: new Date().toISOString(), thresholds, learners };
     return new Blob([JSON.stringify(body, null, 2)], { type: "application/json" });
   }

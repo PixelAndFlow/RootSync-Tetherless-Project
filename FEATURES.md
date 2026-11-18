@@ -5,7 +5,7 @@ a **living document** — update it in the same PR that adds, removes,
 or materially changes a feature, not as a later cleanup pass. See
 [Keeping this updated](#keeping-this-updated) at the bottom.
 
-Last updated: 2026-11-02.
+Last updated: 2026-11-18.
 
 ## Student (learner) experience
 
@@ -90,8 +90,9 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   and changing them immediately reclassifies every learner's status.
 - **Cohort export**: a downloadable file of a cohort's full data
   (learner records, devices, accepted/rejected events) for records or
-  a privacy request — on the real server; the mock adapter's version
-  is thinner and tracked as a known gap (#52).
+  a privacy request. The mock adapter now includes real device data
+  and honest empty event arrays (demo mode has no event log to draw
+  from) instead of silently omitting them (#52).
 - **Permanent delete (`data.purge`)**: the one irreversible action,
   restricted to Superadmin by default, cascades across every related
   table. **Currently has no guardrail requiring export-before-delete**
@@ -163,8 +164,7 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   computes rule-based scoring/active-time/reporting today; there is no
   LLM/ML component yet. "AI-driven" in the product brief is a target,
   not a current capability.
-- Export-before-purge guardrail (#53) and mock/real export parity
-  (#52) — see Staff/Admin above.
+- Export-before-purge guardrail (#53) — see Staff/Admin above.
 
 ## Keeping this updated
 
