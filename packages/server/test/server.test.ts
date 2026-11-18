@@ -479,6 +479,32 @@ test("modules: check, publish, versions never change, and the new-version rule",
   assert.equal((await call("GET", "/v1/staff/modules/security-tools/versions/1", undefined, s.trainer)).body.questions.length, 2, "version 1 is unchanged");
 });
 
+test("modules/check requires content.edit for an existing module, like publishModule does", async () => {
+  // security-tools v1/v2 were already published by the previous test.
+  const roles = await call("GET", "/v1/staff/roles", undefined, s.marc);
+  const trainerPerms: string[] = roles.body.roles.trainer;
+  const withoutEdit = trainerPerms.filter((p) => p !== "content.edit");
+  assert.ok(withoutEdit.length < trainerPerms.length, "content.edit must be a real trainer permission for this test to mean anything");
+  await call("PUT", "/v1/staff/roles/trainer/permissions", { permissions: withoutEdit }, s.marc);
+  // A brand-new module_id only needs content.create, which the trainer still has.
+  assert.equal((await call("POST", "/v1/staff/modules/check", { ...chrisModule(), module_id: "brand-new-module" }, s.trainer)).status, 200);
+  // Checking a NEW VERSION of an already-published module needs content.edit, same as actually publishing it would.
+  assert.equal((await call("POST", "/v1/staff/modules/check", chrisModule(3), s.trainer)).status, 403);
+  await call("PUT", "/v1/staff/roles/trainer/permissions", { permissions: trainerPerms }, s.marc);
+});
+
+test("a non-multiple_choice module can be published (with a warning) but never assigned — no learner-app renderer exists yet", async () => {
+  const gameModule = { ...chrisModule(1, 1), module_id: "future-game", activity_type: "game:placeholder" };
+  const check = await call("POST", "/v1/staff/modules/check", gameModule, s.trainer);
+  assert.equal(check.body.valid, true);
+  assert.ok(check.body.warnings.some((w: { code: string }) => w.code === "GAME_FORMAT_PENDING"));
+  assert.equal((await call("POST", "/v1/staff/modules", gameModule, s.trainer)).status, 201);
+  const assign = await call("POST", "/v1/staff/assignments", { module_id: "future-game", cohort_id: s.cohort }, s.trainer);
+  assert.deepEqual([assign.status, assign.body.error.code], [422, "UNSUPPORTED_ACTIVITY_TYPE"]);
+  // Nothing was ever assigned to it, so the Superadmin can purge it — keep this test from leaving a module behind for later /healthz counts.
+  assert.equal((await call("DELETE", "/v1/staff/modules/future-game", undefined, s.marc)).status, 200);
+});
+
 test("modules in use can be archived but never deleted; unused ones can be purged by the Superadmin", async () => {
   const inUse = await call("DELETE", "/v1/staff/modules/pr-bootcamp-security-tools", undefined, s.marc);
   assert.deepEqual([inUse.status, inUse.body.error.code], [409, "IN_USE"]);

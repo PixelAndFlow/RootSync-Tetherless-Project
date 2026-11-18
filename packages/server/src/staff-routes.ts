@@ -351,8 +351,10 @@ export function registerStaffRoutes(env: Env): void {
   };
 
   router.add("POST", "/v1/staff/modules/check", async (ctx) => {
-    await requireStaff(ctx, "content.create");
-    return checkModule(await readJson(ctx.req, MAX_MODULE_BYTES));
+    const input = await readJson(ctx.req, MAX_MODULE_BYTES);
+    const exists = isRecord(input) && typeof input.module_id === "string" && !!(await store.getModule(input.module_id));
+    await requireStaff(ctx, exists ? "content.edit" : "content.create");
+    return checkModule(input);
   });
 
   router.add("POST", "/v1/staff/modules", async (ctx) => {
@@ -458,6 +460,7 @@ export function registerStaffRoutes(env: Env): void {
     const mod = moduleId ? await store.getModule(moduleId) : undefined;
     if (!mod) throw new HttpError(404, "NOT_FOUND", "Module not found.");
     if (mod.archived_at) throw new HttpError(409, "MODULE_ARCHIVED", "This module is archived.");
+    if (mod.activity_type !== "multiple_choice") throw new HttpError(422, "UNSUPPORTED_ACTIVITY_TYPE", "Only multiple_choice modules can be assigned today — no learner-app renderer exists for any other activity type yet.");
     let version: number | null = null;
     if (body.content_version !== undefined && body.content_version !== null) {
       if (!Number.isInteger(body.content_version) || !content.body(moduleId, body.content_version as number)) throw new HttpError(404, "NOT_FOUND", "That module version is not published.");
