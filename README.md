@@ -110,6 +110,33 @@ The server applies its own PostgreSQL migrations on startup and seeds
 `content/modules/` into an empty database — after that, modules are
 published and versioned only through the staff API (see below).
 
+### Database: initialize and reset
+
+- **Local dev / CI (`MemoryStore`)** — there's nothing to initialize:
+  the store is created fresh in memory on process start, and
+  `content/modules/` is seeded automatically every time. **Reset** is
+  just restarting the process (`npm run start` again) — nothing
+  persists across a restart, so there's no data to clear by hand.
+- **Self-hosted PostgreSQL (`PgStore`, via `docker compose`)** —
+  initialization is automatic and idempotent: `pg-store.ts` applies
+  its own tracked migrations (`schema_migrations` table) on every
+  startup, and seeds `content/modules/` the first time the database is
+  empty. There's no separate "init" command to run. **Reset**
+  (destroys all data — run `scripts/backup.sh` first if you need to
+  keep anything):
+  ```bash
+  docker compose down -v   # removes the db-data volume
+  docker compose up -d --build
+  # re-create the first Superadmin, same as initial setup:
+  docker compose exec -T api node packages/server/src/admin.ts create-staff \
+    --role superadmin --username marc --name "Marc" <<< 'a-long-password'
+  ```
+- **Production (Render + managed PostgreSQL)** — there is no reset
+  command, and there shouldn't be one: this is live RCO data. Use
+  `scripts/backup.sh` / `scripts/restore.sh`, or Render's own database
+  dashboard, deliberately and only when actually intended — never as a
+  routine step.
+
 ## Use
 
 - **Learner** — `/#/learner` to set up a device, then the mission
