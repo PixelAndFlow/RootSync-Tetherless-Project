@@ -279,7 +279,11 @@ Marc Delsoin, Chris Wozniak, Naquan Mckune.
   do today, by audience (Student/Trainer/Staff), kept updated as
   features ship.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the real, current
-  architecture (this file used to say "undecided"; it no longer is).
+  architecture (this file used to say "undecided"; it no longer is),
+  including how the API spec is versioned (see
+  [API contract versioning](./ARCHITECTURE.md#api-contract-versioning)
+  — the full spec and its addenda live in the private docs repo, not
+  here).
 - [`ROADMAP.md`](./ROADMAP.md) — roadmap.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributing.
 - [`SECURITY.md`](./SECURITY.md) — security policy.

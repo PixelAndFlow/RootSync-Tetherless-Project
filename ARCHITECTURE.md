@@ -38,9 +38,15 @@ mock adapters (default) — or — real adapters (DdilLearningGateway, ApiTraine
 It reads `VITE_TETHERLESS_API_BASE_URL` at startup: unset, every
 gateway is a mock adapter backed by in-memory fixtures (no network,
 no persistence); set, it wires up the real `ApiStaffAdminGateway` and
-`DdilLearningGateway` instead. Nothing else in the app branches on
-mock-vs-live — a screen that works against the mock works against the
-real backend unchanged.
+`DdilLearningGateway` instead. Screens are meant to go through the
+gateway interface without caring which adapter backs it — but this
+isn't fully true today: `TrainerDashboardScreen` reads the mock-vs-live
+flag directly and skips its own sign-in check entirely in mock mode
+(`signedIn = !live || Boolean(session)`), and `StaffDashboardScreen`/
+`AppShell` read it too, for a cosmetic "LIVE DATA"/"DEMO DATA" label.
+Whether that Trainer exception should be closed, or demo mode removed
+entirely now that it's served its build-time purpose, is tracked as an
+open decision for RCO (issue #72), not resolved by this file.
 
 ## Offline-first (DDIL) sync
 
@@ -94,6 +100,25 @@ can change what a role grants at runtime
 (`PUT /v1/staff/roles/:role/permissions`) without a code change. The
 one irreversible action, `data.purge`, is intentionally the most
 restricted by default.
+
+## API contract versioning
+
+The API/integration spec (`Tetherless_API_Spec_v1.30_2026-10-21.md`,
+private docs repo) was locked on 2026-11-01: it's no longer edited in
+place. A change to the contract since then is filed as its own dated
+addendum file layered on top of v1.30, with a note in the docs repo's
+`decisions/README.md` explaining why it exists. "The spec" means v1.30
+plus every addendum read together, not v1.30 alone.
+
+Addenda filed so far (both 2026-11-18): v1.31 (#36/#37 — permission
+checks on module check/publish and assignment, closing two gaps where
+the server allowed more than the upload screen's own UI steered staff
+toward) and v1.32 (#53 — an export-before-purge guardrail on
+`purgeLearner`). **As of this writing, both are still on open PRs
+(#62, #65) and not yet merged** — what's actually running in
+production today is the locked v1.30 base without either addendum's
+behavior. Code implementing an addendum cites it directly in a
+comment near the change, not just in the PR description.
 
 ## Shared packages
 
