@@ -274,8 +274,10 @@ export function registerStaffRoutes(env: Env): void {
     const learner = await requireLearner(ctx.params.id);
     const body = await bodyObject(ctx);
     if (body.confirm !== learner.learner_code) throw new HttpError(422, "CONFIRMATION_REQUIRED", `To permanently delete this learner and all their data, send { "confirm": "${learner.learner_code}" }.`);
-    // Issue #53's guardrail: purge is blocked by default unless this learner's cohort has
-    // ever been exported — a deliberate, separately-confirmed override is required otherwise.
+    // Issue #53 / API Spec v1.32 addendum: purge is blocked by default unless
+    // this learner's cohort has ever been exported — EXPORT_REQUIRED (409) is
+    // a new error code not in the locked v1.30 base. A deliberate, separately-
+    // confirmed override (override_unexported) is required otherwise.
     const exported = await store.hasExportedCohort(learner.cohort_id);
     if (!exported && body.override_unexported !== true) {
       throw new HttpError(409, "EXPORT_REQUIRED", "This learner's cohort has never been exported. Export the cohort first, or confirm you want to purge without exporting.");
