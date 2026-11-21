@@ -4,7 +4,7 @@ A resilient, offline-first Progressive Web Application (PWA) that
 trains cyberathletes in critical thinking, rapid information
 retrieval, and vocabulary affirmation — built to function entirely
 in zero-connectivity (DDIL) environments, syncing performance data
-and AI-driven analytics once reconnected.
+for trainer reporting once reconnected.
 
 Built for **RAICES Cyber Organization Inc. (RCO)** via
 [Pursuit.org](https://www.pursuit.org)'s Builder program, as a
@@ -12,9 +12,10 @@ Built for **RAICES Cyber Organization Inc. (RCO)** via
 
 ## Status
 
-Live. The frontend and backend described below are both built and
-deployed, not a prototype — see [Deployment](#deployment). For the
-current punch list of open work, see the repo's GitHub issues.
+Live, as an MVP — not a finished/complete product, and not a
+prototype either: the frontend and backend described below are both
+built and deployed — see [Deployment](#deployment). For the current
+punch list of open work, see the repo's GitHub issues.
 
 ## Tech stack
 
@@ -266,8 +267,11 @@ Marc Delsoin, Chris Wozniak, Naquan Mckune.
   update with zero connectivity
 - Queues performance data locally and syncs it once the device
   reconnects
-- Surfaces AI-driven analysis of synced performance to RCO program
-  managers
+- Surfaces rule-based scoring, active-time, and performance reporting
+  to trainers and RCO program managers (`packages/analytics`) — an
+  AI/LLM-driven version of this was in the original product brief as
+  an optional target, not something built; see `FEATURES.md`'s Known
+  gaps
 
 ## Documentation map
 
