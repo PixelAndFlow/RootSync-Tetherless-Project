@@ -582,6 +582,28 @@ test("a privacy purge needs the Superadmin and the learner ID typed back; it rem
   if (store instanceof MemoryStore) assert.equal(store.audit.find((a) => a.action === "learner.purge")?.target, s.learnerCodes.cara);
 });
 
+test("issue #53: purge is blocked for a learner whose cohort was never exported, unless explicitly overridden", async () => {
+  const cohort = (await call("POST", "/v1/staff/cohorts", { name: "Never Exported Cohort" }, s.marc)).body.cohort;
+  const learner = (await call("POST", "/v1/staff/learners", { cohort_id: cohort.cohort_id, first_name: "Never", last_name: "Exported" }, s.marc)).body.learner;
+  const blocked = await call("POST", `/v1/staff/learners/${learner.learner_id}/purge`, { confirm: learner.learner_code }, s.marc);
+  assert.deepEqual([blocked.status, blocked.body.error.code], [409, "EXPORT_REQUIRED"]);
+  assert.equal((await call("GET", `/v1/staff/learners/${learner.learner_id}`, undefined, s.marc)).status, 200, "not actually purged");
+  const overridden = await call("POST", `/v1/staff/learners/${learner.learner_id}/purge`, { confirm: learner.learner_code, override_unexported: true }, s.marc);
+  assert.equal(overridden.status, 200, JSON.stringify(overridden.body));
+  if (store instanceof MemoryStore) {
+    assert.equal(store.audit.find((a) => a.target === learner.learner_code)?.action, "learner.purge_override_unexported");
+  }
+  // Exporting first removes the need for an override.
+  const cohort2 = (await call("POST", "/v1/staff/cohorts", { name: "Exported First Cohort" }, s.marc)).body.cohort;
+  const learner2 = (await call("POST", "/v1/staff/learners", { cohort_id: cohort2.cohort_id, first_name: "Exported", last_name: "First" }, s.marc)).body.learner;
+  await call("GET", `/v1/staff/cohorts/${cohort2.cohort_id}/export`, undefined, s.marc);
+  const afterExport = await call("POST", `/v1/staff/learners/${learner2.learner_id}/purge`, { confirm: learner2.learner_code }, s.marc);
+  assert.equal(afterExport.status, 200, JSON.stringify(afterExport.body));
+  if (store instanceof MemoryStore) {
+    assert.equal(store.audit.find((a) => a.target === learner2.learner_code)?.action, "learner.purge");
+  }
+});
+
 // ------------------------------------------------------------ transport
 
 test("expired staff sessions stop working", async () => {

@@ -248,9 +248,11 @@ export class ApiStaffAdminGateway implements StaffAdminGateway {
     if (!learnerId.trim() || !deviceId.trim()) throw new ApiError("INVALID_INPUT", 422);
     await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/devices/${encodeURIComponent(deviceId)}/switch-off`, {});
   }
-  async purgeLearner(learnerId: string, confirmLearnerCode: string): Promise<{ eventsDeleted: number }> {
+  async purgeLearner(learnerId: string, confirmLearnerCode: string, options?: { overrideUnexported?: boolean }): Promise<{ eventsDeleted: number }> {
     if (!learnerId.trim() || !confirmLearnerCode.trim()) throw new ApiError("INVALID_INPUT", 422);
-    const body = record(await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/purge`, { confirm: confirmLearnerCode }));
+    const payload: Record<string, unknown> = { confirm: confirmLearnerCode };
+    if (options?.overrideUnexported) payload.override_unexported = true;
+    const body = record(await this.api.post(`/v1/staff/learners/${encodeURIComponent(learnerId)}/purge`, payload));
     return { eventsDeleted: number(body.events_deleted) };
   }
   async listStaff(): Promise<StaffAccountSummary[]> {

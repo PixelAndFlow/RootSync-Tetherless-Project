@@ -148,8 +148,23 @@ describe("MockStaffAdminGateway", () => {
     const learner = await gateway.getLearnerRecord("student-demo-003");
     await expect(gateway.purgeLearner("student-demo-003", "wrong-code")).rejects.toMatchObject({ code: "CONFIRMATION_REQUIRED" });
     await expect(gateway.purgeLearner("not-a-real-id", learner.learnerCode)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    await expect(gateway.purgeLearner("student-demo-003", learner.learnerCode)).resolves.toMatchObject({ eventsDeleted: 0 });
+    // issue #53: this cohort's export state is whatever earlier tests in this file left it in,
+    // so override explicitly here - this test is about the confirmation code, not the guardrail.
+    await expect(gateway.purgeLearner("student-demo-003", learner.learnerCode, { overrideUnexported: true })).resolves.toMatchObject({ eventsDeleted: 0 });
     await expect(gateway.getLearnerRecord("student-demo-003")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("issue #53: purgeLearner blocks a never-exported cohort and requires an explicit override", async () => {
+    // Run before any test exports cohort-demo-001 (student-demo-002's cohort), and before
+    // student-demo-002 is touched by any other test, so this is a clean, deterministic check
+    // of the guard itself, independent of createLearner's demo-mode stub (it doesn't persist a
+    // new learner into `students`, so a freshly-created cohort/learner pair isn't usable here).
+    const gateway = new MockStaffAdminGateway();
+    const learner = await gateway.getLearnerRecord("student-demo-002");
+    await expect(gateway.purgeLearner("student-demo-002", learner.learnerCode)).rejects.toMatchObject({ code: "EXPORT_REQUIRED" });
+    await expect(gateway.getLearnerRecord("student-demo-002")).resolves.toBeTruthy();
+    await expect(gateway.purgeLearner("student-demo-002", learner.learnerCode, { overrideUnexported: true })).resolves.toMatchObject({ eventsDeleted: 0 });
+    await expect(gateway.getLearnerRecord("student-demo-002")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("issue #40: reads a published version, archives unconditionally, and blocks purging an in-use module", async () => {

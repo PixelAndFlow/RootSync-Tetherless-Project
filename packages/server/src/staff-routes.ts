@@ -274,9 +274,18 @@ export function registerStaffRoutes(env: Env): void {
     const learner = await requireLearner(ctx.params.id);
     const body = await bodyObject(ctx);
     if (body.confirm !== learner.learner_code) throw new HttpError(422, "CONFIRMATION_REQUIRED", `To permanently delete this learner and all their data, send { "confirm": "${learner.learner_code}" }.`);
+    // Issue #53 / API Spec v1.32 addendum: purge is blocked by default unless
+    // this learner's cohort has ever been exported — EXPORT_REQUIRED (409) is
+    // a new error code not in the locked v1.30 base. A deliberate, separately-
+    // confirmed override (override_unexported) is required otherwise.
+    const exported = await store.hasExportedCohort(learner.cohort_id);
+    if (!exported && body.override_unexported !== true) {
+      throw new HttpError(409, "EXPORT_REQUIRED", "This learner's cohort has never been exported. Export the cohort first, or confirm you want to purge without exporting.");
+    }
     const events = (await store.listEvents(learner.learner_id)).length;
     await store.purgeLearner(learner.learner_id);
-    await store.addAudit({ staff_id: staff.staff_id, action: "learner.purge", target: learner.learner_code, detail: { learner_id: learner.learner_id, events_deleted: events }, at: ctx.now });
+    const action = !exported && body.override_unexported === true ? "learner.purge_override_unexported" : "learner.purge";
+    await store.addAudit({ staff_id: staff.staff_id, action, target: learner.learner_code, detail: { learner_id: learner.learner_id, events_deleted: events }, at: ctx.now });
     return { ok: true, events_deleted: events };
   });
 
@@ -576,8 +585,11 @@ export function registerStaffRoutes(env: Env): void {
   });
 
   router.add("GET", "/v1/staff/cohorts/:id/export", async (ctx) => {
-    await requireStaff(ctx, "results.export");
+    const { staff } = await requireStaff(ctx, "results.export");
     const cohort = await requireCohort(ctx.params.id);
+    // Issue #53's purge guardrail reads this back (Store.hasExportedCohort) to require an
+    // export before a learner in this cohort can be permanently purged.
+    await store.addAudit({ staff_id: staff.staff_id, action: "cohort.export", target: cohort.cohort_id, detail: null, at: ctx.now });
     const learners = await store.listLearners(cohort.cohort_id, { includeArchived: true });
     const t = await env.thresholds();
     const moduleIds = await reportModuleIds(cohort.cohort_id, learners, null);

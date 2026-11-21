@@ -23,8 +23,17 @@ export interface StaffAdminGateway {
   /** switchOffExistingPhones requires device.revoke in addition to learner.setup_code. */
   issueSetupCode(learnerId: string, switchOffExistingPhones: boolean): Promise<{ setupCode: string; phonesSwitchedOff: number }>;
   switchOffPhone(learnerId: string, deviceId: string): Promise<void>;
-  /** Superadmin-only (data.purge). confirmLearnerCode must equal the learner's own learnerCode, checked server-side (CONFIRMATION_REQUIRED otherwise) — build a type-the-code-back UI, not a plain confirm dialog. */
-  purgeLearner(learnerId: string, confirmLearnerCode: string): Promise<{ eventsDeleted: number }>;
+  /**
+   * Superadmin-only (data.purge). confirmLearnerCode must equal the learner's own learnerCode,
+   * checked server-side (CONFIRMATION_REQUIRED otherwise) — build a type-the-code-back UI, not a
+   * plain confirm dialog.
+   *
+   * Issue #53's guardrail: blocked with EXPORT_REQUIRED unless this learner's cohort has ever
+   * been exported. options.overrideUnexported must come from its own distinct, explicit
+   * confirmation step in the UI — never silently retried with it set, and never the same
+   * confirmation used for confirmLearnerCode.
+   */
+  purgeLearner(learnerId: string, confirmLearnerCode: string, options?: { overrideUnexported?: boolean }): Promise<{ eventsDeleted: number }>;
   listModules(): Promise<ModuleListing[]>;
   /** Validates module JSON without publishing it. Does not require the module to already exist. */
   checkModule(json: unknown): Promise<ModuleCheckResult>;

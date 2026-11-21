@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ReturnLink } from "../../components/common/ReturnLink";
+import { ApiError } from "../../services/api/ApiError";
 import { ApiErrorNotice } from "../../components/common/ApiErrorNotice";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { useStaffSession } from "../../app/providers/StaffSessionProvider";
@@ -41,6 +42,11 @@ export function StaffLearnerDetailScreen() {
   const [purging, setPurging] = useState(false);
   const [purgeError, setPurgeError] = useState<unknown>(null);
   const [purged, setPurged] = useState(false);
+  // Issue #53's guardrail: a distinct, separately-confirmed override — never satisfied by
+  // purgeConfirmInput (the type-the-code step above, which confirms *which* learner, not that
+  // export happened).
+  const [showExportOverrideConfirm, setShowExportOverrideConfirm] = useState(false);
+  const purgeTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!gateway || !session || !learnerId) return;
@@ -108,6 +114,17 @@ export function StaffLearnerDetailScreen() {
     if (!gateway || !learner || purging || purgeConfirmInput !== learner.learnerCode) return;
     setPurging(true); setPurgeError(null);
     try { await gateway.purgeLearner(learnerId, purgeConfirmInput); setPurged(true); }
+    catch (err) {
+      if (err instanceof ApiError && err.code === "EXPORT_REQUIRED") setShowExportOverrideConfirm(true);
+      else setPurgeError(err);
+    } finally { setPurging(false); }
+  };
+
+  const confirmPurgeWithoutExport = async () => {
+    if (!gateway) return;
+    setShowExportOverrideConfirm(false);
+    setPurging(true); setPurgeError(null);
+    try { await gateway.purgeLearner(learnerId, purgeConfirmInput, { overrideUnexported: true }); setPurged(true); }
     catch (err) { setPurgeError(err); } finally { setPurging(false); }
   };
 
@@ -160,7 +177,7 @@ export function StaffLearnerDetailScreen() {
           <p className="font-bold text-rose-300">Permanently delete this student</p>
           <p className="text-sm text-slate-300">This permanently deletes {learner.firstName} {learner.lastName} and all their data. This cannot be undone. Type the student code <strong>{learner.learnerCode}</strong> to confirm.</p>
           <input autoComplete="off" className="integration-input" onChange={(event) => setPurgeConfirmInput(event.target.value)} placeholder={learner.learnerCode} value={purgeConfirmInput} />
-          <button className="ui-action" disabled={purgeConfirmInput !== learner.learnerCode || purging} type="submit">{purging ? "Deleting…" : "Permanently delete"}</button>
+          <button className="ui-action" disabled={purgeConfirmInput !== learner.learnerCode || purging} onClick={(event) => { purgeTriggerRef.current = event.currentTarget; }} type="submit">{purging ? "Deleting…" : "Permanently delete"}</button>
           {purgeError !== null && <div className="mt-3"><ApiErrorNotice error={purgeError} /></div>}
         </form>}
       </article>}
@@ -169,5 +186,6 @@ export function StaffLearnerDetailScreen() {
     </>}
 
     {showArchiveConfirm && learner && <ConfirmationDialog confirmLabel="Archive student" detail={`Archiving ${learner.firstName} ${learner.lastName} removes their device access and hides them from active lists. This does not delete their history.`} onCancel={() => setShowArchiveConfirm(false)} onConfirm={() => void confirmArchive()} returnFocusTo={archiveTriggerRef.current} title={`Archive ${learner.firstName} ${learner.lastName}?`} />}
+    {showExportOverrideConfirm && learner && <ConfirmationDialog confirmLabel="Delete without exporting" detail={`This student's cohort has never been exported. Permanently deleting ${learner.firstName} ${learner.lastName} now means their data cannot be recovered or exported afterward — export the cohort first if there's any chance it's needed for records or a privacy request. Only continue if you're sure nothing here needs to be kept.`} onCancel={() => setShowExportOverrideConfirm(false)} onConfirm={() => void confirmPurgeWithoutExport()} returnFocusTo={purgeTriggerRef.current} title="Delete without exporting first?" />}
   </section>;
 }

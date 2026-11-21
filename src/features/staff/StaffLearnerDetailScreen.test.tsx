@@ -103,6 +103,24 @@ describe("issue #39: StaffLearnerDetailScreen", () => {
     await userEvent.type(input, "RCYC-PR-Bootcamp2026-0001");
     expect(purgeButton).toBeEnabled();
     await userEvent.click(purgeButton);
+    // issue #53: this cohort has never been exported, so purge is blocked behind its own,
+    // separate override confirmation - typing the code back isn't enough by itself.
+    expect(await screen.findByRole("heading", { name: "Delete without exporting first?" })).toBeVisible();
+    const overrideButtons = screen.getAllByRole("button", { name: "Delete without exporting" });
+    await userEvent.click(overrideButtons[overrideButtons.length - 1]);
     expect(await screen.findByText("Student deleted")).toBeInTheDocument();
+  });
+
+  it("issue #53: purges without the export-override step once the cohort has been exported", async () => {
+    // A different learner than the previous test (which already purged student-demo-001) -
+    // MockStaffAdminGateway's fixture data is module-level, shared across tests in this file.
+    await gateway.exportCohort("cohort-demo-001");
+    show("student-demo-002");
+    await screen.findByRole("heading", { name: "Jordan Lee" });
+    const input = screen.getByPlaceholderText("RCYC-PR-Bootcamp2026-0002");
+    await userEvent.type(input, "RCYC-PR-Bootcamp2026-0002");
+    await userEvent.click(screen.getByRole("button", { name: "Permanently delete" }));
+    expect(await screen.findByText("Student deleted")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Delete without exporting first?" })).not.toBeInTheDocument();
   });
 });

@@ -95,8 +95,10 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   from) instead of silently omitting them (#52).
 - **Permanent delete (`data.purge`)**: the one irreversible action,
   restricted to Superadmin by default, cascades across every related
-  table. **Currently has no guardrail requiring export-before-delete**
-  — tracked as a priority gap to close (#53), not yet fixed.
+  table. Blocked with a distinct confirmation step unless the
+  learner's cohort has ever been exported (#53); doesn't yet check
+  that the export happened *before* the data being purged, or cover
+  a future bulk-purge endpoint — flagged for team discussion.
 
 ## Content and curriculum
 
@@ -164,7 +166,6 @@ assignable per role by a Superadmin (see `ARCHITECTURE.md#permissions`).
   computes rule-based scoring/active-time/reporting today; there is no
   LLM/ML component yet. "AI-driven" in the product brief is a target,
   not a current capability.
-- Export-before-purge guardrail (#53) — see Staff/Admin above.
 
 ## Keeping this updated
 
