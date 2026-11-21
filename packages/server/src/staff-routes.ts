@@ -350,6 +350,9 @@ export function registerStaffRoutes(env: Env): void {
     };
   };
 
+  // Issue #36 / API Spec v1.31 addendum: check now requires content.edit for
+  // an existing module, matching publishModule below, instead of always
+  // requiring content.create.
   router.add("POST", "/v1/staff/modules/check", async (ctx) => {
     const input = await readJson(ctx.req, MAX_MODULE_BYTES);
     const exists = isRecord(input) && typeof input.module_id === "string" && !!(await store.getModule(input.module_id));
@@ -460,6 +463,9 @@ export function registerStaffRoutes(env: Env): void {
     const mod = moduleId ? await store.getModule(moduleId) : undefined;
     if (!mod) throw new HttpError(404, "NOT_FOUND", "Module not found.");
     if (mod.archived_at) throw new HttpError(409, "MODULE_ARCHIVED", "This module is archived.");
+    // Issue #37 / API Spec v1.31 addendum: UNSUPPORTED_ACTIVITY_TYPE (422) is
+    // a new error code not in the locked v1.30 base — blocks a non-
+    // multiple_choice module server-side, not just at the upload screen.
     if (mod.activity_type !== "multiple_choice") throw new HttpError(422, "UNSUPPORTED_ACTIVITY_TYPE", "Only multiple_choice modules can be assigned today — no learner-app renderer exists for any other activity type yet.");
     let version: number | null = null;
     if (body.content_version !== undefined && body.content_version !== null) {
